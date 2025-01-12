@@ -5,7 +5,7 @@ from pandas import read_parquet
 import pathlib
 
 from neo4j_viz.pandas import from_dfs
-from neo4j_viz import VisualizationGraph
+from neo4j_viz import VisualizationGraph, Layout
 
 # Path to this file
 script_path = pathlib.Path(__file__).resolve()
@@ -32,9 +32,9 @@ def create_visualization_graph() -> VisualizationGraph:
 
 @st.cache_data
 def render_graph(
-    _VG: VisualizationGraph, height: int, initial_zoom: float = 0.1
+    _VG: VisualizationGraph, height: int, layout: Layout, initial_zoom: float = 0.1
 ) -> HTML:
-    return VG.render(initial_zoom=initial_zoom, height=f"{height}px")
+    return VG.render(initial_zoom=initial_zoom, height=f"{height}px", layout=layout)
 
 
 VG = create_visualization_graph()
@@ -47,6 +47,10 @@ st.text(
 
 with st.sidebar:
     height = st.slider("Height in pixels", 100, 2000, 600, 50)
+    layout = st.radio(
+        "Layout",
+        [Layout.FORCE_DIRECTED, Layout.HIERARCHICAL, Layout.GRID],
+    )
     show_code = st.checkbox("Show code")
 
 st.header("Visualization")
@@ -56,7 +60,7 @@ st.text(
 )
 
 components.html(
-    render_graph(VG, height=height).data,
+    render_graph(VG, height=height, layout=layout).data,
     height=height,
 )
 
