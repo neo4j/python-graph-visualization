@@ -18,6 +18,15 @@ class PyNVL {
     options: NvlOptions = {},
     callbacks = {}
   ) {
+    // initially show all nodes
+    callbacks['onLayoutDone'] = () => {
+      this.nvl.fit(nvlNodes.map((node) => node.id))
+      if (typeof options.initialZoom === 'number') {
+        this.nvl.setZoom(options.initialZoom)
+      }
+    }
+
+
     this.nvl = new NVL(frame, nvlNodes, nvlRels, { ...options, disableTelemetry: true }, callbacks)
     this.zoomInteraction = new ZoomInteraction(this.nvl)
     this.panInteraction = new PanInteraction(this.nvl)
