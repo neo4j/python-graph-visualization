@@ -207,6 +207,15 @@ body.sphinx .doc ul li{
     margin-bottom: 0.5rem;
 }
 
+/* paragraphs */
+.doc p {
+    margin-bottom: 1.5rem;
+}
+
+.doc ul li p {
+    margin-bottom: 0rem;
+}
+
 /* functions */
 
 body.sphinx .doc dl.py.function {
