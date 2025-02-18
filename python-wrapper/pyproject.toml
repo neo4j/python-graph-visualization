@@ -49,7 +49,7 @@ dev = [
     "palettable==3.3.3",
     "pytest-mock==3.14.0",
     "nbconvert==7.16.6",
-    "streamlit==1.42.0",
+    "streamlit==1.42.1",
 ]
 docs = [
     "sphinx==8.1.3",
