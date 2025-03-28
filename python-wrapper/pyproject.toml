@@ -44,7 +44,7 @@ dev = [
     "ruff==0.9.7",
     "mypy==1.15.0",
     "pytest==8.3.4",
-    "selenium==4.28.1",
+    "selenium==4.30.0",
     "ipykernel==6.29.5",
     "palettable==3.3.3",
     "pytest-mock==3.14.0",
