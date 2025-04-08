@@ -3,16 +3,18 @@ from __future__ import annotations
 from typing import Any, Optional, Union
 from uuid import uuid4
 
-from pydantic import AliasChoices, BaseModel, Field, field_serializer, field_validator
+from pydantic import AliasChoices, Field, field_serializer, field_validator
 from pydantic_extra_types.color import Color, ColorType
 
+from .case_insensitive_model import CaseInsensitiveModel
 from .options import CaptionAlignment
 
 
-class Relationship(BaseModel, extra="allow"):
+class Relationship(CaseInsensitiveModel, extra="allow"):
     """
     A relationship in a graph to visualize.
     All options available in the NVL library (see https://neo4j.com/docs/nvl/current/base-library/#_relationships)
+    All field names are case-insensitive.
     """
 
     #: Unique identifier for the relationship
@@ -22,13 +24,13 @@ class Relationship(BaseModel, extra="allow"):
     #: Node ID where the relationship points from
     source: Union[str, int] = Field(
         serialization_alias="from",
-        validation_alias=AliasChoices("source", "sourceNodeId", "source_node_id", "from"),
+        validation_alias=AliasChoices("source", "sourcenodeid", "source_node_id", "from"),
         description="Node ID where the relationship points from",
     )
     #: Node ID where the relationship points to
     target: Union[str, int] = Field(
         serialization_alias="to",
-        validation_alias=AliasChoices("target", "targetNodeId", "target_node_id", "to"),
+        validation_alias=AliasChoices("target", "targetnodeid", "target_node_id", "to"),
         description="Node ID where the relationship points to",
     )
     #: The caption of the relationship

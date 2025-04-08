@@ -59,11 +59,11 @@ def test_node_with_additional_fields() -> None:
 
     assert node.to_dict() == {
         "id": "1",
-        "componentId": 2,
+        "component_id": 2,
     }
 
 
-@pytest.mark.parametrize("alias", ["id", "nodeId", "node_id"])
+@pytest.mark.parametrize("alias", ["id", "nodeId", "node_id", "ID"])
 def test_id_aliases(alias: str) -> None:
     node = Node(**{alias: 1})
 

@@ -117,7 +117,7 @@ def test_from_gds_mocked(mocker: MockerFixture) -> None:
     ]
 
     assert len(VG.relationships) == 3
-    vg_rels = sorted([(e.source, e.target, e.relationshipType) for e in VG.relationships], key=lambda x: x[0])  # type: ignore[attr-defined]
+    vg_rels = sorted([(e.source, e.target, e.relationship_type) for e in VG.relationships], key=lambda x: x[0])  # type: ignore[attr-defined]
     assert vg_rels == [
         (0, 1, "REL"),
         (1, 2, "REL2"),

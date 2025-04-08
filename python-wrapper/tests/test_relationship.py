@@ -47,12 +47,17 @@ def test_rels_additional_fields() -> None:
     )
 
     rel_dict = rel.to_dict()
-    assert {"id", "from", "to", "componentId"} == set(rel_dict.keys())
-    assert rel.componentId == 2  # type: ignore[attr-defined]
+    assert {"id", "from", "to", "component_id"} == set(rel_dict.keys())
+    assert rel.component_id == 2  # type: ignore[attr-defined]
 
 
-@pytest.mark.parametrize("src_alias", ["source", "sourceNodeId", "source_node_id", "from"])
-@pytest.mark.parametrize("trg_alias", ["target", "targetNodeId", "target_node_id", "to"])
+@pytest.mark.parametrize(
+    "src_alias",
+    ["source", "sourceNodeId", "source_node_id", "from", "SOURCE", "SOURCE_NODE_ID", "SOURCENODEID", "FROM"],
+)
+@pytest.mark.parametrize(
+    "trg_alias", ["target", "targetNodeId", "target_node_id", "to", "TARGET", "TARGET_NODE_ID", "TARGETNODEID", "TO"]
+)
 def test_aliases(src_alias: str, trg_alias: str) -> None:
     rel = Relationship(
         **{

@@ -2,24 +2,26 @@ from __future__ import annotations
 
 from typing import Any, Optional, Union
 
-from pydantic import AliasChoices, BaseModel, Field, field_serializer, field_validator
+from pydantic import AliasChoices, Field, field_serializer, field_validator
 from pydantic_extra_types.color import Color, ColorType
 
+from .case_insensitive_model import CaseInsensitiveModel
 from .node_size import RealNumber
 from .options import CaptionAlignment
 
 NodeIdType = Union[str, int]
 
 
-class Node(BaseModel, extra="allow"):
+class Node(CaseInsensitiveModel, extra="allow"):
     """
     A node in a graph to visualize.
     All options available in the NVL library (see https://neo4j.com/docs/nvl/current/base-library/#_nodes)
+    All field names are case-insensitive.
     """
 
     #: Unique identifier for the node
     id: NodeIdType = Field(
-        validation_alias=AliasChoices("id", "nodeId", "node_id"), description="Unique identifier for the node"
+        validation_alias=AliasChoices("id", "nodeid", "node_id"), description="Unique identifier for the node"
     )
     #: The caption of the node
     caption: Optional[str] = Field(None, description="The caption of the node")
