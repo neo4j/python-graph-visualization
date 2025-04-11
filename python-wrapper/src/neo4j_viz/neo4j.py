@@ -79,13 +79,10 @@ def _map_node(node: neo4j.graph.Node, size_property: Optional[str], caption_prop
         else:
             caption = str(node.get(caption_property))
 
-    base_node_props = dict(id=node.element_id, caption=caption, labels=labels, size=size)
+    properties = {k: v for k, v in node.items()}
+    properties["__labels"] = labels
 
-    protected_props = base_node_props.keys()
-    additional_node_props = {k: v for k, v in node.items()}
-    additional_node_props = _rename_protected_props(additional_node_props, protected_props)
-
-    return Node(**base_node_props, **additional_node_props)
+    return Node(id=node.element_id, caption=caption, size=size, properties=properties)
 
 
 def _map_relationship(rel: neo4j.graph.Relationship, caption_property: Optional[str]) -> Optional[Relationship]:
@@ -100,32 +97,13 @@ def _map_relationship(rel: neo4j.graph.Relationship, caption_property: Optional[
     else:
         caption = None
 
-    base_rel_props = dict(
+    properties = {k: v for k, v in rel.items()}
+    properties["__type"] = rel.type
+
+    return Relationship(
         id=rel.element_id,
         source=rel.start_node.element_id,
         target=rel.end_node.element_id,
-        _type=rel.type,
         caption=caption,
+        properties=properties,
     )
-
-    protected_props = base_rel_props.keys()
-    additional_rel_props = {k: v for k, v in rel.items()}
-    additional_rel_props = _rename_protected_props(additional_rel_props, protected_props)
-
-    return Relationship(
-        **base_rel_props,
-        **additional_rel_props,
-    )
-
-
-def _rename_protected_props(
-    additional_props: dict[str, Any],
-    protected_props: Iterable[str],
-) -> dict[str, Union[str, int, float]]:
-    for prop in protected_props:
-        if prop not in additional_props:
-            continue
-
-        additional_props[f"__{prop}"] = additional_props.pop(prop)
-
-    return additional_props

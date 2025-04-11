@@ -26,6 +26,7 @@ def test_nodes_with_all_options() -> None:
         "pinned": True,
         "x": 1,
         "y": 10,
+        "properties": {},
     }
 
 
@@ -36,6 +37,7 @@ def test_nodes_minimal_node() -> None:
 
     assert node.to_dict() == {
         "id": "1",
+        "properties": {},
     }
 
 
@@ -48,6 +50,7 @@ def test_node_with_float_size() -> None:
     assert node.to_dict() == {
         "id": "1",
         "size": 10.2,
+        "properties": {},
     }
 
 
@@ -60,6 +63,7 @@ def test_node_with_additional_fields() -> None:
     assert node.to_dict() == {
         "id": "1",
         "componentId": 2,
+        "properties": {},
     }
 
 
@@ -69,6 +73,7 @@ def test_id_aliases(alias: str) -> None:
 
     assert node.to_dict() == {
         "id": "1",
+        "properties": {},
     }
 
 

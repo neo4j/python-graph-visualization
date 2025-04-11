@@ -23,6 +23,7 @@ def test_rels_with_all_options() -> None:
         "captionAlign": "top",
         "captionSize": 12,
         "color": "#ff0000",
+        "properties": {},
     }
 
 
@@ -34,7 +35,7 @@ def test_rels_minimal_rel() -> None:
 
     rel_dict = rel.to_dict()
 
-    assert {"id", "from", "to"} == set(rel_dict.keys())
+    assert {"id", "from", "to", "properties"} == set(rel_dict.keys())
     assert rel_dict["from"] == "1"
     assert rel_dict["to"] == "2"
 
@@ -43,12 +44,12 @@ def test_rels_additional_fields() -> None:
     rel = Relationship(
         source="1",
         target="2",
-        componentId=2,
+        properties=dict(componentId=2),
     )
 
     rel_dict = rel.to_dict()
-    assert {"id", "from", "to", "componentId"} == set(rel_dict.keys())
-    assert rel.componentId == 2  # type: ignore[attr-defined]
+    assert {"id", "from", "to", "properties"} == set(rel_dict.keys())
+    assert rel.properties["componentId"] == 2  # type: ignore[attr-defined]
 
 
 @pytest.mark.parametrize("src_alias", ["source", "sourceNodeId", "source_node_id", "from"])
@@ -63,6 +64,6 @@ def test_aliases(src_alias: str, trg_alias: str) -> None:
 
     rel_dict = rel.to_dict()
 
-    assert {"id", "from", "to"} == set(rel_dict.keys())
+    assert {"id", "from", "to", "properties"} == set(rel_dict.keys())
     assert rel_dict["from"] == "1"
     assert rel_dict["to"] == "2"

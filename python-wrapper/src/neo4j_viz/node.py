@@ -45,6 +45,8 @@ class Node(BaseModel, extra="allow"):
     x: Optional[RealNumber] = Field(None, description="The x-coordinate of the node")
     #: The y-coordinate of the node
     y: Optional[RealNumber] = Field(None, description="The y-coordinate of the node")
+    #: The properties of the node
+    properties: dict[str, Any] = Field(default_factory=dict, description="The properties of the node")
 
     @field_serializer("color")
     def serialize_color(self, color: Color) -> str:
