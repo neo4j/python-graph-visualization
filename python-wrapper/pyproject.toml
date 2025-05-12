@@ -34,7 +34,7 @@ dependencies = [
     "ipython >=7, <10",
     "pydantic >=2 , <3",
     "pydantic-extra-types >=2, <3",
-    "enum-tools==0.12.0"
+    "enum-tools==0.13.0"
 ]
 requires-python = ">=3.9"
 
