@@ -184,13 +184,16 @@ Once you have installed the additional dependency, you can use the :doc:`from_ne
 to import query results from Neo4j.
 
 The ``from_neo4j`` method takes one mandatory positional parameter:
-
-* A ``result`` representing the query result either in form of `neo4j.graph.Graph` or `neo4j.Result`.
+A ``data`` argument representing either a query result in the shape of a ``neo4j.graph.Graph`` or ``neo4j.Result``, or a
+``neo4j.Driver`` in which case a simple default query will be executed internally to retrieve the graph data.
 
 We can also provide an optional ``size_property`` parameter, which should refer to a node property,
 and will be used to determine the sizes of the nodes in the visualization.
 
-The ``node_caption`` and ``relationship_caption`` parameters are also optional, and indicate the node and relationship properties to use for the captions of each element in the visualization.
+The ``node_caption`` and ``relationship_caption`` parameters are also optional, and indicate the node and relationship
+properties to use for the captions of each element in the visualization.
+By default, the captions will be set to the node labels relationship types, but you can specify any property that
+exists on these entities.
 
 The last optional property, ``node_radius_min_max``, can be used (and is used by default) to scale the node sizes for
 the visualization.
