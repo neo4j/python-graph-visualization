@@ -22,6 +22,20 @@ def _node_dfs(
 
 
 def _rel_df(gds: GraphDataScience, G: Graph) -> pd.DataFrame:
+    relationship_properties = G.relationship_properties()
+
+    if len(relationship_properties) > 0:
+        if isinstance(relationship_properties, pd.Series):
+            relationship_properties_per_type = relationship_properties.tolist()
+            property_set: set[str] = set()
+            for props in relationship_properties_per_type:
+                if props:
+                    property_set.update(props)
+
+        return gds.graph.relationshipProperties.stream(
+            G, relationship_properties=list(property_set), separate_property_columns=True
+        )
+
     return gds.graph.relationships.stream(G)
 
 
@@ -89,10 +103,10 @@ def from_gds(
             df.rename(columns={"labels": "__labels"}, inplace=True)
         df["labels"] = lbl
 
-    node_lbls_df = pd.concat([df[["id", "labels"]] for df in node_dfs.values()], ignore_index=True, axis=0)
-    node_lbls_df = node_lbls_df.groupby("id").agg({"labels": list})
+    node_labels_df = pd.concat([df[["id", "labels"]] for df in node_dfs.values()], ignore_index=True, axis=0)
+    node_labels_df = node_labels_df.groupby("id").agg({"labels": list})
 
-    node_df = node_props_df.merge(node_lbls_df, on="id")
+    node_df = node_props_df.merge(node_labels_df, on="id")
 
     rel_df = _rel_df(gds, G)
     rel_df.rename(columns={"sourceNodeId": "source", "targetNodeId": "target"}, inplace=True)
