@@ -7,6 +7,7 @@
 ## New features
 
 * Allow visualization based only on relationship DataFrames, without specifying node DataFrames in `from_dfs`
+* Add relationship properties to `VisualizationGraph` when constructing via `from_gds`.
 
 ## Bug fixes
 
