@@ -24,6 +24,8 @@ def test_from_gds_integration(gds: Any) -> None:
         {
             "sourceNodeId": [0, 1, 2],
             "targetNodeId": [1, 2, 0],
+            "cost": [1.0, 2.0, 3.0],
+            "weight": [0.5, 1.5, 2.5],
             "relationshipType": ["REL", "REL2", "REL"],
         }
     )
@@ -46,12 +48,16 @@ def test_from_gds_integration(gds: Any) -> None:
 
         assert len(VG.relationships) == 3
         vg_rels = sorted(
-            [(e.source, e.target, e.properties["relationshipType"]) for e in VG.relationships], key=lambda x: x[0]
+            [
+                (e.source, e.target, e.properties["relationshipType"], e.properties["cost"], e.properties["weight"])
+                for e in VG.relationships
+            ],
+            key=lambda x: x[0],
         )
         assert vg_rels == [
-            (0, 1, "REL"),
-            (1, 2, "REL2"),
-            (2, 0, "REL"),
+            (0, 1, "REL", 1.0, 0.5),
+            (1, 2, "REL2", 2.0, 1.0),
+            (2, 0, "REL", 3.0, 1.5),
         ]
 
 
