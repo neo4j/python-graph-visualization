@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import warnings
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import enum_tools.documentation
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 @enum_tools.documentation.document_enum
@@ -31,6 +31,49 @@ class Layout(str, Enum):
     The coordinate layout sets the position of each node based on the `x` and `y` properties of the node.
     """
     GRID = "grid"
+
+
+@enum_tools.documentation.document_enum
+class Direction(str, Enum):
+    """
+    The direction in which the layout should be oriented
+    """
+
+    LEFT = "left"
+    RIGHT = "right"
+    UP = "up"
+    DOWN = "down"
+
+
+@enum_tools.documentation.document_enum
+class Packing(str, Enum):
+    """
+    The packing method to be used
+    """
+
+    BIN = "bin"
+    STACK = "stack"
+
+
+class HierarchicalLayoutOptions(BaseModel):
+    """
+    The options for the hierarchical layout.
+    """
+
+    direction: Optional[Direction] = None
+    packaging: Optional[Packing] = None
+
+
+class ForceDirectedLayoutOptions(BaseModel):
+    """
+    The options for the force-directed layout.
+    """
+
+    gravity: Optional[float] = None
+    simulationStopVelocity: Optional[float] = None
+
+
+LayoutOptions = Union[HierarchicalLayoutOptions, ForceDirectedLayoutOptions]
 
 
 @enum_tools.documentation.document_enum
@@ -72,6 +115,9 @@ class RenderOptions(BaseModel, extra="allow"):
     """
 
     layout: Optional[Layout] = None
+    layout_options: Optional[Union[HierarchicalLayoutOptions, ForceDirectedLayoutOptions]] = Field(
+        None, serialization_alias="layoutOptions"
+    )
     renderer: Optional[Renderer] = None
 
     pan_X: Optional[float] = Field(None, serialization_alias="panX")
@@ -83,6 +129,14 @@ class RenderOptions(BaseModel, extra="allow"):
     )
     min_zoom: Optional[float] = Field(None, serialization_alias="minZoom", description="The minimum zoom level allowed")
     allow_dynamic_min_zoom: Optional[bool] = Field(None, serialization_alias="allowDynamicMinZoom")
+
+    @model_validator(mode="after")
+    def check_layout_options_match(self) -> RenderOptions:
+        if self.layout == Layout.HIERARCHICAL and not isinstance(self.layout_options, HierarchicalLayoutOptions):
+            raise ValueError("layout_options must be of type HierarchicalLayoutOptions for hierarchical layout")
+        if self.layout == Layout.FORCE_DIRECTED and not isinstance(self.layout_options, ForceDirectedLayoutOptions):
+            raise ValueError("layout_options must be of type ForceDirectedLayoutOptions for force-directed layout")
+        return self
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True, by_alias=True)

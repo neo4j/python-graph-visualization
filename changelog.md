@@ -8,6 +8,8 @@
 
 * Allow visualization based only on relationship DataFrames, without specifying node DataFrames in `from_dfs`
 * Add relationship properties to `VisualizationGraph` when constructing via `from_gds`.
+* Allow setting `layout_options` for `VisualizationGraph::render`
+
 
 ## Bug fixes
 
