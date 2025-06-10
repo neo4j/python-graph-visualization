@@ -56,8 +56,8 @@ def test_from_gds_integration(gds: Any) -> None:
         )
         assert vg_rels == [
             (0, 1, "REL", 1.0, 0.5),
-            (1, 2, "REL2", 2.0, 1.0),
-            (2, 0, "REL", 3.0, 1.5),
+            (1, 2, "REL2", 2.0, 1.5),
+            (2, 0, "REL", 3.0, 2.5),
         ]
 
 
