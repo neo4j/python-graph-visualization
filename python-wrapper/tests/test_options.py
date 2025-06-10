@@ -4,6 +4,12 @@ from neo4j_viz.options import Direction, HierarchicalLayoutOptions, Layout, Rend
 
 
 def test_render_options() -> None:
+    options = RenderOptions(layout=Layout.HIERARCHICAL)
+
+    assert options.to_dict() == {"layout": "hierarchical"}
+
+
+def test_render_options_with_layout_options() -> None:
     options = RenderOptions(
         layout=Layout.HIERARCHICAL, layout_options=HierarchicalLayoutOptions(direction=Direction.LEFT)
     )

@@ -132,6 +132,9 @@ class RenderOptions(BaseModel, extra="allow"):
 
     @model_validator(mode="after")
     def check_layout_options_match(self) -> RenderOptions:
+        if self.layout_options is None:
+            return self
+
         if self.layout == Layout.HIERARCHICAL and not isinstance(self.layout_options, HierarchicalLayoutOptions):
             raise ValueError("layout_options must be of type HierarchicalLayoutOptions for hierarchical layout")
         if self.layout == Layout.FORCE_DIRECTED and not isinstance(self.layout_options, ForceDirectedLayoutOptions):
