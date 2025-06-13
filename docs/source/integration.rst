@@ -105,6 +105,14 @@ The ``from_gds`` method takes two mandatory positional parameters:
 * An initialized ``GraphDataScience`` object for the connection to the GDS instance, and
 * A ``Graph`` representing the projection that one wants to import.
 
+The optional ``max_node_count`` parameter can be used to limit the number of nodes that are imported from the
+projection.
+By default, it is set to 10.000, meaning that if the projection has more than 10.000 nodes, ``from_gds`` will sample
+from it using random walk with restarts, to get a smaller graph that can be visualized.
+If you want to have more control of the sampling, such as choosing a specific start node for the sample, you can call
+a `sampling <https://neo4j.com/docs/graph-data-science/current/management-ops/graph-creation/sampling/>`_
+method yourself and passing the resulting projection to ``from_gds``.
+
 We can also provide an optional ``size_property`` parameter, which should refer to a node property of the projection,
 and will be used to determine the sizes of the nodes in the visualization.
 

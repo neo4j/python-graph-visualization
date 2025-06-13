@@ -2,15 +2,17 @@ from __future__ import annotations
 
 from itertools import chain
 from typing import Optional
+from uuid import uuid4
 
 import pandas as pd
 from graphdatascience import Graph, GraphDataScience
+from pandas import Series
 
 from .pandas import _from_dfs
 from .visualization_graph import VisualizationGraph
 
 
-def _node_dfs(
+def _fetch_node_dfs(
     gds: GraphDataScience, G: Graph, node_properties: list[str], node_labels: list[str]
 ) -> dict[str, pd.DataFrame]:
     return {
@@ -21,17 +23,17 @@ def _node_dfs(
     }
 
 
-def _rel_df(gds: GraphDataScience, G: Graph) -> pd.DataFrame:
+def _fetch_rel_df(gds: GraphDataScience, G: Graph) -> pd.DataFrame:
     relationship_properties = G.relationship_properties()
+    assert isinstance(relationship_properties, Series)
 
-    if len(relationship_properties) > 0:
-        if isinstance(relationship_properties, pd.Series):
-            relationship_properties_per_type = relationship_properties.tolist()
-            property_set: set[str] = set()
-            for props in relationship_properties_per_type:
-                if props:
-                    property_set.update(props)
+    relationship_properties_per_type = relationship_properties.tolist()
+    property_set: set[str] = set()
+    for props in relationship_properties_per_type:
+        if props:
+            property_set.update(props)
 
+    if len(property_set) > 0:
         return gds.graph.relationshipProperties.stream(
             G, relationship_properties=list(property_set), separate_property_columns=True
         )
@@ -45,6 +47,7 @@ def from_gds(
     size_property: Optional[str] = None,
     additional_node_properties: Optional[list[str]] = None,
     node_radius_min_max: Optional[tuple[float, float]] = (3, 60),
+    max_node_count: int = 10_000,
 ) -> VisualizationGraph:
     """
     Create a VisualizationGraph from a GraphDataScience object and a Graph object.
@@ -68,6 +71,9 @@ def from_gds(
     node_radius_min_max : tuple[float, float], optional
         Minimum and maximum node radius, by default (3, 60).
         To avoid tiny or huge nodes in the visualization, the node sizes are scaled to fit in the given range.
+    max_node_count : int, optional
+        The maximum number of nodes to fetch from the graph. The graph will be sampled using random walk with restarts
+        if its node count exceeds this number.
     """
     node_properties_from_gds = G.node_properties()
     assert isinstance(node_properties_from_gds, pd.Series)
@@ -86,14 +92,40 @@ def from_gds(
     node_properties = set()
     if additional_node_properties is not None:
         node_properties.update(additional_node_properties)
-
     if size_property is not None:
         node_properties.add(size_property)
-
     node_properties = list(node_properties)
-    node_dfs = _node_dfs(gds, G, node_properties, G.node_labels())
+
+    node_count = G.node_count()
+    if node_count > max_node_count:
+        sampling_ratio = float(max_node_count) / node_count
+        sample_name = f"neo4j-viz_sample_{uuid4()}"
+        G_fetched, _ = gds.graph.sample.rwr(sample_name, G, samplingRatio=sampling_ratio, nodeLabelStratification=True)
+    else:
+        G_fetched = G
+
+    property_name = None
+    try:
+        # Since GDS does not allow us to only fetch node IDs, we add the degree property
+        # as a temporary property to ensure that we have at least one property to fetch
+        if len(actual_node_properties) == 0:
+            property_name = f"neo4j-viz_property_{uuid4()}"
+            gds.degree.mutate(G_fetched, mutateProperty=property_name)
+            node_properties = [property_name]
+
+        node_dfs = _fetch_node_dfs(gds, G_fetched, node_properties, G_fetched.node_labels())
+        rel_df = _fetch_rel_df(gds, G_fetched)
+    finally:
+        if G_fetched.name() != G.name():
+            G_fetched.drop()
+        elif property_name is not None:
+            gds.graph.nodeProperties.drop(G_fetched, node_properties=[property_name])
+
     for df in node_dfs.values():
         df.rename(columns={"nodeId": "id"}, inplace=True)
+        if property_name is not None and property_name in df.columns:
+            df.drop(columns=[property_name], inplace=True)
+    rel_df.rename(columns={"sourceNodeId": "source", "targetNodeId": "target"}, inplace=True)
 
     node_props_df = pd.concat(node_dfs.values(), ignore_index=True, axis=0).drop_duplicates()
     if size_property is not None:
@@ -113,9 +145,6 @@ def from_gds(
 
     if "caption" not in actual_node_properties:
         node_df["caption"] = node_df["labels"].astype(str)
-
-    rel_df = _rel_df(gds, G)
-    rel_df.rename(columns={"sourceNodeId": "source", "targetNodeId": "target"}, inplace=True)
 
     try:
         return _from_dfs(node_df, rel_df, node_radius_min_max=node_radius_min_max, rename_properties={"__size": "size"})
