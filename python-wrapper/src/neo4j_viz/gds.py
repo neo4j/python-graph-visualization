@@ -63,7 +63,8 @@ def from_gds(
     size_property : str, optional
         Property to use for node size, by default None.
     additional_node_properties : list[str], optional
-        Additional properties to include in the visualization node, by default None. They can be used later for modifying the node appearance.
+        Additional properties to include in the visualization node, by default None which means that all node
+        properties will be fetched.
     node_radius_min_max : tuple[float, float], optional
         Minimum and maximum node radius, by default (3, 60).
         To avoid tiny or huge nodes in the visualization, the node sizes are scaled to fit in the given range.
@@ -75,7 +76,9 @@ def from_gds(
     if size_property is not None and size_property not in actual_node_properties:
         raise ValueError(f"There is no node property '{size_property}' in graph '{G.name()}'")
 
-    if additional_node_properties is not None:
+    if additional_node_properties is None:
+        additional_node_properties = actual_node_properties
+    else:
         for prop in additional_node_properties:
             if prop not in actual_node_properties:
                 raise ValueError(f"There is no node property '{prop}' in graph '{G.name()}'")
