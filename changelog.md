@@ -1,4 +1,4 @@
-# Changes in 0.3.2
+# Changes in 0.4.0
 
 
 ## Breaking changes
