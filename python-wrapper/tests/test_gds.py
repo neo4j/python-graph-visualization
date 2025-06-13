@@ -8,7 +8,7 @@ from neo4j_viz import Node
 
 
 @pytest.mark.requires_neo4j_and_gds
-def test_from_gds_integration(gds: Any) -> None:
+def test_from_gds_integration_size(gds: Any) -> None:
     from neo4j_viz.gds import from_gds
 
     nodes = pd.DataFrame(
@@ -41,9 +41,14 @@ def test_from_gds_integration(gds: Any) -> None:
 
         assert len(VG.nodes) == 3
         assert sorted(VG.nodes, key=lambda x: x.id) == [
-            Node(id=0, size=float(1337), properties=dict(labels=["A"], component=float(1), size=0.1)),
-            Node(id=1, size=float(42), properties=dict(labels=["C"], component=float(4), size=0.2)),
-            Node(id=2, size=float(3.14), properties=dict(labels=["A", "B"], component=float(2), size=0.3)),
+            Node(id=0, size=float(1337), caption="['A']", properties=dict(labels=["A"], component=float(1), size=0.1)),
+            Node(id=1, size=float(42), caption="['C']", properties=dict(labels=["C"], component=float(4), size=0.2)),
+            Node(
+                id=2,
+                size=float(3.14),
+                caption="['A', 'B']",
+                properties=dict(labels=["A", "B"], component=float(2), size=0.3),
+            ),
         ]
 
         assert len(VG.relationships) == 3
@@ -93,9 +98,11 @@ def test_from_gds_integration_all_properties(gds: Any) -> None:
 
         assert len(VG.nodes) == 3
         assert sorted(VG.nodes, key=lambda x: x.id) == [
-            Node(id=0, size=0.1, properties=dict(labels=["A"], component=float(1), score=1337.0)),
-            Node(id=1, size=0.2, properties=dict(labels=["C"], component=float(4), score=42.0)),
-            Node(id=2, size=0.3, properties=dict(labels=["A", "B"], component=float(2), score=3.14)),
+            Node(id=0, size=0.1, caption="['A']", properties=dict(labels=["A"], component=float(1), score=1337.0)),
+            Node(id=1, size=0.2, caption="['C']", properties=dict(labels=["C"], component=float(4), score=42.0)),
+            Node(
+                id=2, size=0.3, caption="['A', 'B']", properties=dict(labels=["A", "B"], component=float(2), score=3.14)
+            ),
         ]
 
         assert len(VG.relationships) == 3
@@ -176,9 +183,9 @@ def test_from_gds_mocked(mocker: MockerFixture) -> None:
 
     assert len(VG.nodes) == 3
     assert sorted(VG.nodes, key=lambda x: x.id) == [
-        Node(id=0, size=float(1337), properties=dict(labels=["A"], component=float(1))),
-        Node(id=1, size=float(42), properties=dict(labels=["C"], component=float(4))),
-        Node(id=2, size=float(3.14), properties=dict(labels=["A", "B"], component=float(2))),
+        Node(id=0, caption="['A']", size=float(1337), properties=dict(labels=["A"], component=float(1))),
+        Node(id=1, caption="['C']", size=float(42), properties=dict(labels=["C"], component=float(4))),
+        Node(id=2, caption="['A', 'B']", size=float(3.14), properties=dict(labels=["A", "B"], component=float(2))),
     ]
 
     assert len(VG.relationships) == 3
