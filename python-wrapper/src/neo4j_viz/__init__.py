@@ -2,11 +2,11 @@ from .node import Node
 from .options import (
     CaptionAlignment,
     Direction,
+    ForceDirectedLayoutOptions,
+    HierarchicalLayoutOptions,
     Layout,
     Packing,
     Renderer,
-    HierarchicalLayoutOptions,
-    ForceDirectedLayoutOptions,
 )
 from .relationship import Relationship
 from .visualization_graph import VisualizationGraph

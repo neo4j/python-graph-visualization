@@ -106,7 +106,10 @@ class VisualizationGraph:
         if not layout_options:
             layout_options = {}
 
-        layout_options_typed = construct_layout_options(layout, layout_options)
+        if isinstance(layout_options, dict):
+            layout_options_typed = construct_layout_options(layout, layout_options)
+        else:
+            layout_options_typed = layout_options
 
         render_options = RenderOptions(
             layout=layout,
