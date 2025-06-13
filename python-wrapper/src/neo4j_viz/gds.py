@@ -111,6 +111,9 @@ def from_gds(
 
     node_df = node_props_df.merge(node_labels_df, on="id")
 
+    if "caption" not in actual_node_properties:
+        node_df["caption"] = node_df["labels"].astype(str)
+
     rel_df = _rel_df(gds, G)
     rel_df.rename(columns={"sourceNodeId": "source", "targetNodeId": "target"}, inplace=True)
 

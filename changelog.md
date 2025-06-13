@@ -3,7 +3,8 @@
 
 ## Breaking changes
 
-* The `from_gds` methods now fetches all node properties of a given GDS projection by default, instead of none.
+* The `from_gds` method now fetches all node properties of a given GDS projection by default, instead of none.
+* The `from_gds` now adds node labels as captions for nodes.
 
 
 ## New features
