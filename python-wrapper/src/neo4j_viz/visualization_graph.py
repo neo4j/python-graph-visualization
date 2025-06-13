@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterable
-from typing import Any, Callable, Hashable, Optional
+from typing import Any, Callable, Hashable, Optional, Union
 
 from IPython.display import HTML
 from pydantic_extra_types.color import Color, ColorType
@@ -13,6 +13,7 @@ from .node_size import RealNumber, verify_radii
 from .nvl import NVL
 from .options import (
     Layout,
+    LayoutOptions,
     Renderer,
     RenderOptions,
     construct_layout_options,
@@ -47,7 +48,7 @@ class VisualizationGraph:
     def render(
         self,
         layout: Optional[Layout] = None,
-        layout_options: Optional[dict[str, Any]] = None,
+        layout_options: Union[dict[str, Any], LayoutOptions, None] = None,
         renderer: Renderer = Renderer.CANVAS,
         width: str = "100%",
         height: str = "600px",
