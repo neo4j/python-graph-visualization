@@ -170,9 +170,10 @@ def test_from_gds_mocked(mocker: MockerFixture) -> None:
         lambda x: pd.Series({lbl: node_properties for lbl in nodes.keys()}),
     )
     mocker.patch("graphdatascience.Graph.node_labels", lambda x: list(nodes.keys()))
+    mocker.patch("graphdatascience.Graph.node_count", lambda x: sum(len(df) for df in nodes.values()))
     mocker.patch("graphdatascience.GraphDataScience.__init__", lambda x: None)
-    mocker.patch("neo4j_viz.gds._node_dfs", return_value=nodes)
-    mocker.patch("neo4j_viz.gds._rel_df", return_value=rels)
+    mocker.patch("neo4j_viz.gds._fetch_node_dfs", return_value=nodes)
+    mocker.patch("neo4j_viz.gds._fetch_rel_df", return_value=rels)
 
     gds = GraphDataScience()  # type: ignore[call-arg]
     G = Graph()  # type: ignore[call-arg]
@@ -244,3 +245,16 @@ def test_from_gds_node_errors(gds: Any) -> None:
                 additional_node_properties=["component", "size"],
                 node_radius_min_max=None,
             )
+
+
+@pytest.mark.requires_neo4j_and_gds
+def test_from_gds_sample(gds: Any) -> None:
+    from neo4j_viz.gds import from_gds
+
+    with gds.graph.generate("hello", node_count=11_000, average_degree=1) as G:
+        VG = from_gds(gds, G)
+
+        assert len(VG.nodes) >= 9_500
+        assert len(VG.nodes) <= 10_500
+        assert len(VG.relationships) >= 9_500
+        assert len(VG.relationships) <= 10_500
