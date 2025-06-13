@@ -2,8 +2,6 @@ from .node import Node
 from .options import (
     CaptionAlignment,
     Direction,
-    ForceDirectedLayoutOptions,
-    HierarchicalLayoutOptions,
     Layout,
     Packing,
     Renderer,
@@ -18,8 +16,6 @@ __all__ = [
     "CaptionAlignment",
     "Layout",
     "Renderer",
-    "HierarchicalLayoutOptions",
-    "ForceDirectedLayoutOptions",
     "Direction",
     "Packing",
 ]

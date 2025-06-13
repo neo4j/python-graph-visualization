@@ -11,7 +11,12 @@ from .colors import NEO4J_COLORS_CONTINUOUS, NEO4J_COLORS_DISCRETE, ColorSpace, 
 from .node import Node, NodeIdType
 from .node_size import RealNumber, verify_radii
 from .nvl import NVL
-from .options import Layout, LayoutOptions, Renderer, RenderOptions
+from .options import (
+    Layout,
+    Renderer,
+    RenderOptions,
+    construct_layout_options,
+)
 from .relationship import Relationship
 
 
@@ -42,7 +47,7 @@ class VisualizationGraph:
     def render(
         self,
         layout: Optional[Layout] = None,
-        layout_options: Optional[LayoutOptions] = None,
+        layout_options: Optional[dict[str, Any]] = None,
         renderer: Renderer = Renderer.CANVAS,
         width: str = "100%",
         height: str = "600px",
@@ -95,9 +100,16 @@ class VisualizationGraph:
 
         Renderer.check(renderer, num_nodes)
 
+        if not layout:
+            layout = Layout.FORCE_DIRECTED
+        if not layout_options:
+            layout_options = {}
+
+        layout_options_typed = construct_layout_options(layout, layout_options)
+
         render_options = RenderOptions(
             layout=layout,
-            layout_options=layout_options,
+            layout_options=layout_options_typed,
             renderer=renderer,
             pan_X=pan_position[0] if pan_position is not None else None,
             pan_Y=pan_position[1] if pan_position is not None else None,

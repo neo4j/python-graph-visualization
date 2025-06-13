@@ -14,6 +14,8 @@ render_cases = {
     "force layout": {"layout": Layout.FORCE_DIRECTED},
     "grid layout": {"layout": Layout.GRID},
     "coordinate layout": {"layout": Layout.COORDINATE},
+    "hierarchical layout + options": {"layout": Layout.HIERARCHICAL, "layout_options": {"direction": "left"}},
+    "with layout options": {"layout_options": {"gravity": 0.1}},
 }
 
 
@@ -111,3 +113,23 @@ def test_render_non_json_serializable() -> None:
     VG = VisualizationGraph(nodes=[node], relationships=[])
     # Should not raise an error
     VG.render()
+
+
+def test_render_with_wrong_layout_options() -> None:
+    nodes = [
+        Node(id="4:d09f48a4-5fca-421d-921d-a30a896c604d:0", caption="Person", x=1, y=10),
+    ]
+
+    VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+    with pytest.raises(
+        ValueError,
+        match="Unexpected `ForceDirectedLayoutOptions` parameter 'direction' with provided input 'left'",
+    ):
+        VG.render(layout_options={"direction": "left"})
+
+    with pytest.raises(
+        ValueError,
+        match="Unexpected `ForceDirectedLayoutOptions` parameter 'direction' with provided input 'left'",
+    ):
+        VG.render(layout=Layout.FORCE_DIRECTED, layout_options={"direction": "left"})

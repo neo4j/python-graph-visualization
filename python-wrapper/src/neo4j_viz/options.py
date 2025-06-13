@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Any, Optional, Union
 
 import enum_tools.documentation
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 
 @enum_tools.documentation.document_enum
@@ -55,7 +55,7 @@ class Packing(str, Enum):
     STACK = "stack"
 
 
-class HierarchicalLayoutOptions(BaseModel):
+class HierarchicalLayoutOptions(BaseModel, extra="forbid"):
     """
     The options for the hierarchical layout.
     """
@@ -64,7 +64,7 @@ class HierarchicalLayoutOptions(BaseModel):
     packaging: Optional[Packing] = None
 
 
-class ForceDirectedLayoutOptions(BaseModel):
+class ForceDirectedLayoutOptions(BaseModel, extra="forbid"):
     """
     The options for the force-directed layout.
     """
@@ -74,6 +74,26 @@ class ForceDirectedLayoutOptions(BaseModel):
 
 
 LayoutOptions = Union[HierarchicalLayoutOptions, ForceDirectedLayoutOptions]
+
+
+def construct_layout_options(layout: Layout, options: dict[str, Any]) -> Optional[LayoutOptions]:
+    if not options:
+        return None
+
+    if layout == Layout.FORCE_DIRECTED:
+        try:
+            return ForceDirectedLayoutOptions(**options)
+        except ValidationError as e:
+            _parse_validation_error(e, ForceDirectedLayoutOptions)
+    elif layout == Layout.HIERARCHICAL:
+        try:
+            return HierarchicalLayoutOptions(**options)
+        except ValidationError as e:
+            _parse_validation_error(e, ForceDirectedLayoutOptions)
+
+    raise ValueError(
+        f"Layout options only supported for layouts `{Layout.FORCE_DIRECTED}` and `{Layout.HIERARCHICAL}`, but was `{layout}`"
+    )
 
 
 @enum_tools.documentation.document_enum
@@ -143,3 +163,21 @@ class RenderOptions(BaseModel, extra="allow"):
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True, by_alias=True)
+
+
+def _parse_validation_error(e: ValidationError, entity_type: type[BaseModel]) -> None:
+    for err in e.errors():
+        loc = err["loc"][0]
+        if err["type"] == "missing":
+            raise ValueError(
+                f"Mandatory `{entity_type.__name__}` parameter '{loc}' is missing. Expected one of {entity_type.model_fields[loc].validation_alias.choices} to be present"  # type: ignore
+            )
+        elif err["type"] == "extra_forbidden":
+            raise ValueError(
+                f"Unexpected `{entity_type.__name__}` parameter '{loc}' with provided input '{err['input']}'. "
+                f"Allowed parameters are: {', '.join(entity_type.model_fields.keys())}"
+            )
+        else:
+            raise ValueError(
+                f"Error for `{entity_type.__name__}` parameter '{loc}' with provided input '{err['input']}'. Reason: {err['msg']}"
+            )
