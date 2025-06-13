@@ -110,8 +110,10 @@ and will be used to determine the sizes of the nodes in the visualization.
 
 The ``additional_node_properties`` parameter is also optional, and should be a list of additional node properties of the
 projection that you want to include in the visualization.
-For example, these properties could be used to color the nodes, or give captions to them in the visualization, or simply
-included in the nodes' `Node.properties` maps without directly impacting the visualization.
+The default is `None`, which means that all properties of the nodes in the projection will be included.
+Apart from being visible through on-hover tooltips, these properties could be used to color the nodes, or give captions
+to them in the visualization, or simply included in the nodes' `Node.properties` maps without directly impacting the
+visualization.
 
 The last optional property, ``node_radius_min_max``, can be used (and is used by default) to scale the node sizes for
 the visualization.

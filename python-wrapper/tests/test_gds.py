@@ -61,6 +61,58 @@ def test_from_gds_integration(gds: Any) -> None:
         ]
 
 
+@pytest.mark.requires_neo4j_and_gds
+def test_from_gds_integration_all_properties(gds: Any) -> None:
+    from neo4j_viz.gds import from_gds
+
+    nodes = pd.DataFrame(
+        {
+            "nodeId": [0, 1, 2],
+            "labels": [["A"], ["C"], ["A", "B"]],
+            "score": [1337, 42, 3.14],
+            "component": [1, 4, 2],
+            "size": [0.1, 0.2, 0.3],
+        }
+    )
+    rels = pd.DataFrame(
+        {
+            "sourceNodeId": [0, 1, 2],
+            "targetNodeId": [1, 2, 0],
+            "cost": [1.0, 2.0, 3.0],
+            "weight": [0.5, 1.5, 2.5],
+            "relationshipType": ["REL", "REL2", "REL"],
+        }
+    )
+
+    with gds.graph.construct("flo", nodes, rels) as G:
+        VG = from_gds(
+            gds,
+            G,
+            node_radius_min_max=None,
+        )
+
+        assert len(VG.nodes) == 3
+        assert sorted(VG.nodes, key=lambda x: x.id) == [
+            Node(id=0, size=0.1, properties=dict(labels=["A"], component=float(1), score=1337.0)),
+            Node(id=1, size=0.2, properties=dict(labels=["C"], component=float(4), score=42.0)),
+            Node(id=2, size=0.3, properties=dict(labels=["A", "B"], component=float(2), score=3.14)),
+        ]
+
+        assert len(VG.relationships) == 3
+        vg_rels = sorted(
+            [
+                (e.source, e.target, e.properties["relationshipType"], e.properties["cost"], e.properties["weight"])
+                for e in VG.relationships
+            ],
+            key=lambda x: x[0],
+        )
+        assert vg_rels == [
+            (0, 1, "REL", 1.0, 0.5),
+            (1, 2, "REL2", 2.0, 1.5),
+            (2, 0, "REL", 3.0, 2.5),
+        ]
+
+
 def test_from_gds_mocked(mocker: MockerFixture) -> None:
     from graphdatascience import Graph, GraphDataScience
 

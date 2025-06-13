@@ -3,6 +3,8 @@
 
 ## Breaking changes
 
+* The `from_gds` methods now fetches all node properties of a given GDS projection by default, instead of none.
+
 
 ## New features
 
