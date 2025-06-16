@@ -56,6 +56,7 @@ def from_gds(
     If the properties are named as the fields of the `Node` class, they will be included as top level fields of the
     created `Node` objects. Otherwise, they will be included in the `properties` dictionary.
     Additionally, a new "labels" node property will be added, containing the node labels of the node.
+    Similarly for relationships, a new "relationshipType" property will be added.
 
     Parameters
     ----------
@@ -145,6 +146,9 @@ def from_gds(
 
     if "caption" not in actual_node_properties:
         node_df["caption"] = node_df["labels"].astype(str)
+
+    if "caption" not in rel_df.columns:
+        rel_df["caption"] = rel_df["relationshipType"]
 
     try:
         return _from_dfs(node_df, rel_df, node_radius_min_max=node_radius_min_max, rename_properties={"__size": "size"})

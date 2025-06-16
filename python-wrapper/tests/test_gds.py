@@ -54,15 +54,22 @@ def test_from_gds_integration_size(gds: Any) -> None:
         assert len(VG.relationships) == 3
         vg_rels = sorted(
             [
-                (e.source, e.target, e.properties["relationshipType"], e.properties["cost"], e.properties["weight"])
+                (
+                    e.source,
+                    e.target,
+                    e.caption,
+                    e.properties["relationshipType"],
+                    e.properties["cost"],
+                    e.properties["weight"],
+                )
                 for e in VG.relationships
             ],
             key=lambda x: x[0],
         )
         assert vg_rels == [
-            (0, 1, "REL", 1.0, 0.5),
-            (1, 2, "REL2", 2.0, 1.5),
-            (2, 0, "REL", 3.0, 2.5),
+            (0, 1, "REL", "REL", 1.0, 0.5),
+            (1, 2, "REL2", "REL2", 2.0, 1.5),
+            (2, 0, "REL", "REL", 3.0, 2.5),
         ]
 
 
@@ -108,15 +115,22 @@ def test_from_gds_integration_all_properties(gds: Any) -> None:
         assert len(VG.relationships) == 3
         vg_rels = sorted(
             [
-                (e.source, e.target, e.properties["relationshipType"], e.properties["cost"], e.properties["weight"])
+                (
+                    e.source,
+                    e.target,
+                    e.caption,
+                    e.properties["relationshipType"],
+                    e.properties["cost"],
+                    e.properties["weight"],
+                )
                 for e in VG.relationships
             ],
             key=lambda x: x[0],
         )
         assert vg_rels == [
-            (0, 1, "REL", 1.0, 0.5),
-            (1, 2, "REL2", 2.0, 1.5),
-            (2, 0, "REL", 3.0, 2.5),
+            (0, 1, "REL", "REL", 1.0, 0.5),
+            (1, 2, "REL2", "REL2", 2.0, 1.5),
+            (2, 0, "REL", "REL", 3.0, 2.5),
         ]
 
 
@@ -191,12 +205,13 @@ def test_from_gds_mocked(mocker: MockerFixture) -> None:
 
     assert len(VG.relationships) == 3
     vg_rels = sorted(
-        [(e.source, e.target, e.properties["relationshipType"]) for e in VG.relationships], key=lambda x: x[0]
+        [(e.source, e.target, e.caption, e.properties["relationshipType"]) for e in VG.relationships],
+        key=lambda x: x[0],
     )
     assert vg_rels == [
-        (0, 1, "REL"),
-        (1, 2, "REL2"),
-        (2, 0, "REL"),
+        (0, 1, "REL", "REL"),
+        (1, 2, "REL2", "REL2"),
+        (2, 0, "REL", "REL"),
     ]
 
 
