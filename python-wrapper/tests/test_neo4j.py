@@ -1,3 +1,4 @@
+import re
 from typing import Generator
 
 import neo4j
@@ -249,3 +250,18 @@ def test_from_neo4j_graph_driver(neo4j_session: Session, neo4j_driver: Driver) -
         (node_ids[0], node_ids[1], "KNOWS"),
         (node_ids[1], node_ids[0], "RELATED"),
     ]
+
+
+@pytest.mark.requires_neo4j_and_gds
+def test_from_neo4j_graph_row_limit_warning(neo4j_session: Session, neo4j_driver: Driver) -> None:
+    neo4j_session.run("MATCH (a:_CI_A|_CI_B)-[r]->(b) RETURN a, b, r ORDER BY a").graph()
+
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "Database relationship count (2) exceeds `row_limit` (1), so limiting will be applied. Increase the `row_limit` if needed"
+        ),
+    ):
+        VG = from_neo4j(neo4j_driver, row_limit=1)
+
+    assert len(VG.relationships) == 1

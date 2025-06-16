@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import Optional, Union
 
 import neo4j.graph
@@ -59,6 +60,15 @@ def from_neo4j(
     elif isinstance(data, neo4j.graph.Graph):
         graph = data
     elif isinstance(data, Driver):
+        rel_count = data.execute_query(
+            "MATCH ()-[r]->() RETURN count(r) as count",
+            routing_=RoutingControl.READ,
+            result_transformer_=Result.single,
+        ).get("count")  # type: ignore[union-attr]
+        if rel_count > row_limit:
+            warnings.warn(
+                f"Database relationship count ({rel_count}) exceeds `row_limit` ({row_limit}), so limiting will be applied. Increase the `row_limit` if needed"
+            )
         graph = data.execute_query(
             f"MATCH (n)-[r]->(m) RETURN n,r,m LIMIT {row_limit}",
             routing_=RoutingControl.READ,
