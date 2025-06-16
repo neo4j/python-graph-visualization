@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from itertools import chain
 from typing import Optional
 from uuid import uuid4
@@ -99,6 +100,9 @@ def from_gds(
 
     node_count = G.node_count()
     if node_count > max_node_count:
+        warnings.warn(
+            f"The '{G.name()}' projection's node count ({G.node_count()}) exceeds `max_node_count` ({max_node_count}), so subsampling will be applied. Increase `max_node_count` if needed"
+        )
         sampling_ratio = float(max_node_count) / node_count
         sample_name = f"neo4j-viz_sample_{uuid4()}"
         G_fetched, _ = gds.graph.sample.rwr(sample_name, G, samplingRatio=sampling_ratio, nodeLabelStratification=True)

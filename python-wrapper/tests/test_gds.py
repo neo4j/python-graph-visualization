@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 import pandas as pd
@@ -267,7 +268,13 @@ def test_from_gds_sample(gds: Any) -> None:
     from neo4j_viz.gds import from_gds
 
     with gds.graph.generate("hello", node_count=11_000, average_degree=1) as G:
-        VG = from_gds(gds, G)
+        with pytest.warns(
+            UserWarning,
+            match=re.escape(
+                "The 'hello' projection's node count (11000) exceeds `max_node_count` (10000), so subsampling will be applied. Increase `max_node_count` if needed"
+            ),
+        ):
+            VG = from_gds(gds, G)
 
         assert len(VG.nodes) >= 9_500
         assert len(VG.nodes) <= 10_500

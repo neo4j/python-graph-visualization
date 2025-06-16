@@ -8,6 +8,8 @@
 
 ## New features
 
+* Allow passing a `neo4j.Driver` instance as input to `from_neo4j`, in which case the driver will be used internally to fetch the graph data using a simple query
+
 
 ## Bug fixes
 
