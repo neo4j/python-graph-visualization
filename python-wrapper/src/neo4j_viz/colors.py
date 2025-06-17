@@ -2,13 +2,11 @@ from collections.abc import Iterable
 from enum import Enum
 from typing import Any, Union
 
-import enum_tools
-from pydantic_extra_types.color import ColorType
+from neo4j_viz.pydantic_colors import ColorType
 
 ColorsType = Union[dict[Any, ColorType], Iterable[ColorType]]
 
 
-@enum_tools.documentation.document_enum
 class ColorSpace(Enum):
     """
     Describes the type of color space used by a color palette.

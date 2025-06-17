@@ -1,8 +1,8 @@
 import pytest
-from pydantic_extra_types.color import Color
 
 from neo4j_viz import Node, VisualizationGraph
 from neo4j_viz.colors import NEO4J_COLORS_CONTINUOUS, NEO4J_COLORS_DISCRETE, ColorSpace
+from neo4j_viz.pydantic_colors import Color
 
 
 @pytest.mark.parametrize("override", [True, False])

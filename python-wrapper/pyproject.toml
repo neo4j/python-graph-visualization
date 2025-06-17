@@ -33,8 +33,6 @@ keywords = ["graph", "visualization", "neo4j"]
 dependencies = [
     "ipython >=7, <10",
     "pydantic >=2 , <3",
-    "pydantic-extra-types >=2, <3",
-    "enum-tools==0.12.0"
 ]
 requires-python = ">=3.9"
 
@@ -147,12 +145,14 @@ select = [
     "F",  # flake8
     "I",  # isort
 ]
+exclude = ["src/neo4j_viz/pydantic_colors.py"]
 
 [tool.mypy]
 strict = true
 exclude = [
     '(^build|^\.?venv)',
     'build',
+    'src/neo4j_viz/pydantic_colors.py',
     ]
 plugins = ['pydantic.mypy']
 untyped_calls_exclude=["nbconvert"]

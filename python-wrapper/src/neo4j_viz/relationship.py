@@ -5,9 +5,9 @@ from uuid import uuid4
 
 from pydantic import AliasChoices, AliasGenerator, BaseModel, Field, field_serializer, field_validator
 from pydantic.alias_generators import to_camel
-from pydantic_extra_types.color import Color, ColorType
 
 from .options import CaptionAlignment
+from .pydantic_colors import Color, ColorType
 
 
 def create_aliases(field_name: str) -> AliasChoices:

@@ -5,7 +5,6 @@ from collections.abc import Iterable
 from typing import Any, Callable, Hashable, Optional, Union
 
 from IPython.display import HTML
-from pydantic_extra_types.color import Color, ColorType
 
 from .colors import NEO4J_COLORS_CONTINUOUS, NEO4J_COLORS_DISCRETE, ColorSpace, ColorsType
 from .node import Node, NodeIdType
@@ -18,6 +17,7 @@ from .options import (
     RenderOptions,
     construct_layout_options,
 )
+from .pydantic_colors import Color, ColorType
 from .relationship import Relationship
 
 

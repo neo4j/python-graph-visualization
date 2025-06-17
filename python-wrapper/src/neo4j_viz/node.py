@@ -4,10 +4,10 @@ from typing import Any, Optional, Union
 
 from pydantic import AliasChoices, AliasGenerator, BaseModel, Field, field_serializer, field_validator
 from pydantic.alias_generators import to_camel
-from pydantic_extra_types.color import Color, ColorType
 
 from .node_size import RealNumber
 from .options import CaptionAlignment
+from .pydantic_colors import Color, ColorType
 
 NodeIdType = Union[str, int]
 

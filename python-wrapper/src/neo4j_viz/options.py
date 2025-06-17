@@ -4,11 +4,9 @@ import warnings
 from enum import Enum
 from typing import Any, Optional, Union
 
-import enum_tools.documentation
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
 
-@enum_tools.documentation.document_enum
 class CaptionAlignment(str, Enum):
     """
     The alignment of the caption text for nodes and relationships.
@@ -19,7 +17,6 @@ class CaptionAlignment(str, Enum):
     BOTTOM = "bottom"
 
 
-@enum_tools.documentation.document_enum
 class Layout(str, Enum):
     FORCE_DIRECTED = "forcedirected"
     HIERARCHICAL = "hierarchical"
@@ -33,7 +30,6 @@ class Layout(str, Enum):
     GRID = "grid"
 
 
-@enum_tools.documentation.document_enum
 class Direction(str, Enum):
     """
     The direction in which the layout should be oriented
@@ -45,7 +41,6 @@ class Direction(str, Enum):
     DOWN = "down"
 
 
-@enum_tools.documentation.document_enum
 class Packing(str, Enum):
     """
     The packing method to be used
@@ -96,7 +91,6 @@ def construct_layout_options(layout: Layout, options: dict[str, Any]) -> Optiona
     )
 
 
-@enum_tools.documentation.document_enum
 class Renderer(str, Enum):
     """
     The renderer used to render the visualization.

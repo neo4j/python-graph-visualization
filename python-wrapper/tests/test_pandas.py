@@ -1,9 +1,9 @@
 import pytest
 from pandas import DataFrame
-from pydantic_extra_types.color import Color
 
 from neo4j_viz.node import Node
 from neo4j_viz.pandas import from_dfs
+from neo4j_viz.pydantic_colors import Color
 
 
 def test_from_df() -> None:
