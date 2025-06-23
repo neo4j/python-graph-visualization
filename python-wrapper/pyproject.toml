@@ -68,7 +68,7 @@ notebook = [
     "ipywidgets>=8.0.0",
     "palettable>=3.3.3",
     "matplotlib>=3.9.4",
-    "snowflake-snowpark-python==1.26.0",
+    "snowflake-snowpark-python==1.33.0",
 ]
 
 [project.urls]
