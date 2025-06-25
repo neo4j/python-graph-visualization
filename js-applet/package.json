@@ -11,6 +11,8 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "babel-loader": "^10.0.0",
+    "css-loader": "^7.1.2",
+    "style-loader": "^4.0.0",
     "ts-loader": "^9.4.4",
     "ts-node": "^10.9.2",
     "typescript": "5.8.3",
@@ -18,8 +20,11 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
+    "@neo4j-ndl/base": "^3.7.10",
+    "@neo4j-ndl/react": "^3.8.22",
     "@neo4j-nvl/base": "0.3.8",
     "@neo4j-nvl/interaction-handlers": "0.3.8",
+    "@tanstack/react-table": "8.20.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

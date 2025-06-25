@@ -1,3 +1,4 @@
+import "@neo4j-ndl/base/lib/neo4j-ds-styles.css";
 import type { Node, NvlOptions, Relationship } from "@neo4j-nvl/base";
 import { FreeLayoutType, NVL } from "@neo4j-nvl/base";
 import {
