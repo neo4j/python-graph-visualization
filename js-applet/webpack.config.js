@@ -5,7 +5,7 @@ module.exports = [
     name: "base",
     mode: "production",
     entry: {
-      base: ["./src/index.ts"],
+      base: ["./src/index.tsx"],
     },
     module: {
       rules: [

@@ -15,5 +15,5 @@
     "moduleResolution": "Bundler",
     "outDir": "./dist"
   },
-  "files": ["src/index.ts"]
+  "files": ["src/index.tsx"]
 }

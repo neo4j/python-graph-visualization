@@ -1,4 +1,5 @@
 import "@neo4j-ndl/base/lib/neo4j-ds-styles.css";
+import { GraphVisualization } from "@neo4j-ndl/react";
 import type { Node, NvlOptions, Relationship } from "@neo4j-nvl/base";
 import { FreeLayoutType, NVL } from "@neo4j-nvl/base";
 import {
@@ -7,16 +8,16 @@ import {
   PanInteraction,
   ZoomInteraction,
 } from "@neo4j-nvl/interaction-handlers";
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { TestComponent } from "./TestComponent";
+import { createRoot } from "react-dom/client";
 
 interface PyNode extends Node {
-  properties: Object;
+  properties: Record<string, any>;
 }
 
 interface PyRel extends Relationship {
-  properties: Object;
+  properties: Record<string, any>;
+  from: string;
+  to: string;
 }
 
 class PyNVL {
@@ -100,16 +101,65 @@ class PyNVL {
 
 export { PyNVL as NVL };
 
-// Export a function to mount React components
-export function mountReactComponent(elementId: string, props: any = {}) {
+type ReactVisProps = {
+  nodes: PyNode[];
+  relationships: PyRel[];
+};
+
+export function mountReactComponent(
+  elementId: string,
+  { nodes, relationships }: ReactVisProps
+) {
+  console.log("mountReactComponent", nodes, relationships);
   const container = document.getElementById(elementId);
-  if (container && typeof ReactDOM !== "undefined") {
-    const root = ReactDOM.createRoot(container);
-    root.render(React.createElement(TestComponent, props));
+  if (container) {
+    console.log("mounting");
+    const root = createRoot(container);
+    root.render(
+      <div style={{ height: "500px", width: "100%" }}>
+        <GraphVisualization
+          nodes={nodes.map((node) => ({
+            id: node.id,
+            labels: node.properties.labels,
+            properties: Object.entries(node.properties).reduce(
+              (acc, [key, value]) => {
+                if (key === "labels") {
+                  return acc;
+                }
+                const type = typeof value;
+                acc[key] = {
+                  stringified:
+                    type === "string" ? `"${value}"` : value.toString(),
+                  type,
+                };
+                return acc;
+              },
+              {} as Record<string, any>
+            ),
+          }))}
+          rels={relationships.map((rel) => ({
+            id: rel.id,
+            type: rel.properties.type,
+            properties: Object.entries(rel.properties).reduce(
+              (acc, [key, value]) => {
+                if (key === "type") {
+                  return acc;
+                }
+                acc[key] = {
+                  stringified: value.toString(),
+                  type: typeof value,
+                };
+                return acc;
+              },
+              {} as Record<string, any>
+            ),
+            from: rel.from,
+            to: rel.to,
+          }))}
+        />
+      </div>
+    );
     return root;
   }
   return null;
 }
-
-// Make it available globally
-(window as any).mountReactComponent = mountReactComponent;

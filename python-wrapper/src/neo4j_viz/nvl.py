@@ -90,26 +90,9 @@ class NVL:
         # Using a different varname for every instance, so that a notebook
         # can use several instances without unwanted interactions.
         # The first part of the UUID should be "unique enough" in this context.
-        nvl_varname = "graph_" + container_id.split("-")[0]
-        download_name = nvl_varname + ".png"
-
         js_code = f"""
-        var {nvl_varname} = new NVLBase.NVL(
-            document.getElementById('{container_id}'),
-            {hover_element},
-            {nodes_json},
-            {rels_json},
-            {render_options_json},
-        );
-
-        // Mount React component using the exported function
-        if (typeof mountReactComponent === 'function') {{
-            mountReactComponent('{react_container_id}', {{ 
-                message: 'React component rendered with {len(nodes)} nodes and {len(relationships)} relationships!' 
-            }});
-        }}
+        NVLBase.mountReactComponent('{react_container_id}', {{ nodes: {nodes_json}, relationships: {rels_json} }});
         """
-        full_code = self.library_code + js_code
 
         html_output = f"""
         <style>
@@ -117,20 +100,6 @@ class NVL:
         </style>
         <div style="display: flex; flex-direction: column; gap: 10px;">
             <div id="{react_container_id}" style="width: {width};"></div>
-            <div id="{container_id}" style="width: {width}; height: {height}; position: relative;">
-                <div style="position: absolute; z-index: 2147483647; right: 0; top: 0; padding: 1rem">
-                    <button type="button" title="Save as PNG" onclick="{nvl_varname}.nvl.saveToFile({{ filename: '{download_name}' }})" class="icon">
-                        {self.screenshot_svg}
-                    </button>
-                    <button type="button" title="Zoom in" onclick="{nvl_varname}.nvl.setZoom({nvl_varname}.nvl.getScale() + 0.5)" class="icon">
-                        {self.zoom_in_svg}
-                    </button>
-                    <button type="button" title="Zoom out" onclick="{nvl_varname}.nvl.setZoom({nvl_varname}.nvl.getScale() - 0.5)" class="icon">
-                        {self.zoom_out_svg}
-                    </button>
-                </div>
-                {hover_div}
-            </div>
         </div>
 
         <script>
@@ -142,7 +111,7 @@ class NVL:
             }}
             document.documentElement.className = getTheme()
 
-            {full_code}
+            {self.library_code + js_code}
         </script>
         """
 
