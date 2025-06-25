@@ -78,6 +78,7 @@ class NVL:
 
         render_options_json = json.dumps(render_options.to_dict())
         container_id = str(uuid.uuid4())
+        react_container_id = container_id + "-react"
 
         if show_hover_tooltip:
             hover_element = f"document.getElementById('{container_id}-tooltip')"
@@ -100,6 +101,13 @@ class NVL:
             {rels_json},
             {render_options_json},
         );
+
+        // Mount React component using the exported function
+        if (typeof mountReactComponent === 'function') {{
+            mountReactComponent('{react_container_id}', {{ 
+                message: 'React component rendered with {len(nodes)} nodes and {len(relationships)} relationships!' 
+            }});
+        }}
         """
         full_code = self.library_code + js_code
 
@@ -107,19 +115,22 @@ class NVL:
         <style>
             {self.styles}
         </style>
-        <div id="{container_id}" style="width: {width}; height: {height}; position: relative;">
-            <div style="position: absolute; z-index: 2147483647; right: 0; top: 0; padding: 1rem">
-                <button type="button" title="Save as PNG" onclick="{nvl_varname}.nvl.saveToFile({{ filename: '{download_name}' }})" class="icon">
-                    {self.screenshot_svg}
-                </button>
-                <button type="button" title="Zoom in" onclick="{nvl_varname}.nvl.setZoom({nvl_varname}.nvl.getScale() + 0.5)" class="icon">
-                    {self.zoom_in_svg}
-                </button>
-                <button type="button" title="Zoom out" onclick="{nvl_varname}.nvl.setZoom({nvl_varname}.nvl.getScale() - 0.5)" class="icon">
-                    {self.zoom_out_svg}
-                </button>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div id="{react_container_id}" style="width: {width};"></div>
+            <div id="{container_id}" style="width: {width}; height: {height}; position: relative;">
+                <div style="position: absolute; z-index: 2147483647; right: 0; top: 0; padding: 1rem">
+                    <button type="button" title="Save as PNG" onclick="{nvl_varname}.nvl.saveToFile({{ filename: '{download_name}' }})" class="icon">
+                        {self.screenshot_svg}
+                    </button>
+                    <button type="button" title="Zoom in" onclick="{nvl_varname}.nvl.setZoom({nvl_varname}.nvl.getScale() + 0.5)" class="icon">
+                        {self.zoom_in_svg}
+                    </button>
+                    <button type="button" title="Zoom out" onclick="{nvl_varname}.nvl.setZoom({nvl_varname}.nvl.getScale() - 0.5)" class="icon">
+                        {self.zoom_out_svg}
+                    </button>
+                </div>
+                {hover_div}
             </div>
-            {hover_div}
         </div>
 
         <script>

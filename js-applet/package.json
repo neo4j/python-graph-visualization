@@ -6,6 +6,10 @@
     "postbuild": "cp dist/base.js ../python-wrapper/src/neo4j_viz/resources/nvl_entrypoint"
   },
   "devDependencies": {
+    "@babel/core": "^7.22.0",
+    "@babel/preset-react": "^7.22.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "babel-loader": "^10.0.0",
     "ts-loader": "^9.4.4",
     "ts-node": "^10.9.2",
@@ -15,6 +19,9 @@
   },
   "dependencies": {
     "@neo4j-nvl/base": "0.3.8",
-    "@neo4j-nvl/interaction-handlers": "0.3.8"
-  }
+    "@neo4j-nvl/interaction-handlers": "0.3.8",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

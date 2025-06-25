@@ -10,14 +10,10 @@
     "allowSyntheticDefaultImports": true,
     "strictNullChecks": true,
     "noUncheckedIndexedAccess": true,
-    "lib": [
-      "ESNext",
-      "DOM"
-    ],
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM"],
     "moduleResolution": "Bundler",
     "outDir": "./dist"
   },
-  "files": [
-    "src/index.ts"
-  ]
+  "files": ["src/index.ts"]
 }

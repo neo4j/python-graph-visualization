@@ -1,35 +1,40 @@
-const path = require('path')
+const path = require("path");
 
 module.exports = [
   {
-    name: 'base',
-    mode: 'production',
+    name: "base",
+    mode: "production",
     entry: {
-      base: ['./src/index.ts']
+      base: ["./src/index.ts"],
     },
     module: {
       rules: [
         {
-          test: /\.js$/,
+          test: /\.(js|jsx)$/,
           exclude: /node_modules|dist/,
-          use: 'babel-loader'
+          use: {
+            loader: "babel-loader",
+            options: {
+              presets: ["@babel/preset-react"],
+            },
+          },
         },
         {
-          test: /\.ts$/,
-          use: 'ts-loader',
-          exclude: /node_modules/
-        }
-      ]
+          test: /\.(ts|tsx)$/,
+          use: "ts-loader",
+          exclude: /node_modules/,
+        },
+      ],
     },
     resolve: {
-      extensions: ['.ts', '.js']
+      extensions: [".tsx", ".ts", ".jsx", ".js"],
     },
     output: {
-      path: path.resolve(__dirname, 'dist'),
-      publicPath: '',
-      library: 'NVLBase',
-      libraryTarget: 'var',
-      clean: false
-    }
-  }
-]
+      path: path.resolve(__dirname, "dist"),
+      publicPath: "",
+      library: "NVLBase",
+      libraryTarget: "var",
+      clean: false,
+    },
+  },
+];
