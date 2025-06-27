@@ -119,6 +119,10 @@ def from_gds(
             node_properties = [property_name]
 
         node_dfs = _fetch_node_dfs(gds, G_fetched, node_properties, G_fetched.node_labels())
+        if property_name is not None:
+            for df in node_dfs.values():
+                df.drop(columns=[property_name], inplace=True)
+
         rel_df = _fetch_rel_df(gds, G_fetched)
     finally:
         if G_fetched.name() != G.name():

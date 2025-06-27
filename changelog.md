@@ -13,6 +13,8 @@
 
 ## Bug fixes
 
+* Make sure that temporary internal node properties are not included in the visualization output.
+
 
 ## Improvements
 
