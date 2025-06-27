@@ -27,13 +27,19 @@ def _parse_validation_error(e: ValidationError, entity_type: type[BaseModel]) ->
 
 
 def _from_dfs(
-    node_dfs: Optional[DFS_TYPE],
-    rel_dfs: DFS_TYPE,
+    node_dfs: Optional[DFS_TYPE] = None,
+    rel_dfs: Optional[DFS_TYPE] = None,
     node_radius_min_max: Optional[tuple[float, float]] = (3, 60),
     rename_properties: Optional[dict[str, str]] = None,
     dropna: bool = False,
 ) -> VisualizationGraph:
-    relationships = _parse_relationships(rel_dfs, rename_properties=rename_properties, dropna=dropna)
+    if node_dfs is None and rel_dfs is None:
+        raise ValueError("At least one of `node_dfs` or `rel_dfs` must be provided")
+
+    if rel_dfs is None:
+        relationships = []
+    else:
+        relationships = _parse_relationships(rel_dfs, rename_properties=rename_properties, dropna=dropna)
 
     if node_dfs is None:
         has_size = False
@@ -124,8 +130,8 @@ def _parse_relationships(
 
 
 def from_dfs(
-    node_dfs: Optional[DFS_TYPE],
-    rel_dfs: DFS_TYPE,
+    node_dfs: Optional[DFS_TYPE] = None,
+    rel_dfs: Optional[DFS_TYPE] = None,
     node_radius_min_max: Optional[tuple[float, float]] = (3, 60),
 ) -> VisualizationGraph:
     """
@@ -137,11 +143,12 @@ def from_dfs(
 
     Parameters
     ----------
-    node_dfs: Optional[Union[DataFrame, Iterable[DataFrame]]]
+    node_dfs: Optional[Union[DataFrame, Iterable[DataFrame]]], optional
         DataFrame or iterable of DataFrames containing node data.
         If None, the nodes will be created from the source and target node ids in the rel_dfs.
-    rel_dfs: Union[DataFrame, Iterable[DataFrame]]
+    rel_dfs: Optional[Union[DataFrame, Iterable[DataFrame]]], optional
         DataFrame or iterable of DataFrames containing relationship data.
+        If None, no relationships will be created.
     node_radius_min_max : tuple[float, float], optional
         Minimum and maximum node radius.
         To avoid tiny or huge nodes in the visualization, the node sizes are scaled to fit in the given range.

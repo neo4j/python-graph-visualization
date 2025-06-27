@@ -9,6 +9,7 @@
 ## New features
 
 * Allow passing a `neo4j.Driver` instance as input to `from_neo4j`, in which case the driver will be used internally to fetch the graph data using a simple query
+* The `rel_dfs` parameter of `from_dfs` is now optional, allowing for loading a graph with only nodes and no relationships
 
 
 ## Bug fixes

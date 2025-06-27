@@ -190,3 +190,39 @@ def test_rel_errors() -> None:
         match=r"Error for relationship column 'caption_size' with provided input '-300.0'. Reason: Input should be greater than 0",
     ):
         from_dfs(nodes, relationships)
+
+
+def test_from_dfs_no_rels() -> None:
+    nodes = [
+        DataFrame(
+            {
+                "id": [0],
+                "caption": ["A"],
+                "size": [1337],
+                "color": "#FF0000",
+            }
+        ),
+        DataFrame(
+            {
+                "id": [1],
+                "caption": ["B"],
+                "size": [42],
+                "color": "#FF0000",
+            }
+        ),
+    ]
+    VG = from_dfs(nodes, [], node_radius_min_max=(42, 1337))
+
+    assert len(VG.nodes) == 2
+
+    assert VG.nodes[0].id == 0
+    assert VG.nodes[0].caption == "A"
+    assert VG.nodes[0].size == 1337
+    assert VG.nodes[0].color == Color("#ff0000")
+
+    assert VG.nodes[1].id == 1
+    assert VG.nodes[1].caption == "B"
+    assert VG.nodes[1].size == 42
+    assert VG.nodes[0].color == Color("#ff0000")
+
+    assert len(VG.relationships) == 0
