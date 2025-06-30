@@ -276,6 +276,9 @@ def test_from_gds_sample(gds: Any) -> None:
         ):
             VG = from_gds(gds, G)
 
+        # Make sure internal temporary properties are not present
+        assert set(VG.nodes[0].properties.keys()) == {"labels"}
+
         assert len(VG.nodes) >= 9_500
         assert len(VG.nodes) <= 10_500
         assert len(VG.relationships) >= 9_500
