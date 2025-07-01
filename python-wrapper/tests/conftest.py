@@ -43,7 +43,9 @@ def aura_ds_instance() -> Generator[Any, None, None]:
 
     # setting as environment variables to run notebooks with this connection
     os.environ["NEO4J_URI"] = dbms_connection_info.uri
+    assert isinstance(dbms_connection_info.username, str)
     os.environ["NEO4J_USER"] = dbms_connection_info.username
+    assert isinstance(dbms_connection_info.password, str)
     os.environ["NEO4J_PASSWORD"] = dbms_connection_info.password
     yield dbms_connection_info
 
