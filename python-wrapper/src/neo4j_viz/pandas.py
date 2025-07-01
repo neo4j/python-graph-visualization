@@ -71,7 +71,7 @@ def _parse_nodes(
         has_size &= "size" in node_df.columns
         for _, row in node_df.iterrows():
             if dropna:
-                row.dropna(inplace=True)
+                row = row.dropna(inplace=False)
             top_level = {}
             properties = {}
             for key, value in row.to_dict().items():
@@ -104,7 +104,7 @@ def _parse_relationships(
     for rel_df in rel_dfs_iter:
         for _, row in rel_df.iterrows():
             if dropna:
-                row.dropna(inplace=True)
+                row = row.dropna(inplace=False)
             top_level = {}
             properties = {}
             for key, value in row.to_dict().items():
@@ -127,7 +127,6 @@ def from_dfs(
     node_dfs: Optional[DFS_TYPE],
     rel_dfs: DFS_TYPE,
     node_radius_min_max: Optional[tuple[float, float]] = (3, 60),
-    dropna: bool = False,
 ) -> VisualizationGraph:
     """
     Create a VisualizationGraph from pandas DataFrames representing a graph.
@@ -146,9 +145,6 @@ def from_dfs(
     node_radius_min_max : tuple[float, float], optional
         Minimum and maximum node radius.
         To avoid tiny or huge nodes in the visualization, the node sizes are scaled to fit in the given range.
-    dropna : bool, optional
-        If True, NaN values will be dropped from the DataFrames before processing.
-        Defaults to False.
     """
 
-    return _from_dfs(node_dfs, rel_dfs, node_radius_min_max, dropna=dropna)
+    return _from_dfs(node_dfs, rel_dfs, node_radius_min_max, dropna=False)
