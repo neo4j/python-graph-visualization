@@ -14,11 +14,11 @@ from .visualization_graph import VisualizationGraph
 
 
 def _fetch_node_dfs(
-    gds: GraphDataScience, G: Graph, node_properties: list[str], node_labels: list[str]
+    gds: GraphDataScience, G: Graph, node_properties_by_label: dict[str, list[str]], node_labels: list[str]
 ) -> dict[str, pd.DataFrame]:
     return {
         lbl: gds.graph.nodeProperties.stream(
-            G, node_properties=node_properties, node_labels=[lbl], separate_property_columns=True
+            G, node_properties=node_properties_by_label[lbl], node_labels=[lbl], separate_property_columns=True
         )
         for lbl in node_labels
     }
@@ -79,24 +79,31 @@ def from_gds(
     """
     node_properties_from_gds = G.node_properties()
     assert isinstance(node_properties_from_gds, pd.Series)
-    actual_node_properties = list(chain.from_iterable(node_properties_from_gds.to_dict().values()))
+    actual_node_properties = node_properties_from_gds.to_dict()
+    all_actual_node_properties = list(chain.from_iterable(actual_node_properties.values()))
 
-    if size_property is not None and size_property not in actual_node_properties:
-        raise ValueError(f"There is no node property '{size_property}' in graph '{G.name()}'")
+    if size_property is not None:
+        if size_property not in all_actual_node_properties:
+            raise ValueError(f"There is no node property '{size_property}' in graph '{G.name()}'")
 
     if additional_node_properties is None:
-        additional_node_properties = actual_node_properties
+        node_properties_by_label = {k: set(v) for k, v in actual_node_properties.items()}
     else:
         for prop in additional_node_properties:
-            if prop not in actual_node_properties:
+            if prop not in all_actual_node_properties:
                 raise ValueError(f"There is no node property '{prop}' in graph '{G.name()}'")
 
-    node_properties = set()
-    if additional_node_properties is not None:
-        node_properties.update(additional_node_properties)
+        node_properties_by_label = {}
+        for label, props in actual_node_properties.items():
+            node_properties_by_label[label] = {
+                prop for prop in actual_node_properties[label] if prop in additional_node_properties
+            }
+
     if size_property is not None:
-        node_properties.add(size_property)
-    node_properties = list(node_properties)
+        for label, props in node_properties_by_label.items():
+            props.add(size_property)
+
+    node_properties_by_label = {k: list(v) for k, v in node_properties_by_label.items()}
 
     node_count = G.node_count()
     if node_count > max_node_count:
@@ -112,13 +119,14 @@ def from_gds(
     property_name = None
     try:
         # Since GDS does not allow us to only fetch node IDs, we add the degree property
-        # as a temporary property to ensure that we have at least one property to fetch
-        if len(actual_node_properties) == 0:
+        # as a temporary property to ensure that we have at least one property for each label to fetch
+        if sum([len(props) == 0 for props in node_properties_by_label.values()]) > 0:
             property_name = f"neo4j-viz_property_{uuid4()}"
             gds.degree.mutate(G_fetched, mutateProperty=property_name)
-            node_properties = [property_name]
+            for props in node_properties_by_label.values():
+                props.append(property_name)
 
-        node_dfs = _fetch_node_dfs(gds, G_fetched, node_properties, G_fetched.node_labels())
+        node_dfs = _fetch_node_dfs(gds, G_fetched, node_properties_by_label, G_fetched.node_labels())
         if property_name is not None:
             for df in node_dfs.values():
                 df.drop(columns=[property_name], inplace=True)
@@ -131,35 +139,35 @@ def from_gds(
             gds.graph.nodeProperties.drop(G_fetched, node_properties=[property_name])
 
     for df in node_dfs.values():
-        df.rename(columns={"nodeId": "id"}, inplace=True)
         if property_name is not None and property_name in df.columns:
             df.drop(columns=[property_name], inplace=True)
-    rel_df.rename(columns={"sourceNodeId": "source", "targetNodeId": "target"}, inplace=True)
 
     node_props_df = pd.concat(node_dfs.values(), ignore_index=True, axis=0).drop_duplicates()
     if size_property is not None:
-        if "size" in actual_node_properties and size_property != "size":
+        if "size" in all_actual_node_properties and size_property != "size":
             node_props_df.rename(columns={"size": "__size"}, inplace=True)
         node_props_df.rename(columns={size_property: "size"}, inplace=True)
 
     for lbl, df in node_dfs.items():
-        if "labels" in actual_node_properties:
+        if "labels" in all_actual_node_properties:
             df.rename(columns={"labels": "__labels"}, inplace=True)
         df["labels"] = lbl
 
-    node_labels_df = pd.concat([df[["id", "labels"]] for df in node_dfs.values()], ignore_index=True, axis=0)
-    node_labels_df = node_labels_df.groupby("id").agg({"labels": list})
+    node_labels_df = pd.concat([df[["nodeId", "labels"]] for df in node_dfs.values()], ignore_index=True, axis=0)
+    node_labels_df = node_labels_df.groupby("nodeId").agg({"labels": list})
 
-    node_df = node_props_df.merge(node_labels_df, on="id")
+    node_df = node_props_df.merge(node_labels_df, on="nodeId")
 
-    if "caption" not in actual_node_properties:
+    if "caption" not in all_actual_node_properties:
         node_df["caption"] = node_df["labels"].astype(str)
 
     if "caption" not in rel_df.columns:
         rel_df["caption"] = rel_df["relationshipType"]
 
     try:
-        return _from_dfs(node_df, rel_df, node_radius_min_max=node_radius_min_max, rename_properties={"__size": "size"})
+        return _from_dfs(
+            node_df, rel_df, node_radius_min_max=node_radius_min_max, rename_properties={"__size": "size"}, dropna=True
+        )
     except ValueError as e:
         err_msg = str(e)
         if "column" in err_msg:

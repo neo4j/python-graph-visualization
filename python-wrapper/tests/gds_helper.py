@@ -62,8 +62,6 @@ def create_aurads_instance(api: AuraApi) -> tuple[str, DbmsConnectionInfo]:
     if wait_result.error:
         raise Exception(f"Error while waiting for instance to be running: {wait_result.error}")
 
-    wait_result.connection_url
-
     return instance_details.id, DbmsConnectionInfo(
         uri=wait_result.connection_url,
         username="neo4j",

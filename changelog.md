@@ -13,7 +13,8 @@
 
 ## Bug fixes
 
-* Make sure that temporary internal node properties are not included in the visualization output.
+* Make sure that temporary internal node properties are not included in the visualization output
+* Fixed bug where loading a graph with `from_gds` where all node or relationship properties are not present on every entity would result in an error
 
 
 ## Improvements

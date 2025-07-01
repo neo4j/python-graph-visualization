@@ -283,3 +283,64 @@ def test_from_gds_sample(gds: Any) -> None:
         assert len(VG.nodes) <= 10_500
         assert len(VG.relationships) >= 9_500
         assert len(VG.relationships) <= 10_500
+
+
+@pytest.mark.requires_neo4j_and_gds
+def test_from_gds_hetero(gds: Any) -> None:
+    from neo4j_viz.gds import from_gds
+
+    A_nodes = pd.DataFrame(
+        {
+            "nodeId": [0, 1],
+            "labels": ["A", "A"],
+            "component": [1, 2],
+        }
+    )
+    B_nodes = pd.DataFrame(
+        {
+            "nodeId": [2, 3],
+            "labels": ["B", "B"],
+            # No 'component' property
+        }
+    )
+    rels = pd.DataFrame(
+        {
+            "sourceNodeId": [0, 1],
+            "targetNodeId": [2, 3],
+            "weight": [0.5, 1.5],
+            "relationshipType": ["REL", "REL2"],
+        }
+    )
+
+    with gds.graph.construct("flo", [A_nodes, B_nodes], rels) as G:
+        VG = from_gds(
+            gds,
+            G,
+        )
+
+        assert len(VG.nodes) == 4
+        assert sorted(VG.nodes, key=lambda x: x.id) == [
+            Node(id=0, caption="['A']", properties=dict(labels=["A"], component=float(1))),
+            Node(id=1, caption="['A']", properties=dict(labels=["A"], component=float(2))),
+            Node(id=2, caption="['B']", properties=dict(labels=["B"])),
+            Node(id=3, caption="['B']", properties=dict(labels=["B"])),
+        ]
+
+        assert len(VG.relationships) == 2
+        vg_rels = sorted(
+            [
+                (
+                    e.source,
+                    e.target,
+                    e.caption,
+                    e.properties["relationshipType"],
+                    e.properties["weight"],
+                )
+                for e in VG.relationships
+            ],
+            key=lambda x: x[0],
+        )
+        assert vg_rels == [
+            (0, 2, "REL", "REL", 0.5),
+            (1, 3, "REL2", "REL2", 1.5),
+        ]

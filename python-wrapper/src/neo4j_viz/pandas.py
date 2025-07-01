@@ -31,8 +31,9 @@ def _from_dfs(
     rel_dfs: DFS_TYPE,
     node_radius_min_max: Optional[tuple[float, float]] = (3, 60),
     rename_properties: Optional[dict[str, str]] = None,
+    dropna: bool = False,
 ) -> VisualizationGraph:
-    relationships = _parse_relationships(rel_dfs, rename_properties=rename_properties)
+    relationships = _parse_relationships(rel_dfs, rename_properties=rename_properties, dropna=dropna)
 
     if node_dfs is None:
         has_size = False
@@ -42,7 +43,7 @@ def _from_dfs(
             node_ids.add(rel.target)
         nodes = [Node(id=id) for id in node_ids]
     else:
-        nodes, has_size = _parse_nodes(node_dfs, rename_properties=rename_properties)
+        nodes, has_size = _parse_nodes(node_dfs, rename_properties=rename_properties, dropna=dropna)
 
     VG = VisualizationGraph(nodes=nodes, relationships=relationships)
 
@@ -52,7 +53,9 @@ def _from_dfs(
     return VG
 
 
-def _parse_nodes(node_dfs: DFS_TYPE, rename_properties: Optional[dict[str, str]]) -> tuple[list[Node], bool]:
+def _parse_nodes(
+    node_dfs: DFS_TYPE, rename_properties: Optional[dict[str, str]], dropna: bool = False
+) -> tuple[list[Node], bool]:
     if isinstance(node_dfs, DataFrame):
         node_dfs_iter: Iterable[DataFrame] = [node_dfs]
     elif node_dfs is None:
@@ -67,6 +70,8 @@ def _parse_nodes(node_dfs: DFS_TYPE, rename_properties: Optional[dict[str, str]]
     for node_df in node_dfs_iter:
         has_size &= "size" in node_df.columns
         for _, row in node_df.iterrows():
+            if dropna:
+                row = row.dropna(inplace=False)
             top_level = {}
             properties = {}
             for key, value in row.to_dict().items():
@@ -85,7 +90,9 @@ def _parse_nodes(node_dfs: DFS_TYPE, rename_properties: Optional[dict[str, str]]
     return nodes, has_size
 
 
-def _parse_relationships(rel_dfs: DFS_TYPE, rename_properties: Optional[dict[str, str]]) -> list[Relationship]:
+def _parse_relationships(
+    rel_dfs: DFS_TYPE, rename_properties: Optional[dict[str, str]], dropna: bool = False
+) -> list[Relationship]:
     all_rel_field_aliases = Relationship.all_validation_aliases()
 
     if isinstance(rel_dfs, DataFrame):
@@ -96,6 +103,8 @@ def _parse_relationships(rel_dfs: DFS_TYPE, rename_properties: Optional[dict[str
 
     for rel_df in rel_dfs_iter:
         for _, row in rel_df.iterrows():
+            if dropna:
+                row = row.dropna(inplace=False)
             top_level = {}
             properties = {}
             for key, value in row.to_dict().items():
@@ -138,4 +147,4 @@ def from_dfs(
         To avoid tiny or huge nodes in the visualization, the node sizes are scaled to fit in the given range.
     """
 
-    return _from_dfs(node_dfs, rel_dfs, node_radius_min_max)
+    return _from_dfs(node_dfs, rel_dfs, node_radius_min_max, dropna=False)
