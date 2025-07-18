@@ -74,7 +74,7 @@ def _parse_nodes(
     has_size = True
     nodes = []
     for node_df in node_dfs_iter:
-        has_size &= "size" in node_df.columns
+        has_size &= "size" in [c.lower() for c in node_df.columns]
         for _, row in node_df.iterrows():
             if dropna:
                 row = row.dropna(inplace=False)
