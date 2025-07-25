@@ -7,7 +7,6 @@ from uuid import uuid4
 
 import pandas as pd
 from graphdatascience import Graph, GraphDataScience
-from pandas import Series
 
 from .pandas import _from_dfs
 from .visualization_graph import VisualizationGraph
@@ -24,22 +23,25 @@ def _fetch_node_dfs(
     }
 
 
-def _fetch_rel_df(gds: GraphDataScience, G: Graph) -> pd.DataFrame:
-    relationship_properties = G.relationship_properties()
-    assert isinstance(relationship_properties, Series)
+def _fetch_rel_dfs(gds: GraphDataScience, G: Graph) -> list[pd.DataFrame]:
+    rel_types = G.relationship_types()
 
-    relationship_properties_per_type = relationship_properties.tolist()
-    property_set: set[str] = set()
-    for props in relationship_properties_per_type:
-        if props:
-            property_set.update(props)
+    rel_props = {rel_type: G.relationship_properties(rel_type) for rel_type in rel_types}
 
-    if len(property_set) > 0:
-        return gds.graph.relationshipProperties.stream(
-            G, relationship_properties=list(property_set), separate_property_columns=True
-        )
+    rel_dfs: list[pd.DataFrame] = []
+    # Have to call per stream per relationship type as there was a bug in GDS < 2.21
+    for rel_type, props in rel_props.items():
+        assert isinstance(props, list)
+        if len(props) > 0:
+            rel_df = gds.graph.relationshipProperties.stream(
+                G, relationship_types=rel_type, relationship_properties=list(props), separate_property_columns=True
+            )
+        else:
+            rel_df = gds.graph.relationships.stream(G, relationship_types=[rel_type])
 
-    return gds.graph.relationships.stream(G)
+        rel_dfs.append(rel_df)
+
+    return rel_dfs
 
 
 def from_gds(
@@ -131,7 +133,7 @@ def from_gds(
             for df in node_dfs.values():
                 df.drop(columns=[property_name], inplace=True)
 
-        rel_df = _fetch_rel_df(gds, G_fetched)
+        rel_dfs = _fetch_rel_dfs(gds, G_fetched)
     finally:
         if G_fetched.name() != G.name():
             G_fetched.drop()
@@ -161,12 +163,13 @@ def from_gds(
     if "caption" not in all_actual_node_properties:
         node_df["caption"] = node_df["labels"].astype(str)
 
-    if "caption" not in rel_df.columns:
-        rel_df["caption"] = rel_df["relationshipType"]
+    for rel_df in rel_dfs:
+        if "caption" not in rel_df.columns:
+            rel_df["caption"] = rel_df["relationshipType"]
 
     try:
         return _from_dfs(
-            node_df, rel_df, node_radius_min_max=node_radius_min_max, rename_properties={"__size": "size"}, dropna=True
+            node_df, rel_dfs, node_radius_min_max=node_radius_min_max, rename_properties={"__size": "size"}, dropna=True
         )
     except ValueError as e:
         err_msg = str(e)

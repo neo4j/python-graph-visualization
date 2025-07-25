@@ -163,13 +163,15 @@ def test_from_gds_mocked(mocker: MockerFixture) -> None:
             }
         ),
     }
-    rels = pd.DataFrame(
-        {
-            "sourceNodeId": [0, 1, 2],
-            "targetNodeId": [1, 2, 0],
-            "relationshipType": ["REL", "REL2", "REL"],
-        }
-    )
+    rels = [
+        pd.DataFrame(
+            {
+                "sourceNodeId": [0, 1, 2],
+                "targetNodeId": [1, 2, 0],
+                "relationshipType": ["REL", "REL2", "REL"],
+            }
+        )
+    ]
 
     mocker.patch(
         "graphdatascience.Graph.__init__",
@@ -188,7 +190,7 @@ def test_from_gds_mocked(mocker: MockerFixture) -> None:
     mocker.patch("graphdatascience.Graph.node_count", lambda x: sum(len(df) for df in nodes.values()))
     mocker.patch("graphdatascience.GraphDataScience.__init__", lambda x: None)
     mocker.patch("neo4j_viz.gds._fetch_node_dfs", return_value=nodes)
-    mocker.patch("neo4j_viz.gds._fetch_rel_df", return_value=rels)
+    mocker.patch("neo4j_viz.gds._fetch_rel_dfs", return_value=rels)
 
     gds = GraphDataScience()  # type: ignore[call-arg]
     G = Graph()  # type: ignore[call-arg]
@@ -303,16 +305,24 @@ def test_from_gds_hetero(gds: Any) -> None:
             # No 'component' property
         }
     )
-    rels = pd.DataFrame(
+    X_rels = pd.DataFrame(
         {
-            "sourceNodeId": [0, 1],
-            "targetNodeId": [2, 3],
-            "weight": [0.5, 1.5],
-            "relationshipType": ["REL", "REL2"],
+            "sourceNodeId": [1],
+            "targetNodeId": [3],
+            "weight": [1.5],
+            "relationshipType": ["X"],
+        }
+    )
+    Y_rels = pd.DataFrame(
+        {
+            "sourceNodeId": [0],
+            "targetNodeId": [2],
+            "score": [1],
+            "relationshipType": ["Y"],
         }
     )
 
-    with gds.graph.construct("flo", [A_nodes, B_nodes], rels) as G:
+    with gds.graph.construct("flo", [A_nodes, B_nodes], [X_rels, Y_rels]) as G:
         VG = from_gds(
             gds,
             G,
@@ -333,14 +343,13 @@ def test_from_gds_hetero(gds: Any) -> None:
                     e.source,
                     e.target,
                     e.caption,
-                    e.properties["relationshipType"],
-                    e.properties["weight"],
+                    e.properties,
                 )
                 for e in VG.relationships
             ],
             key=lambda x: x[0],
         )
         assert vg_rels == [
-            (0, 2, "REL", "REL", 0.5),
-            (1, 3, "REL2", "REL2", 1.5),
+            (0, 2, "Y", {"relationshipType": "Y", "score": 1.0}),
+            (1, 3, "X", {"relationshipType": "X", "weight": 1.5}),
         ]
