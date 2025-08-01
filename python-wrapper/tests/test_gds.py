@@ -134,6 +134,7 @@ def test_from_gds_integration_all_properties(gds: Any) -> None:
             (2, 0, "REL", "REL", 3.0, 2.5),
         ]
 
+
 def test_from_gds_mocked(mocker: MockerFixture) -> None:
     from graphdatascience import Graph, GraphDataScience
 
@@ -195,14 +196,28 @@ def test_from_gds_mocked(mocker: MockerFixture) -> None:
     G = Graph()  # type: ignore[call-arg]
 
     VG = from_gds(
-        gds, G, size_property="score", additional_node_properties=["component", "score"], node_radius_min_max=(3.14, 1337)
+        gds,
+        G,
+        size_property="score",
+        additional_node_properties=["component", "score"],
+        node_radius_min_max=(3.14, 1337),
     )
 
     assert len(VG.nodes) == 3
     assert sorted(VG.nodes, key=lambda x: x.id) == [
-        Node(id=0, caption="['A']", size=float(1337), properties=dict(labels=["A"], component=float(1), score=float(1337))),
+        Node(
+            id=0,
+            caption="['A']",
+            size=float(1337),
+            properties=dict(labels=["A"], component=float(1), score=float(1337)),
+        ),
         Node(id=1, caption="['C']", size=float(42), properties=dict(labels=["C"], component=float(4), score=float(42))),
-        Node(id=2, caption="['A', 'B']", size=float(3.14), properties=dict(labels=["A", "B"], component=float(2), score=float(3.14))),
+        Node(
+            id=2,
+            caption="['A', 'B']",
+            size=float(3.14),
+            properties=dict(labels=["A", "B"], component=float(2), score=float(3.14)),
+        ),
     ]
 
     assert len(VG.relationships) == 3
