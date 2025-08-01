@@ -1,0 +1,8 @@
+{
+  "python.testing.pytestArgs": [
+    "tests",
+    "--include-neo4j-and-gds"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true
+}
