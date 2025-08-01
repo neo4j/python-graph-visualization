@@ -148,7 +148,10 @@ def from_gds(
     if size_property is not None:
         if "size" in all_actual_node_properties and size_property != "size":
             node_props_df.rename(columns={"size": "__size"}, inplace=True)
-        node_props_df.rename(columns={size_property: "size"}, inplace=True)
+        if size_property not in additional_node_properties:
+            node_props_df.rename(columns={size_property: "size"}, inplace=True)
+        else:
+            node_props_df["size"] = node_props_df[size_property]
 
     for lbl, df in node_dfs.items():
         if "labels" in all_actual_node_properties:
