@@ -19,7 +19,7 @@ Pandas DataFrames
 -----------------
 
 The ``neo4j-viz`` library provides a convenience method for importing data from Pandas DataFrames.
-These DataFrames can be created from many sources, such as CSV files or :doc:`Snowflake tables<./tutorials/snowpark-example>`.
+These DataFrames can be created from many sources, such as CSV files or :doc:`Snowflake tables<./tutorials/snowflake-example>`.
 It requires and additional dependency to be installed, which you can do by running:
 
 .. code-block:: bash
@@ -83,7 +83,7 @@ and :doc:`Relationships <./api-reference/relationship>`.
     VG = from_dfs(nodes, relationships)
 
 For another example of the ``from_dfs`` importer in action, see the
-:doc:`Visualizing Snowflake Tables tutorial <./tutorials/snowpark-example>`.
+:doc:`Visualizing Snowflake Tables tutorial <./tutorials/snowflake-example>`.
 
 
 Neo4j Graph Data Science (GDS) library

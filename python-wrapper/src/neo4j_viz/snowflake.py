@@ -37,6 +37,7 @@ from snowflake.snowpark.types import (
 )
 
 from neo4j_viz import VisualizationGraph
+from neo4j_viz.colors import ColorSpace
 from neo4j_viz.pandas import from_dfs
 
 
@@ -336,4 +337,8 @@ def from_snowflake(
         for i, rel_df in enumerate(rel_dfs):
             rel_df["caption"] = rel_table_names[i].split(".")[-1]
 
-    return from_dfs(node_dfs, rel_dfs, node_radius_min_max)
+    VG = from_dfs(node_dfs, rel_dfs, node_radius_min_max)
+
+    VG.color_nodes(field="caption", color_space=ColorSpace.DISCRETE)
+
+    return VG

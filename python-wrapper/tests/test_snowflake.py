@@ -62,10 +62,12 @@ def test_from_snowflake(session_with_minimal_graph: Session) -> None:
 
     assert VG.nodes[0].id == 0
     assert VG.nodes[0].caption == "NODES"
+    assert VG.nodes[0].color is not None
     assert VG.nodes[0].properties == {"SNOWFLAKEID": 6}
 
     assert VG.nodes[1].id == 1
     assert VG.nodes[1].caption == "NODES"
+    assert VG.nodes[0].color is not None
     assert VG.nodes[1].properties == {"SNOWFLAKEID": 7}
 
     assert len(VG.relationships) == 1
