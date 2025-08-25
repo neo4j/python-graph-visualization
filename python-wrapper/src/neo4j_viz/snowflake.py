@@ -246,11 +246,11 @@ LowercaseOrientation = Annotated[Orientation, BeforeValidator(to_lower)]
 class VizRelationshipTableConfig(BaseModel, extra="forbid"):
     sourceTable: VizNodeTable
     targetTable: VizNodeTable
-    orientation: LowercaseOrientation | None = Orientation.NATURAL
+    orientation: Optional[LowercaseOrientation] = Orientation.NATURAL
 
 
 class VizProjectConfig(BaseModel, extra="forbid"):
-    defaultTablePrefix: str | None = None
+    defaultTablePrefix: Optional[str] = None
     nodeTables: list[VizNodeTable]
     relationshipTables: dict[VizRelationshipTable, VizRelationshipTableConfig]
 

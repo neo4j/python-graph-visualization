@@ -42,6 +42,7 @@ jobs:
       - run: pip install ".[pandas]"
       - run: pip install ".[neo4j]"
       - run: pip install ".[gds]"
+      - run: pip install ".[snowflake]"
 
       - name: Run tests
         run: pytest tests/

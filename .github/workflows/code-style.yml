@@ -35,6 +35,7 @@ jobs:
       - run: pip install ".[dev]"
       - run: pip install ".[pandas]"
       - run: pip install ".[gds]"
+      - run: pip install ".[snowflake]"
 
       - name: Check code style
         run: cd ${GITHUB_WORKSPACE} && ./scripts/checkstyle.sh
