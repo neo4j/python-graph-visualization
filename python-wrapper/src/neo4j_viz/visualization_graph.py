@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from typing import Any, Callable, Hashable, Optional, Union
 
 from IPython.display import HTML
+from pydantic.alias_generators import to_snake
 from pydantic_extra_types.color import Color, ColorType
 
 from .colors import NEO4J_COLORS_CONTINUOUS, NEO4J_COLORS_DISCRETE, ColorSpace, ColorsType
@@ -277,7 +278,7 @@ class VisualizationGraph:
                 return node.properties.get(attribute)
         else:
             assert field is not None
-            attribute = field
+            attribute = to_snake(field)
 
             def node_to_attr(node: Node) -> Any:
                 return getattr(node, attribute)
