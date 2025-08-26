@@ -41,7 +41,7 @@ from neo4j_viz.colors import ColorSpace
 from neo4j_viz.pandas import from_dfs
 
 
-def data_type_name(type: DataType) -> str:
+def _data_type_name(type: DataType) -> str:
     if isinstance(type, StringType):
         return "VARCHAR"
     elif isinstance(type, LongType):
@@ -83,7 +83,7 @@ def data_type_name(type: DataType) -> str:
         return type.simple_string().upper()
 
 
-SUPPORTED_ID_TYPES = [data_type_name(data_type) for data_type in [StringType(), LongType(), IntegerType()]]
+SUPPORTED_ID_TYPES = [_data_type_name(data_type) for data_type in [StringType(), LongType(), IntegerType()]]
 
 
 def _validate_id_column(schema: StructType, column_name: str, index: int, supported_types: list[str]) -> None:
@@ -95,13 +95,13 @@ def _validate_id_column(schema: StructType, column_name: str, index: int, suppor
     if field.name.lower() != column_name.lower():
         raise ValueError(f"Column `{column_name}` must have column index {index}")
 
-    if data_type_name(field.datatype) not in supported_types:
+    if _data_type_name(field.datatype) not in supported_types:
         raise ValueError(
-            f"Column `{column_name}` has invalid type `{data_type_name(field.datatype)}`. Expected one of [{', '.join(supported_types)}]"
+            f"Column `{column_name}` has invalid type `{_data_type_name(field.datatype)}`. Expected one of [{', '.join(supported_types)}]"
         )
 
 
-def validate_viz_node_table(table: str, info: ValidationInfo) -> str:
+def _validate_viz_node_table(table: str, info: ValidationInfo) -> str:
     context = info.context
     if context and context["session"] is not None:
         session = context["session"]
@@ -113,7 +113,7 @@ def validate_viz_node_table(table: str, info: ValidationInfo) -> str:
     return table
 
 
-def validate_viz_relationship_table(
+def _validate_viz_relationship_table(
     table: str,
     info: ValidationInfo,
 ) -> str:
@@ -129,7 +129,7 @@ def validate_viz_relationship_table(
     return table
 
 
-def parse_identifier_groups(identifier: str) -> list[str]:
+def _parse_identifier_groups(identifier: str) -> list[str]:
     """
     Parses a table identifier into a list of individual identifier groups.
 
@@ -208,12 +208,12 @@ def parse_identifier_groups(identifier: str) -> list[str]:
     return words
 
 
-def validate_table_name(table: str) -> str:
+def _validate_table_name(table: str) -> str:
     if not isinstance(table, str):
         raise TypeError(f"Table name must be a string, got {type(table).__name__}")
 
     try:
-        words = parse_identifier_groups(table)
+        words = _parse_identifier_groups(table)
     except ValueError as e:
         raise ValueError(f"Invalid table name '{table}'. {str(e)}") from e
 
@@ -225,10 +225,10 @@ def validate_table_name(table: str) -> str:
     return table
 
 
-Table = Annotated[str, BeforeValidator(validate_table_name)]
+Table = Annotated[str, BeforeValidator(_validate_table_name)]
 
-VizNodeTable = Annotated[Table, AfterValidator(validate_viz_node_table)]
-VizRelationshipTable = Annotated[Table, AfterValidator(validate_viz_relationship_table)]
+VizNodeTable = Annotated[Table, AfterValidator(_validate_viz_node_table)]
+VizRelationshipTable = Annotated[Table, AfterValidator(_validate_viz_relationship_table)]
 
 
 class Orientation(Enum):
@@ -237,11 +237,11 @@ class Orientation(Enum):
     REVERSE = "reverse"
 
 
-def to_lower(value: str) -> str:
+def _to_lower(value: str) -> str:
     return value.lower() if value and isinstance(value, str) else value
 
 
-LowercaseOrientation = Annotated[Orientation, BeforeValidator(to_lower)]
+LowercaseOrientation = Annotated[Orientation, BeforeValidator(_to_lower)]
 
 
 class VizRelationshipTableConfig(BaseModel, extra="forbid"):

@@ -5,8 +5,9 @@ In addition to creating graphs from scratch, with ``neo4j-viz`` as is shown in t
 :doc:`Getting started section <./getting-started>`, you can also import data directly from external sources.
 In this section we will cover how to import data from `Pandas DataFrames <https://pandas.pydata.org/>`_,
 `Neo4j Graph Data Science <https://neo4j.com/docs/graph-data-science/current/>`_,
-`Neo4j Database <https://neo4j.com/docs/python-manual/current/>`_ and
-`GQL CREATE queries <https://neo4j.com/docs/cypher-manual/current/clauses/create/>`_.
+`Neo4j Database <https://neo4j.com/docs/python-manual/current/>`_,
+`GQL CREATE queries <https://neo4j.com/docs/cypher-manual/current/clauses/create/>`_,
+and `Snowflake tables <https://docs.snowflake.com/>`_.
 
 
 .. contents:: On this page:
@@ -19,14 +20,14 @@ Pandas DataFrames
 -----------------
 
 The ``neo4j-viz`` library provides a convenience method for importing data from Pandas DataFrames.
-These DataFrames can be created from many sources, such as CSV files or :doc:`Snowflake tables<./tutorials/snowflake-example>`.
+These DataFrames can be created from many sources, such as CSV files.
 It requires and additional dependency to be installed, which you can do by running:
 
 .. code-block:: bash
 
     pip install neo4j-viz[pandas]
 
-Once you have installed the additional dependency, you can use the :doc:`from_gds <./api-reference/from_pandas>` method
+Once you have installed the additional dependency, you can use the :doc:`from_pandas <./api-reference/from_pandas>` method
 to import pandas DataFrames.
 
 The ``from_dfs`` method takes two mandatory positional parameters:
@@ -82,9 +83,6 @@ and :doc:`Relationships <./api-reference/relationship>`.
 
     VG = from_dfs(nodes, relationships)
 
-For another example of the ``from_dfs`` importer in action, see the
-:doc:`Visualizing Snowflake Tables tutorial <./tutorials/snowflake-example>`.
-
 
 Neo4j Graph Data Science (GDS) library
 --------------------------------------
@@ -118,9 +116,9 @@ and will be used to determine the sizes of the nodes in the visualization.
 
 The ``additional_node_properties`` parameter is also optional, and should be a list of additional node properties of the
 projection that you want to include in the visualization.
-The default is `None`, which means that all properties of the nodes in the projection will be included.
+The default is ``None``, which means that all properties of the nodes in the projection will be included.
 Apart from being visible through on-hover tooltips, these properties could be used to color the nodes, or give captions
-to them in the visualization, or simply included in the nodes' `Node.properties` maps without directly impacting the
+to them in the visualization, or simply included in the nodes' ``Node.properties`` maps without directly impacting the
 visualization.
 
 The last optional property, ``node_radius_min_max``, can be used (and is used by default) to scale the node sizes for
@@ -285,3 +283,122 @@ In this small example, we create a visualization graph from a GQL ``CREATE`` que
             """
 
     VG = from_gql_create(query)
+
+
+Snowflake Tables
+----------------
+
+The ``neo4j-viz`` library provides a convenience method for importing data from Snowflake tables.
+It requires and additional dependency to be installed, which you can do by running:
+
+.. code-block:: bash
+
+    pip install neo4j-viz[snowflake]
+
+Once you have installed the additional dependency, you can use the :doc:`from_snowflake <./api-reference/from_snowflake>` method
+to import Snowflake tables into a ``VisualizationGraph``.
+
+The ``from_snowflake`` method takes two mandatory positional parameters:
+
+* A ``snowflake.snowpark.Session`` object for the connection to Snowflake, and
+* A `project configuration <https://neo4j.com/docs/snowflake-graph-analytics/current/jobs/#jobs-project>`_ as a dictionary, that specifies how you want your tables to be projected as a graph.
+  This configuration is the same as the project configuration of the `Neo4j Snowflake Graph Analytics application <https://neo4j.com/docs/snowflake-graph-analytics/current/>`_.
+
+``from_snowflake`` also takes an optional property, ``node_radius_min_max``, that can be used (and is used by default) to
+scale the node sizes for the visualization.
+It is a tuple of two numbers, representing the radii (sizes) in pixels of the smallest and largest nodes respectively in
+the visualization.
+The node sizes will be scaled such that the smallest node will have the size of the first value, and the largest node
+will have the size of the second value.
+The other nodes will be scaled linearly between these two values according to their relative size.
+This can be useful if node sizes vary a lot, or are all very small or very big.
+
+
+Special columns
+~~~~~~~~~~~~~~~
+
+It is possible to modify the visualization directly by including columns of certain specific names in the node and relationship tables.
+
+All such special columns can be found :doc:`here <./api-reference/node>` for nodes and :doc:`here <./api-reference/relationship>` for relationships.
+Though listed in ``snake_case`` here, ``SCREAMING_SNAKE_CASE`` and ``camelCase`` are also supported.
+Some of the most commonly used special columns are:
+
+* **Node sizes**: The sizes of nodes can be controlled by including a column named "SIZE" in node tables.
+  The values in these columns should be of a numeric type. This can be useful for visualizing the relative importance or size of nodes in the graph, for example using a computed centrality score.
+
+* **Captions**: The caption text of nodes and relationships can be controlled by including a column named "CAPTION" in the tables.
+  The values in these columns should be of a string type. This can be useful for displaying additional information about the nodes, such as their names or labels. If no "CAPTION" column is provided, the default captions in the visualization will be the names of the corresponding node and relationship tables.
+
+Please also note that you can further customize the visualization after the `VisualizationGraph` has been created, by using the methods described in the :doc:`Customizing the visualization <./customizing>` section.
+
+
+Default behavior
+~~~~~~~~~~~~~~~~
+
+Unless there are "CAPTION" columns in the tables, the node and relationship captions will be set to the names of the corresponding tables.
+Similarly, if there are are no "COLOR" node table columns, the nodes will be colored be colored so that nodes from the same table have the same color, and different tables have different colors.
+
+
+Example
+~~~~~~~
+
+In this small example, we import a toy graph representing a social network from two tables in Snowflake.
+
+.. code-block:: python
+
+    from snowflake.snowpark import Session
+    from neo4j_viz.snowflake import from_dfs
+
+    # Configure according to your own setup
+    connection_parameters = {
+        "account": os.environ.get("SNOWFLAKE_ACCOUNT"),
+        "user": os.environ.get("SNOWFLAKE_USER"),
+        "password": os.environ.get("SNOWFLAKE_PASSWORD"),
+        "role": os.environ.get("SNOWFLAKE_ROLE"),
+        "warehouse": os.environ.get("SNOWFLAKE_WAREHOUSE"),
+    }
+
+    session.sql(
+        "CREATE OR REPLACE TABLE EXAMPLE_DB.DATA_SCHEMA.PERSONS (NODEID VARCHAR);"
+    ).collect()
+
+    session.sql("""
+    INSERT INTO EXAMPLE_DB.DATA_SCHEMA.PERSONS VALUES
+      ('Alice'),
+      ('Bob'),
+      ('Carol'),
+      ('Dave'),
+      ('Eve');
+      """).collect()
+
+    session.sql(
+        "CREATE OR REPLACE TABLE EXAMPLE_DB.DATA_SCHEMA.KNOWS (SOURCENODEID VARCHAR, TARGETNODEID VARCHAR);"
+    ).collect()
+
+    session.sql("""
+    INSERT INTO EXAMPLE_DB.DATA_SCHEMA.KNOWS VALUES
+      ('Alice', 'Dave'),
+      ('Alice', 'Carol'),
+      ('Bob',   'Carol'),
+      ('Dave',  'Eve'),
+      """).collect()
+
+    VG = from_snowflake(
+        session,
+        {
+            "nodeTables": [
+                "EXAMPLE_DB.DATA_SCHEMA.PERSONS",
+            ],
+            "relationshipTables": {
+                "EXAMPLE_DB.DATA_SCHEMA.KNOWS": {
+                    "sourceTable": "EXAMPLE_DB.DATA_SCHEMA.PERSONS",
+                    "targetTable": "EXAMPLE_DB.DATA_SCHEMA.PERSONS",
+                    "orientation": "UNDIRECTED",
+                }
+            },
+        },
+    )
+
+For a full example of the ``from_snowflake`` importer in action, please see the
+:doc:`Visualizing Snowflake Tables tutorial <./tutorials/snowflake-example>`.
+

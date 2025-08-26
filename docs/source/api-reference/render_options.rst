@@ -18,6 +18,5 @@
 .. autoenum:: neo4j_viz.options.Packing
     :members:
 
-
 .. autoenum:: neo4j_viz.Renderer
     :members:
