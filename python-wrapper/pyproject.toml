@@ -42,7 +42,7 @@ requires-python = ">=3.9"
 [project.optional-dependencies]
 dev = [
     "ruff==0.11.8",
-    "mypy==1.15.0",
+    "mypy==1.17.1",
     "pytest==8.3.4",
     "selenium==4.32.0",
     "ipykernel==6.29.5",
@@ -61,6 +61,7 @@ docs = [
 pandas = ["pandas>=2, <3", "pandas-stubs>=2, <3"]
 gds = ["graphdatascience>=1, <2"]
 neo4j = ["neo4j"]
+snowflake = ["snowflake-snowpark-python>=1, <2"]
 notebook = [
     "ipykernel>=6.29.5",
     "pykernel>=0.1.6",
@@ -68,7 +69,7 @@ notebook = [
     "ipywidgets>=8.0.0",
     "palettable>=3.3.3",
     "matplotlib>=3.9.4",
-    "snowflake-snowpark-python==1.26.0",
+    "snowflake-snowpark-python==1.37.0",
 ]
 
 [project.urls]

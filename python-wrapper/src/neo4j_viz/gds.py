@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from itertools import chain
-from typing import Optional
+from typing import Optional, cast
 from uuid import uuid4
 
 import pandas as pd
@@ -81,31 +81,32 @@ def from_gds(
     """
     node_properties_from_gds = G.node_properties()
     assert isinstance(node_properties_from_gds, pd.Series)
-    actual_node_properties = node_properties_from_gds.to_dict()
+    actual_node_properties: dict[str, list[str]] = cast(dict[str, list[str]], node_properties_from_gds.to_dict())
     all_actual_node_properties = list(chain.from_iterable(actual_node_properties.values()))
 
     if size_property is not None:
         if size_property not in all_actual_node_properties:
             raise ValueError(f"There is no node property '{size_property}' in graph '{G.name()}'")
 
+    node_properties_by_label_sets: dict[str, set[str]] = dict()
     if additional_node_properties is None:
-        node_properties_by_label = {k: set(v) for k, v in actual_node_properties.items()}
+        node_properties_by_label_sets = {k: set(v) for k, v in actual_node_properties.items()}
     else:
         for prop in additional_node_properties:
             if prop not in all_actual_node_properties:
                 raise ValueError(f"There is no node property '{prop}' in graph '{G.name()}'")
 
-        node_properties_by_label = {}
         for label, props in actual_node_properties.items():
-            node_properties_by_label[label] = {
+            node_properties_by_label_sets[label] = {
                 prop for prop in actual_node_properties[label] if prop in additional_node_properties
             }
 
     if size_property is not None:
-        for label, props in node_properties_by_label.items():
-            props.add(size_property)
+        # For some reason mypy are unable to understand that this is dict[str, set[str]]
+        for label, props in node_properties_by_label_sets.items():  # type: ignore
+            props.add(size_property)  # type: ignore
 
-    node_properties_by_label = {k: list(v) for k, v in node_properties_by_label.items()}
+    node_properties_by_label = {k: list(v) for k, v in node_properties_by_label_sets.items()}
 
     node_count = G.node_count()
     if node_count > max_node_count:
@@ -148,7 +149,7 @@ def from_gds(
     if size_property is not None:
         if "size" in all_actual_node_properties and size_property != "size":
             node_props_df.rename(columns={"size": "__size"}, inplace=True)
-        if size_property not in additional_node_properties:
+        if additional_node_properties is not None and size_property not in additional_node_properties:
             node_props_df.rename(columns={size_property: "size"}, inplace=True)
         else:
             node_props_df["size"] = node_props_df[size_property]
