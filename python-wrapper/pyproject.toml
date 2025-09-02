@@ -45,7 +45,7 @@ dev = [
     "mypy==1.17.1",
     "pytest==8.3.4",
     "selenium==4.32.0",
-    "ipykernel==6.29.5",
+    "ipykernel==6.30.1",
     "palettable==3.3.3",
     "pytest-mock==3.14.0",
     "nbconvert==7.16.6",
