@@ -47,8 +47,9 @@ def test_from_neo4j_graph_basic(neo4j_session: Session) -> None:
         Node(
             id=node_ids[1],
             caption="_CI_A:_CI_B",
-            size=11,
+            size=None,
             properties=dict(
+                size=11,
                 labels=["_CI_A", "_CI_B"],
                 name="Bob",
                 height=10,
@@ -131,8 +132,8 @@ def test_from_neo4j_result(neo4j_session: Session) -> None:
         Node(
             id=node_ids[1],
             caption="_CI_A:_CI_B",
-            size=11,
             properties=dict(
+                size=11,
                 labels=["_CI_A", "_CI_B"],
                 name="Bob",
                 height=10,
@@ -268,9 +269,9 @@ def test_from_neo4j_graph_driver(neo4j_session: Session, neo4j_driver: Driver) -
         Node(
             id=node_ids[1],
             caption="_CI_A:_CI_B",
-            size=11,
             properties=dict(
                 labels=["_CI_A", "_CI_B"],
+                size=11,
                 name="Bob",
                 height=10,
                 id=84,

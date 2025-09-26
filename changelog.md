@@ -2,7 +2,7 @@
 
 ## Breaking changes
 
-- Do not automatically derive size and caption for `from_neo4j`. Use the `size_property` and `node_caption` parameters to configure them.
+- Do not automatically derive size and caption for `from_neo4j` and `from_gql_create`. Use the `size_property` and `node_caption` parameters to explicitly configure them.
 
 ## New features
 
@@ -12,5 +12,7 @@
 - fixed a bug in `from_neo4j`, where the node caption would always be set to the `caption` property.
 
 ## Improvements
+
+- Validate fields of a node and relationship not only at construction but also on assignment.
 
 ## Other changes
