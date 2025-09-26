@@ -12,8 +12,11 @@ from neo4j_viz.node import Node
 @pytest.fixture(scope="class", autouse=True)
 def graph_setup(neo4j_session: Session) -> Generator[None, None, None]:
     neo4j_session.run(
-        "CREATE (a:_CI_A {name:'Alice', height:20, id:42, _id: 1337, caption: 'hello'})-[:KNOWS {year: 2025, id: 41, source: 1, target: 2}]->"
-        "(b:_CI_A:_CI_B {name:'Bob', height:10, id: 84, size: 11, labels: [1,2]}), (b)-[:RELATED {year: 2015, _type: 'A', caption:'hej'}]->(a)"
+        "CREATE "
+        "  (a:_CI_A {name:'Alice', height:20, id:42, _id: 1337, caption: 'hello'})"
+        " ,(b:_CI_A:_CI_B {name:'Bob', height:10, id: 84, size: 11, labels: [1,2]})"
+        " ,(a)-[:KNOWS {year: 2025, id: 41, source: 1, target: 2}]->(b)"
+        " ,(b)-[:RELATED {year: 2015, _type: 'A', caption:'hej'}]->(a)"
     )
     yield
     neo4j_session.run("MATCH (n:_CI_A|_CI_B) DETACH DELETE n")
@@ -67,60 +70,38 @@ def test_from_neo4j_graph_basic(neo4j_session: Session) -> None:
 
 
 @pytest.mark.requires_neo4j_and_gds
-def test_from_neo4j_graph_default_size(neo4j_session: Session) -> None:
+def test_from_neo4j_graph_size_property(neo4j_session: Session) -> None:
     # set a non parsable size property, by default it should not be picked up
-    neo4j_session.run("MATCH (n) SET n.size = 'banana' SET n.real_caption = 'my_caption' SET n.real_size = 4")
+    neo4j_session.run("MATCH (n) SET n.size = 'banana'")
 
     graph = neo4j_session.run("MATCH (a:_CI_A|_CI_B)-[r]->(b) RETURN a, b, r ORDER BY a").graph()
 
-    VG = from_neo4j(graph, size_property="real_size", node_caption="real_caption", node_radius_min_max=None)
+    VG = from_neo4j(graph, size_property="height", node_radius_min_max=None)
 
-    sorted_nodes: list[neo4j.graph.Node] = sorted(graph.nodes, key=lambda x: dict(x.items())["name"])
-    node_ids: list[str] = [node.element_id for node in sorted_nodes]
+    assert {n.properties["name"]: n.size for n in VG.nodes} == {"Alice": 20, "Bob": 10}
 
-    expected_nodes = [
-        Node(
-            id=node_ids[0],
-            caption="my_caption",
-            size=4,
-            properties=dict(
-                labels=["_CI_A"],
-                name="Alice",
-                size="banana",
-                real_size=4,
-                real_caption="my_caption",
-                height=20,
-                id=42,
-                _id=1337,
-                caption="hello",
-            ),
-        ),
-        Node(
-            id=node_ids[1],
-            caption="my_caption",
-            size=4,
-            properties=dict(
-                labels=["_CI_A", "_CI_B"],
-                name="Bob",
-                size="banana",
-                real_size=4,
-                real_caption="my_caption",
-                height=10,
-                id=84,
-                __labels=[1, 2],
-            ),
-        ),
-    ]
+    VG = from_neo4j(graph, size_property=None, node_radius_min_max=None)
 
-    assert len(VG.nodes) == 2
-    assert sorted(VG.nodes, key=lambda x: x.properties["name"]) == expected_nodes
+    assert {n.properties["name"]: n.size for n in VG.nodes} == {"Alice": None, "Bob": None}
 
-    assert len(VG.relationships) == 2
-    vg_rels = sorted([(e.source, e.target, e.caption) for e in VG.relationships], key=lambda x: x[2] if x[2] else "foo")
-    assert vg_rels == [
-        (node_ids[0], node_ids[1], "KNOWS"),
-        (node_ids[1], node_ids[0], "RELATED"),
-    ]
+
+@pytest.mark.requires_neo4j_and_gds
+def test_from_neo4j_graph_default_caption(neo4j_session: Session) -> None:
+    neo4j_session.run("MATCH (n) SET n.caption = 'my_caption' SET n.other_caption = 'other_caption'")
+
+    graph = neo4j_session.run("MATCH (a:_CI_A|_CI_B)-[r]->(b) RETURN a, b, r ORDER BY a").graph()
+
+    VG = from_neo4j(graph, node_caption=None, node_radius_min_max=None)
+
+    assert [n.caption for n in VG.nodes] == [None, None]
+
+    VG = from_neo4j(graph, node_caption="other_caption", node_radius_min_max=None)
+
+    assert [n.caption for n in VG.nodes] == ["other_caption", "other_caption"]
+
+    VG = from_neo4j(graph, relationship_caption="year")
+
+    assert {e.properties["type"]: e.caption for e in VG.relationships} == {"KNOWS": "2025", "RELATED": "2015"}
 
 
 @pytest.mark.requires_neo4j_and_gds
