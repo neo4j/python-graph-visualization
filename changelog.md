@@ -14,5 +14,6 @@
 ## Improvements
 
 - Validate fields of a node and relationship not only at construction but also on assignment.
+- Allow resizing per node property such as `VG.resize_nodes(property="score")`.
 
 ## Other changes
