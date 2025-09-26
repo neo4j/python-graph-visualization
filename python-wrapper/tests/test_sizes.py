@@ -45,7 +45,7 @@ def test_resize_nodes_either_sizes_or_property() -> None:
     VG = VisualizationGraph(nodes=nodes, relationships=[])
 
     with pytest.raises(ValueError, match="At most one of the arguments `sizes` and `property` can be provided"):
-        VG.resize_nodes(sizes={"1337": 20}, property="size", node_radius_min_max=(3, 60))  # type: ignore
+        VG.resize_nodes(sizes={"1337": 20}, property="size", node_radius_min_max=(3, 60))
 
 
 def test_resize_nodes_no_scaling() -> None:

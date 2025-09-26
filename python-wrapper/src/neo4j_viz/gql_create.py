@@ -381,5 +381,4 @@ def from_gql_create(
     if (node_radius_min_max is not None) and (size_property is not None):
         VG.resize_nodes(node_radius_min_max=node_radius_min_max)
 
-
     return VG
