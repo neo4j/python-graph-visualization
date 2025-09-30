@@ -8,7 +8,6 @@ on:
   #    branches: [ "main" ]
   # Skip on this check PR to minimize the load against Snowflake (and keep PR checks fast)
 
-
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -33,7 +32,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: 'pip'
+          cache: "pip"
           cache-dependency-path: pyproject.toml
       - run: pip install ".[dev]"
       - run: pip install ".[pandas]"
@@ -46,4 +45,4 @@ jobs:
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
           SNOWFLAKE_ROLE: ACCOUNTADMIN
           SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-        run: pytest tests/ --include-snowflake
+        run: pytest tests/ --include-snowflake  -W "ignore:Python Runtime 3.9 reached its End-Of-Life:DeprecationWarning"
