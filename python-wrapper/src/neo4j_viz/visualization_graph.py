@@ -154,6 +154,7 @@ class VisualizationGraph:
         self,
         sizes: Optional[dict[NodeIdType, RealNumber]] = None,
         node_radius_min_max: Optional[tuple[RealNumber, RealNumber]] = (3, 60),
+        property: Optional[str] = None,
     ) -> None:
         """
         Resize the nodes in the graph.
@@ -163,32 +164,46 @@ class VisualizationGraph:
         sizes:
             A dictionary mapping from node ID to the new size of the node.
             If a node ID is not in the dictionary, the size of the node is not changed.
+            Must be None if `property` is provided.
         node_radius_min_max:
             Minimum and maximum node size radius as a tuple. To avoid tiny or huge nodes in the visualization, the
             node sizes are scaled to fit in the given range. If None, the sizes are used as is.
+        property:
+            The property of the nodes to use for sizing. Must be None if `sizes` is provided.
         """
-        if sizes is None and node_radius_min_max is None:
-            raise ValueError("At least one of `sizes` and `node_radius_min_max` must be given")
+        if sizes is not None and property is not None:
+            raise ValueError("At most one of the arguments `sizes` and `property` can be provided")
 
-        # Gather and verify all node size values we have to work with
+        if sizes is None and property is None and node_radius_min_max is None:
+            raise ValueError("At least one of `sizes`, `property` or `node_radius_min_max` must be given")
+
+        # Gather node sizes
         all_sizes = {}
-        for node in self.nodes:
-            size = None
-            if sizes is not None:
-                size = sizes.get(node.id)
-
+        if sizes is not None:
+            for node in self.nodes:
+                size = sizes.get(node.id, node.size)
                 if size is not None:
-                    if not isinstance(size, (int, float)):
-                        raise ValueError(f"Size for node '{node.id}' must be a real number, but was {size}")
-
-                    if size < 0:
-                        raise ValueError(f"Size for node '{node.id}' must be non-negative, but was {size}")
-
                     all_sizes[node.id] = size
-
-            if size is None:
+        elif property is not None:
+            for node in self.nodes:
+                size = node.properties.get(property, node.size)
+                if size is not None:
+                    all_sizes[node.id] = size
+        else:
+            for node in self.nodes:
                 if node.size is not None:
                     all_sizes[node.id] = node.size
+
+        # Validate node sizes
+        for id, size in all_sizes.items():
+            if size is None:
+                continue
+
+            if not isinstance(size, (int, float)):
+                raise ValueError(f"Size for node '{id}' must be a real number, but was {size}")
+
+            if size < 0:
+                raise ValueError(f"Size for node '{id}' must be non-negative, but was {size}")
 
         if node_radius_min_max is not None:
             verify_radii(node_radius_min_max)
@@ -197,6 +212,7 @@ class VisualizationGraph:
         else:
             final_sizes = all_sizes
 
+        # Apply the final sizes to the nodes
         for node in self.nodes:
             size = final_sizes.get(node.id)
 

@@ -30,6 +30,7 @@ class Node(
         validation_alias=create_aliases,
         serialization_alias=lambda field_name: to_camel(field_name),
     ),
+    validate_assignment=True,
 ):
     """
     A node in a graph to visualize.

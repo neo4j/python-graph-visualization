@@ -30,8 +30,8 @@ def test_from_gql_create_syntax() -> None:
             "properties": {"name": "Alice", "age": 23, "labels": ["User"], "__labels": ["Happy"], "id": 42},
         },
         {
-            "top_level": {"caption": "Bridget"},
-            "properties": {"name": "Bridget", "age": 34, "labels": ["User", "person"]},
+            "top_level": {},
+            "properties": {"name": "Bridget", "caption": "Bridget", "age": 34, "labels": ["User", "person"]},
         },
         {
             "top_level": {},
@@ -70,8 +70,8 @@ def test_from_gql_create_syntax() -> None:
         {
             "source_idx": 4,
             "target_idx": 7,
-            "top_level": {"caption": "Balloon"},
-            "properties": {"weight": -2, "type": "OTHER_LINK", "__type": 1, "source": 1337},
+            "top_level": {},
+            "properties": {"weight": -2, "caption": "Balloon", "type": "OTHER_LINK", "__type": 1, "source": 1337},
         },
         {"source_idx": 9, "target_idx": 10, "top_level": {}, "properties": {"type": "LINK"}},
     ]
@@ -102,7 +102,7 @@ def test_from_gql_create_captions() -> None:
         },
         {
             "top_level": {"caption": "User:person"},
-            "properties": {"name": "Bridget", "age": 34, "labels": ["User", "person"]},
+            "properties": {"name": "Bridget", "caption": "Bridget", "age": 34, "labels": ["User", "person"]},
         },
     ]
 
@@ -148,8 +148,8 @@ def test_from_gql_create_sizes() -> None:
             "properties": {"name": "Alice", "age": 23, "labels": ["User"]},
         },
         {
-            "top_level": {"caption": "Bridget", "size": 60.0},
-            "properties": {"name": "Bridget", "age": 34, "labels": ["User", "person"]},
+            "top_level": {"size": 60.0},
+            "properties": {"name": "Bridget", "caption": "Bridget", "age": 34, "labels": ["User", "person"]},
         },
     ]
 
@@ -232,7 +232,7 @@ def test_illegal_node_size() -> None:
     query = "CREATE (a:User {hello: 'tennis'})"
     with pytest.raises(
         ValueError,
-        match="Error for node property 'hello'. Reason: must be a numerical value",
+        match="Error for node property 'hello' with provided input 'tennis'",
     ):
         from_gql_create(query, size_property="hello")
 

@@ -251,8 +251,8 @@ def from_gql_create(
     node_pattern = re.compile(r"^\(([^)]*)\)$")
     rel_pattern = re.compile(r"^\(([^)]*)\)-\s*\[\s*:(\w+)\s*(\{[^}]*\})?\s*\]->\(([^)]*)\)$")
 
-    node_top_level_keys = Node.all_validation_aliases(exempted_fields=["id"])
-    rel_top_level_keys = Relationship.all_validation_aliases(exempted_fields=["id", "source", "target"])
+    node_top_level_keys = Node.all_validation_aliases(exempted_fields=["id", "size", "caption"])
+    rel_top_level_keys = Relationship.all_validation_aliases(exempted_fields=["id", "source", "target", "caption"])
 
     def _parse_validation_error(e: ValidationError, entity_type: type[BaseModel]) -> None:
         for err in e.errors():
@@ -358,8 +358,11 @@ def from_gql_create(
         raise ValueError(f"Invalid element in CREATE near: `{snippet}`.")
 
     if size_property is not None:
-        for node in nodes:
-            node.size = node.properties.get(size_property)
+        try:
+            for node in nodes:
+                node.size = node.properties.get(size_property)
+        except ValidationError as e:
+            _parse_validation_error(e, Node)
     if node_caption is not None:
         for node in nodes:
             if node_caption == "labels":
@@ -376,10 +379,6 @@ def from_gql_create(
 
     VG = VisualizationGraph(nodes=nodes, relationships=relationships)
     if (node_radius_min_max is not None) and (size_property is not None):
-        try:
-            VG.resize_nodes(node_radius_min_max=node_radius_min_max)
-        except TypeError:
-            loc = "size" if size_property is None else size_property
-            raise ValueError(f"Error for node property '{loc}'. Reason: must be a numerical value")
+        VG.resize_nodes(node_radius_min_max=node_radius_min_max)
 
     return VG

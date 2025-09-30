@@ -77,8 +77,8 @@ def from_neo4j(
     else:
         raise ValueError(f"Invalid input type `{type(data)}`. Expected `neo4j.Graph`, `neo4j.Result` or `neo4j.Driver`")
 
-    all_node_field_aliases = Node.all_validation_aliases()
-    all_rel_field_aliases = Relationship.all_validation_aliases()
+    all_node_field_aliases = Node.all_validation_aliases(exempted_fields=["size", "caption"])
+    all_rel_field_aliases = Relationship.all_validation_aliases(exempted_fields=["caption"])
 
     try:
         nodes = [
