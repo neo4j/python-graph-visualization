@@ -120,6 +120,7 @@ The default is ``None``, which means that all properties of the nodes in the pro
 Apart from being visible through on-hover tooltips, these properties could be used to color the nodes, or give captions
 to them in the visualization, or simply included in the nodes' ``Node.properties`` maps without directly impacting the
 visualization.
+If you want to include node properties stored at the Neo4j database, you can include them in the visualization by using the `additional_db_node_properties` parameter.
 
 The last optional property, ``node_radius_min_max``, can be used (and is used by default) to scale the node sizes for
 the visualization.
@@ -401,4 +402,3 @@ In this small example, we import a toy graph representing a social network from 
 
 For a full example of the ``from_snowflake`` importer in action, please see the
 :doc:`Visualizing Snowflake Tables tutorial <./tutorials/snowflake-example>`.
-

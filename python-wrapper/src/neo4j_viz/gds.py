@@ -13,11 +13,19 @@ from .visualization_graph import VisualizationGraph
 
 
 def _fetch_node_dfs(
-    gds: GraphDataScience, G: Graph, node_properties_by_label: dict[str, list[str]], node_labels: list[str]
+    gds: GraphDataScience,
+    G: Graph,
+    node_properties_by_label: dict[str, list[str]],
+    node_labels: list[str],
+    additional_db_node_properties: list[str],
 ) -> dict[str, pd.DataFrame]:
     return {
         lbl: gds.graph.nodeProperties.stream(
-            G, node_properties=node_properties_by_label[lbl], node_labels=[lbl], separate_property_columns=True
+            G,
+            node_properties=node_properties_by_label[lbl],
+            node_labels=[lbl],
+            separate_property_columns=True,
+            db_node_properties=additional_db_node_properties,
         )
         for lbl in node_labels
     }
@@ -49,6 +57,7 @@ def from_gds(
     G: Graph,
     size_property: Optional[str] = None,
     additional_node_properties: Optional[list[str]] = None,
+    additional_db_node_properties: Optional[list[str]] = None,
     node_radius_min_max: Optional[tuple[float, float]] = (3, 60),
     max_node_count: int = 10_000,
 ) -> VisualizationGraph:
@@ -71,7 +80,9 @@ def from_gds(
         Property to use for node size, by default None.
     additional_node_properties : list[str], optional
         Additional properties to include in the visualization node, by default None which means that all node
-        properties will be fetched.
+        properties from the Graph will be fetched.
+    additional_db_node_properties : list[str], optional
+        Additional node properties to fetch from the database, by default None. Only works if the graph was projected from the database.
     node_radius_min_max : tuple[float, float], optional
         Minimum and maximum node radius, by default (3, 60).
         To avoid tiny or huge nodes in the visualization, the node sizes are scaled to fit in the given range.
@@ -79,6 +90,9 @@ def from_gds(
         The maximum number of nodes to fetch from the graph. The graph will be sampled using random walk with restarts
         if its node count exceeds this number.
     """
+    if additional_db_node_properties is None:
+        additional_db_node_properties = []
+
     node_properties_from_gds = G.node_properties()
     assert isinstance(node_properties_from_gds, pd.Series)
     actual_node_properties: dict[str, list[str]] = cast(dict[str, list[str]], node_properties_from_gds.to_dict())
@@ -102,9 +116,8 @@ def from_gds(
             }
 
     if size_property is not None:
-        # For some reason mypy are unable to understand that this is dict[str, set[str]]
-        for label, props in node_properties_by_label_sets.items():  # type: ignore
-            props.add(size_property)  # type: ignore
+        for label, props in node_properties_by_label_sets.items():
+            props.add(size_property)
 
     node_properties_by_label = {k: list(v) for k, v in node_properties_by_label_sets.items()}
 
@@ -129,7 +142,9 @@ def from_gds(
             for props in node_properties_by_label.values():
                 props.append(property_name)
 
-        node_dfs = _fetch_node_dfs(gds, G_fetched, node_properties_by_label, G_fetched.node_labels())
+        node_dfs = _fetch_node_dfs(
+            gds, G_fetched, node_properties_by_label, G_fetched.node_labels(), additional_db_node_properties
+        )
         if property_name is not None:
             for df in node_dfs.values():
                 df.drop(columns=[property_name], inplace=True)

@@ -6,6 +6,9 @@
 
 ## New features
 
+- Allow to include db node properties in addition to the properties in the GDS Graph. Specify `additional_db_node_properties` in `from_gds`.
+
+
 ## Bug fixes
 
 - fixed a bug in `from_neo4j`, where the node size would always be set to the `size` property.
