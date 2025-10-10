@@ -116,8 +116,8 @@ def from_gds(
             }
 
     if size_property is not None:
-        for label, props in node_properties_by_label_sets.items():
-            props.add(size_property)
+        for label, label_props in node_properties_by_label_sets.items():
+            label_props.add(size_property)
 
     node_properties_by_label = {k: list(v) for k, v in node_properties_by_label_sets.items()}
 
