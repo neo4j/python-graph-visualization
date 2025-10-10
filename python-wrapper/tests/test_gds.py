@@ -8,7 +8,7 @@ from pytest_mock import MockerFixture
 from neo4j_viz import Node
 
 
-@pytest.fixture(scope="class", autouse=True)
+@pytest.fixture(scope="class")
 def db_setup(gds: Any) -> Generator[None, None, None]:
     gds.run_cypher(
         "CREATE "
