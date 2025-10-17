@@ -314,6 +314,16 @@ def from_snowflake(
     project_config: dict[str, Any],
     node_radius_min_max: Optional[tuple[float, float]] = (3, 60),
 ) -> VisualizationGraph:
+    """
+    Create a VisualizationGraph from Snowflake tables based on a project configuration.
+
+    Args:
+        session (Session): The Snowflake session to use for querying the tables.
+        project_config (dict[str, Any]): The project configuration dictionary defining node and relationship tables.
+        node_radius_min_max (Optional[tuple[float, float]], optional): Tuple defining the min and max radius for nodes. Defaults to (3, 60).
+    Returns:
+        VisualizationGraph: The constructed visualization graph.
+    """
     project_model = VizProjectConfig.model_validate(project_config, strict=False, context={"session": session})
     node_dfs, rel_dfs, rel_table_names = _map_tables(session, project_model)
 
