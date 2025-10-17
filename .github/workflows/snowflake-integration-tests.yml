@@ -45,4 +45,4 @@ jobs:
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
           SNOWFLAKE_ROLE: ACCOUNTADMIN
           SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-        run: pytest tests/ --include-snowflake  -W "ignore:Python Runtime 3.9 reached its End-Of-Life:DeprecationWarning"
+        run: pytest tests/ --include-snowflake
