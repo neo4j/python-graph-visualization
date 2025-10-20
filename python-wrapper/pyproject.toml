@@ -48,7 +48,7 @@ dev = [
     "palettable==3.3.3",
     "pytest-mock==3.14.0",
     "nbconvert==7.16.6",
-    "streamlit==1.45.0",
+    "streamlit==1.50.0",
     "matplotlib>=3.9.4",
 ]
 docs = [
