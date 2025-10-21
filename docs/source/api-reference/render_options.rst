@@ -4,7 +4,7 @@
 .. autoenum:: neo4j_viz.Layout
     :members:
 
-.. autoclass:: neo4j_viz.Force-Directed
+.. autoclass:: neo4j_viz.ForceDirectedLayoutOptions
     :members:
     :exclude-members: model_config
 
@@ -12,10 +12,10 @@
     :members:
     :exclude-members: model_config
 
-.. autoenum:: neo4j_viz.options.Direction
+.. autoenum:: neo4j_viz.Direction
     :members:
 
-.. autoenum:: neo4j_viz.options.Packing
+.. autoenum:: neo4j_viz.Packing
     :members:
 
 .. autoenum:: neo4j_viz.Renderer
