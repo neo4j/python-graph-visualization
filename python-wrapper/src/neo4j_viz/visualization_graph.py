@@ -324,6 +324,29 @@ class VisualizationGraph:
             colors are assigned based on unique field/property values or a gradient of the values of the field/property.
         override:
             Whether to override existing colors of the nodes, if they have any.
+
+        Examples
+        --------
+
+        Given a VisualizationGraph `VG`:
+
+        >>> nodes = [
+        ...    Node(id="0", properties={"label": "Person", "score": 10}),
+        ...    Node(id="1", properties={"label": "Person", "score": 20}),
+        ... ]
+        >>> VG = VisualizationGraph(nodes=nodes)
+
+        Color nodes based on a discrete field such as "label":
+        >>> VG.color_nodes(field="label", color_space=ColorSpace.DISCRETE)
+
+        Color nodes based on a continuous field such as "score":
+
+        >>> VG.color_nodes(field="score", color_space=ColorSpace.CONTINUOUS)
+
+        Color nodes based on a custom colors such as from palettable:
+
+        >>> from palettable.wesanderson import Moonrise1_5  # type: ignore[import-untyped]
+        >>> VG.color_nodes(field="label", colors=Moonrise1_5.colors)
         """
         if not ((field is None) ^ (property is None)):
             raise ValueError(
