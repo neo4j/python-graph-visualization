@@ -312,30 +312,25 @@ def _map_tables(
 def from_snowflake(
     session: Session,
     project_config: dict[str, Any],
-    node_radius_min_max: Optional[tuple[float, float]] = (3, 60),
 ) -> VisualizationGraph:
     """
     Create a VisualizationGraph from Snowflake tables based on a project configuration.
 
+    The caption of the nodes and relationships will be set to the table name.
+    The color of the nodes will be set based on the caption.
+    Otherwise, columns will be included as properties on the nodes and relationships.
+
     Args:
-        session (Session): The Snowflake session to use for querying the tables.
-        project_config (dict[str, Any]): The project configuration dictionary defining node and relationship tables.
-        node_radius_min_max (Optional[tuple[float, float]], optional): Tuple defining the min and max radius for nodes. Defaults to (3, 60).
+        session (Session): An active Snowflake session.
+        project_config (dict[str, Any]): A dictionary representing the project configuration.
     Returns:
-        VisualizationGraph: The constructed visualization graph.
+        VisualizationGraph: The resulting visualization graph.
     """
     project_model = VizProjectConfig.model_validate(project_config, strict=False, context={"session": session})
     node_dfs, rel_dfs, rel_table_names = _map_tables(session, project_model)
 
-    node_caption_present = False
-    for node_df in node_dfs:
-        if "CAPTION" in node_df.columns:
-            node_caption_present = True
-            break
-
-    if not node_caption_present:
-        for i, node_df in enumerate(node_dfs):
-            node_df["caption"] = project_model.nodeTables[i].split(".")[-1]
+    for i, node_df in enumerate(node_dfs):
+        node_df["caption"] = project_model.nodeTables[i].split(".")[-1]
 
     rel_caption_present = False
     for rel_df in rel_dfs:
@@ -347,7 +342,7 @@ def from_snowflake(
         for i, rel_df in enumerate(rel_dfs):
             rel_df["caption"] = rel_table_names[i].split(".")[-1]
 
-    VG = from_dfs(node_dfs, rel_dfs, node_radius_min_max)
+    VG = from_dfs(node_dfs, rel_dfs)
 
     VG.color_nodes(field="caption", color_space=ColorSpace.DISCRETE)
 

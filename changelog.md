@@ -3,11 +3,17 @@
 ## Breaking changes
 
 - Do not automatically derive size and caption for `from_neo4j` and `from_gql_create`. Use the `size_property` and `node_caption` parameters to explicitly configure them.
+- Change API of integrations to only provide basic parameters. Any further configuration should happen ons the Visualization Graph object:
+  - `from_gds`
+    - Drop parameters size_property, node_radius_min_max. `Use VG.resize_nodes(property=...)` instead
+    - rename additional_node_properties to node_properties
+    - Dont derive fields from properties. Use `VG.map_properties_to_fields` instead
+  - `from_pandas`
+    - Drop `node_radius_min_max` parameter. `VG.resize_nodes(...)` instead
 
 ## New features
 
-- Allow to include db node properties in addition to the properties in the GDS Graph. Specify `additional_db_node_properties` in `from_gds`.
-
+- Allow to include db node properties in addition to the properties in the GDS Graph. Specify `db_node_properties` in `from_gds`.
 
 ## Bug fixes
 

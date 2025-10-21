@@ -8,6 +8,8 @@ from uuid import uuid4
 import pandas as pd
 from graphdatascience import Graph, GraphDataScience
 
+from neo4j_viz.colors import ColorSpace
+
 from .pandas import _from_dfs
 from .visualization_graph import VisualizationGraph
 
@@ -55,18 +57,19 @@ def _fetch_rel_dfs(gds: GraphDataScience, G: Graph) -> list[pd.DataFrame]:
 def from_gds(
     gds: GraphDataScience,
     G: Graph,
-    size_property: Optional[str] = None,
-    additional_node_properties: Optional[list[str]] = None,
-    additional_db_node_properties: Optional[list[str]] = None,
-    node_radius_min_max: Optional[tuple[float, float]] = (3, 60),
+    node_properties: Optional[list[str]] = None,
+    db_node_properties: Optional[list[str]] = None,
     max_node_count: int = 10_000,
 ) -> VisualizationGraph:
     """
     Create a VisualizationGraph from a GraphDataScience object and a Graph object.
 
-    All `additional_node_properties` will be included in the visualization graph.
-    If the properties are named as the fields of the `Node` class, they will be included as top level fields of the
-    created `Node` objects. Otherwise, they will be included in the `properties` dictionary.
+    The caption of a node will be based on its `labels` property.
+    The caption of a relationship will be based on its `relationshipType` property.
+    The color of nodes will be set based on their label.
+
+    All `node_properties` will be included in the visualization graph under the `properties` field.
+    Otherwise, they will be included in the `properties` dictionary.
     Additionally, a new "labels" node property will be added, containing the node labels of the node.
     Similarly for relationships, a new "relationshipType" property will be added.
 
@@ -76,48 +79,35 @@ def from_gds(
         GraphDataScience object.
     G : Graph
         Graph object.
-    size_property : str, optional
-        Property to use for node size, by default None.
-    additional_node_properties : list[str], optional
+    node_properties : list[str], optional
         Additional properties to include in the visualization node, by default None which means that all node
         properties from the Graph will be fetched.
-    additional_db_node_properties : list[str], optional
+    db_node_properties : list[str], optional
         Additional node properties to fetch from the database, by default None. Only works if the graph was projected from the database.
-    node_radius_min_max : tuple[float, float], optional
-        Minimum and maximum node radius, by default (3, 60).
-        To avoid tiny or huge nodes in the visualization, the node sizes are scaled to fit in the given range.
     max_node_count : int, optional
         The maximum number of nodes to fetch from the graph. The graph will be sampled using random walk with restarts
         if its node count exceeds this number.
     """
-    if additional_db_node_properties is None:
-        additional_db_node_properties = []
+    if db_node_properties is None:
+        db_node_properties = []
 
     node_properties_from_gds = G.node_properties()
     assert isinstance(node_properties_from_gds, pd.Series)
     actual_node_properties: dict[str, list[str]] = cast(dict[str, list[str]], node_properties_from_gds.to_dict())
     all_actual_node_properties = list(chain.from_iterable(actual_node_properties.values()))
 
-    if size_property is not None:
-        if size_property not in all_actual_node_properties:
-            raise ValueError(f"There is no node property '{size_property}' in graph '{G.name()}'")
-
     node_properties_by_label_sets: dict[str, set[str]] = dict()
-    if additional_node_properties is None:
+    if node_properties is None:
         node_properties_by_label_sets = {k: set(v) for k, v in actual_node_properties.items()}
     else:
-        for prop in additional_node_properties:
+        for prop in node_properties:
             if prop not in all_actual_node_properties:
                 raise ValueError(f"There is no node property '{prop}' in graph '{G.name()}'")
 
         for label, props in actual_node_properties.items():
             node_properties_by_label_sets[label] = {
-                prop for prop in actual_node_properties[label] if prop in additional_node_properties
+                prop for prop in actual_node_properties[label] if prop in node_properties
             }
-
-    if size_property is not None:
-        for label, label_props in node_properties_by_label_sets.items():
-            label_props.add(size_property)
 
     node_properties_by_label = {k: list(v) for k, v in node_properties_by_label_sets.items()}
 
@@ -143,7 +133,7 @@ def from_gds(
                 props.append(property_name)
 
         node_dfs = _fetch_node_dfs(
-            gds, G_fetched, node_properties_by_label, G_fetched.node_labels(), additional_db_node_properties
+            gds, G_fetched, node_properties_by_label, G_fetched.node_labels(), db_node_properties
         )
         if property_name is not None:
             for df in node_dfs.values():
@@ -161,13 +151,6 @@ def from_gds(
             df.drop(columns=[property_name], inplace=True)
 
     node_props_df = pd.concat(node_dfs.values(), ignore_index=True, axis=0).drop_duplicates()
-    if size_property is not None:
-        if "size" in all_actual_node_properties and size_property != "size":
-            node_props_df.rename(columns={"size": "__size"}, inplace=True)
-        if additional_node_properties is not None and size_property not in additional_node_properties:
-            node_props_df.rename(columns={size_property: "size"}, inplace=True)
-        else:
-            node_props_df["size"] = node_props_df[size_property]
 
     for lbl, df in node_dfs.items():
         if "labels" in all_actual_node_properties:
@@ -187,14 +170,13 @@ def from_gds(
             rel_df["caption"] = rel_df["relationshipType"]
 
     try:
-        return _from_dfs(
-            node_df, rel_dfs, node_radius_min_max=node_radius_min_max, rename_properties={"__size": "size"}, dropna=True
-        )
+        VG = _from_dfs(node_df, rel_dfs, dropna=True)
+        # TODO handle warning if there are more distinct labels than colors?
+        VG.color_nodes(property="labels", color_space=ColorSpace.DISCRETE)
+        return VG
     except ValueError as e:
         err_msg = str(e)
         if "column" in err_msg:
             err_msg = err_msg.replace("column", "property")
-            if ("'size'" in err_msg) and (size_property is not None):
-                err_msg = err_msg.replace("'size'", f"'{size_property}'")
             raise ValueError(err_msg)
         raise e

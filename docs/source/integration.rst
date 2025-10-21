@@ -35,27 +35,16 @@ The ``from_dfs`` method takes two mandatory positional parameters:
 * A Pandas ``DataFrame``, or iterable (eg. list) of DataFrames representing the nodes of the graph.
   The rows of the DataFrame(s) should represent the individual nodes, and the columns should represent the node
   IDs and attributes.
-  If a column shares the name with a field of :doc:`Node <./api-reference/node>`, the values it contains will be set
-  on corresponding nodes under that field name.
-  Otherwise, the column name will be a key in each node's `properties` dictionary, that maps to the node's corresponding
+  The node ID will be set on the :doc:`Node <./api-reference/node>`,
+  Other columns will be a key in each node's `properties` dictionary, that maps to the node's corresponding
   value in the column.
   If the graph has no node properties, the nodes can be derived from the relationships DataFrame alone.
 * A Pandas ``DataFrame``, or iterable (eg. list) of DataFrames representing the relationships of the graph.
   The rows of the DataFrame(s) should represent the individual relationships, and the columns should represent the
   relationship IDs and attributes.
-  If a column shares the name with a field of :doc:`Relationship <./api-reference/relationship>`, the values it contains
-  will be set on corresponding relationships under that field name.
-  Otherwise, the column name will be a key in each node's `properties` dictionary, that maps to the node's corresponding
+  The relationship id, source and target node IDs will be set on the :doc:`Relationship <./api-reference/relationship>`.
+  Other columns will be a key in each relationship's `properties` dictionary, that maps to the relationship's corresponding
   value in the column.
-
-``from_dfs`` also takes an optional property, ``node_radius_min_max``, that can be used (and is used by default) to
-scale the node sizes for the visualization.
-It is a tuple of two numbers, representing the radii (sizes) in pixels of the smallest and largest nodes respectively in
-the visualization.
-The node sizes will be scaled such that the smallest node will have the size of the first value, and the largest node
-will have the size of the second value.
-The other nodes will be scaled linearly between these two values according to their relative size.
-This can be useful if node sizes vary a lot, or are all very small or very big.
 
 
 Example
@@ -111,25 +100,13 @@ If you want to have more control of the sampling, such as choosing a specific st
 a `sampling <https://neo4j.com/docs/graph-data-science/current/management-ops/graph-creation/sampling/>`_
 method yourself and passing the resulting projection to ``from_gds``.
 
-We can also provide an optional ``size_property`` parameter, which should refer to a node property of the projection,
-and will be used to determine the sizes of the nodes in the visualization.
-
-The ``additional_node_properties`` parameter is also optional, and should be a list of additional node properties of the
+The ``node_properties`` parameter is also optional, and should be a list of additional node properties of the
 projection that you want to include in the visualization.
 The default is ``None``, which means that all properties of the nodes in the projection will be included.
 Apart from being visible through on-hover tooltips, these properties could be used to color the nodes, or give captions
 to them in the visualization, or simply included in the nodes' ``Node.properties`` maps without directly impacting the
 visualization.
-If you want to include node properties stored at the Neo4j database, you can include them in the visualization by using the `additional_db_node_properties` parameter.
-
-The last optional property, ``node_radius_min_max``, can be used (and is used by default) to scale the node sizes for
-the visualization.
-It is a tuple of two numbers, representing the radii (sizes) in pixels of the smallest and largest nodes respectively in
-the visualization.
-The node sizes will be scaled such that the smallest node will have the size of the first value, and the largest node
-will have the size of the second value.
-The other nodes will be scaled linearly between these two values according to their relative size.
-This can be useful if node sizes vary a lot, or are all very small or very big.
+If you want to include node properties stored at the Neo4j database, you can include them in the visualization by using the `db_node_properties` parameter.
 
 
 Example
@@ -137,7 +114,7 @@ Example
 
 In this small example, we import a graph projection from the GDS library, that has the node properties "pagerank" and
 "componentId".
-We use the "pagerank" property to determine the size of the nodes, and the "componentId" property to color the nodes.
+We use the "pagerank" property to set the size of the nodes, and the "componentId" property to color the nodes.
 
 .. code-block:: python
 
@@ -156,9 +133,10 @@ We use the "pagerank" property to determine the size of the nodes, and the "comp
     VG = from_gds(
         gds,
         G,
-        size_property="pagerank",
-        additional_node_properties=["componentId"],
+        node_properties=["componentId"],
     )
+    # Size the nodes by the `pagerank` property
+    VG.resize_nodes(property="pagerank")
 
     # Color the nodes by the `componentId` property, so that the nodes are
     # colored by the connected component they belong to

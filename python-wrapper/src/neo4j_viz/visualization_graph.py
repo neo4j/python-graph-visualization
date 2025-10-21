@@ -22,6 +22,7 @@ from .options import (
 from .relationship import Relationship
 
 
+# TODO helper for map properties to fields. helper for set caption (simplicity), expand doc string
 class VisualizationGraph:
     """
     A graph to visualize.
