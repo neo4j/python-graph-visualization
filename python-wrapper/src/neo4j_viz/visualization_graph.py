@@ -22,26 +22,67 @@ from .options import (
 from .relationship import Relationship
 
 
-# TODO helper for map properties to fields. helper for set caption (simplicity), expand doc string
+# TODO helper for map properties to fields. helper for set caption (simplicity)
 class VisualizationGraph:
-    """
-    A graph to visualize.
-    """
-
     #: "The nodes in the graph"
     nodes: list[Node]
     #: "The relationships in the graph"
     relationships: list[Relationship]
 
     def __init__(self, nodes: list[Node], relationships: list[Relationship]) -> None:
-        """ "
-        Create a new `VisualizationGraph`.
+        """
+        A graph to visualize.
+
+        The `VisualizationGraph` class represents a collection of nodes and relationships that can be
+        rendered as an interactive graph visualization. You can customize the appearance of nodes and
+        relationships by setting their properties, colors, sizes, and other visual attributes.
+
+        Examples
+        --------
+        Basic usage with nodes and relationships:
+
+        >>> from neo4j_viz import Node, Relationship, VisualizationGraph
+        >>> nodes = [
+        ...     Node(id="1", properties={"name": "Alice", "age": 30}),
+        ...     Node(id="2", properties={"name": "Bob", "age": 25}),
+        ... ]
+        >>> relationships = [
+        ...     Relationship(id="r1", start_node_id="1", end_node_id="2", type="KNOWS")
+        ... ]
+        >>> VG = VisualizationGraph(nodes=nodes, relationships=relationships)
+
+        Setting a node field such as captions from properties:
+
+        >>> # Set caption from a specific property
+        >>> for node in VG.nodes:
+        ...     node.caption = node.properties.get("name")
+
+        Setting a relationship field such as type from properties:
+
+        >>> # Set relationship type from property
+        >>> for rel in VG.relationships:
+        ...     rel.type = rel.properties.get("type")
+
+        Using built-in helper methods:
+
+        >>> # Use the color_nodes method for automatic coloring
+        >>> VG.color_nodes(property="age", color_space=ColorSpace.CONTINUOUS)
+        >>>
+        >>> # Use resize_nodes for automatic sizing
+        >>> VG.resize_nodes(property="degree", node_radius_min_max=(10, 50))
 
         Parameters
         ----------
-        nodes:
+        nodes : list[Node]
             The nodes in the graph.
-        relationships:
+        relationships : list[Relationship]
+            The relationships in the graph.
+
+        Attributes
+        ----------
+        nodes : list[Node]
+            The nodes in the graph.
+        relationships : list[Relationship]
             The relationships in the graph.
         """
         self.nodes = nodes

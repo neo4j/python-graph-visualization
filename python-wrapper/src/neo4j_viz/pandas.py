@@ -120,8 +120,10 @@ def from_dfs(
 
     All columns will be included in the visualization graph.
     The following columns will be treated as fields:
+
         * `id`, and `caption` for the node_dfs
         * `id`, `source`, `target`, `caption` for the rel_dfs
+
     Other columns will be included in the `properties` dictionary on the respective node or relationship objects.
 
     Parameters
@@ -132,6 +134,7 @@ def from_dfs(
     rel_dfs: Optional[Union[DataFrame, Iterable[DataFrame]]], optional
         DataFrame or iterable of DataFrames containing relationship data.
         If None, no relationships will be created.
+
     """
 
     return _from_dfs(node_dfs, rel_dfs, dropna=False)
