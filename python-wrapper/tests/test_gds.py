@@ -3,7 +3,6 @@ from typing import Any, Generator
 
 import pandas as pd
 import pytest
-from pytest_mock import MockerFixture
 
 from neo4j_viz import Node
 
