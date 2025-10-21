@@ -8,7 +8,7 @@ from uuid import uuid4
 import pandas as pd
 from graphdatascience import Graph, GraphDataScience
 
-from neo4j_viz.colors import ColorSpace, NEO4J_COLORS_DISCRETE
+from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace
 
 from .pandas import _from_dfs
 from .visualization_graph import VisualizationGraph
@@ -68,7 +68,7 @@ def from_gds(
 
     * the caption of a node will be based on its `labels` property.
     * the caption of a relationship will be based on its `relationshipType` property.
-    * the color of nodes will be set based on their label, unless there are too many unique labels.
+    * the color of nodes will be set based on their label, unless there are more than 12 unique labels.
 
     All `node_properties` will be included in the visualization graph under the `properties` field.
     Otherwise, they will be included in the `properties` dictionary.

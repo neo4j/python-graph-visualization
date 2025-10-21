@@ -37,7 +37,7 @@ from snowflake.snowpark.types import (
 )
 
 from neo4j_viz import VisualizationGraph
-from neo4j_viz.colors import ColorSpace
+from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace
 from neo4j_viz.pandas import from_dfs
 
 
@@ -316,8 +316,10 @@ def from_snowflake(
     """
     Create a VisualizationGraph from Snowflake tables based on a project configuration.
 
-    The caption of the nodes and relationships will be set to the table name.
-    The color of the nodes will be set based on the caption.
+    By default:
+    * The caption of the nodes will be set to the table name.
+    * The caption of the relationships will be set to the table name.
+    * The color of the nodes will be set based on the caption, unless there are more than 12 node tables used.
     Otherwise, columns will be included as properties on the nodes and relationships.
 
     Args:
@@ -344,6 +346,8 @@ def from_snowflake(
 
     VG = from_dfs(node_dfs, rel_dfs)
 
-    VG.color_nodes(field="caption", color_space=ColorSpace.DISCRETE)
+    number_of_colors = node_df["caption"].drop_duplicates().count()
+    if number_of_colors <= len(NEO4J_COLORS_DISCRETE):
+        VG.color_nodes(field="caption", color_space=ColorSpace.DISCRETE)
 
     return VG

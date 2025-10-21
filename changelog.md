@@ -19,10 +19,12 @@
 
 - fixed a bug in `from_neo4j`, where the node size would always be set to the `size` property.
 - fixed a bug in `from_neo4j`, where the node caption would always be set to the `caption` property.
+- Color nodes in `from_snowflake` only if there are less than 13 node tables used. This avoids reuse of colors for different tables.
 
 ## Improvements
 
 - Validate fields of a node and relationship not only at construction but also on assignment.
 - Allow resizing per node property such as `VG.resize_nodes(property="score")`.
+- Color nodes by label in `fom_gds`.
 
 ## Other changes
