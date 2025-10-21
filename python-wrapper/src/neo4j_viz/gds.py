@@ -70,8 +70,7 @@ def from_gds(
     * the caption of a relationship will be based on its `relationshipType` property.
     * the color of nodes will be set based on their label, unless there are more than 12 unique labels.
 
-    All `node_properties` will be included in the visualization graph under the `properties` field.
-    Otherwise, they will be included in the `properties` dictionary.
+    All `node_properties` and `db_node_properties` will be included in the visualization graph under the `properties` field.
     Additionally, a new "labels" node property will be added, containing the node labels of the node.
     Similarly for relationships, a new "relationshipType" property will be added.
 

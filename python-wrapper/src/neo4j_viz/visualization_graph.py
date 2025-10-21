@@ -56,7 +56,7 @@ class VisualizationGraph:
         ...     Node(id="2", properties={"name": "Bob", "age": 25}),
         ... ]
         >>> relationships = [
-        ...     Relationship(id="r1", start_node_id="1", end_node_id="2", type="KNOWS")
+        ...     Relationship(id="r1", source="1", target="2", properties={"type": "KNOWS"})
         ... ]
         >>> VG = VisualizationGraph(nodes=nodes, relationships=relationships)
 
@@ -68,9 +68,9 @@ class VisualizationGraph:
 
         Setting a relationship field such as type from properties:
 
-        >>> # Set relationship type from property
+        >>> # Set relationship caption from property
         >>> for rel in VG.relationships:
-        ...     rel.type = rel.properties.get("type")
+        ...     rel.caption = rel.properties.get("type")
 
         Using built-in helper methods:
 
