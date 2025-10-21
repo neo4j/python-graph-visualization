@@ -8,7 +8,7 @@ from uuid import uuid4
 import pandas as pd
 from graphdatascience import Graph, GraphDataScience
 
-from neo4j_viz.colors import ColorSpace
+from neo4j_viz.colors import ColorSpace, NEO4J_COLORS_DISCRETE
 
 from .pandas import _from_dfs
 from .visualization_graph import VisualizationGraph
@@ -64,9 +64,11 @@ def from_gds(
     """
     Create a VisualizationGraph from a GraphDataScience object and a Graph object.
 
-    The caption of a node will be based on its `labels` property.
-    The caption of a relationship will be based on its `relationshipType` property.
-    The color of nodes will be set based on their label.
+    By default:
+
+    * the caption of a node will be based on its `labels` property.
+    * the caption of a relationship will be based on its `relationshipType` property.
+    * the color of nodes will be set based on their label, unless there are too many unique labels.
 
     All `node_properties` will be included in the visualization graph under the `properties` field.
     Otherwise, they will be included in the `properties` dictionary.
@@ -171,8 +173,11 @@ def from_gds(
 
     try:
         VG = _from_dfs(node_df, rel_dfs, dropna=True)
-        # TODO handle warning if there are more distinct labels than colors?
-        VG.color_nodes(property="labels", color_space=ColorSpace.DISCRETE)
+
+        number_of_colors = node_df["labels"].drop_duplicates().count()
+        if number_of_colors <= len(NEO4J_COLORS_DISCRETE):
+            VG.color_nodes(property="labels", color_space=ColorSpace.DISCRETE)
+
         return VG
     except ValueError as e:
         err_msg = str(e)
