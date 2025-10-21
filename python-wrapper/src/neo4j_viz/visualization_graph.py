@@ -24,6 +24,14 @@ from .relationship import Relationship
 
 # TODO helper for map properties to fields. helper for set caption (simplicity)
 class VisualizationGraph:
+    """
+    A graph to visualize.
+
+    The `VisualizationGraph` class represents a collection of nodes and relationships that can be
+    rendered as an interactive graph visualization. You can customize the appearance of nodes and
+    relationships by setting their properties, colors, sizes, and other visual attributes.
+    """
+
     #: "The nodes in the graph"
     nodes: list[Node]
     #: "The relationships in the graph"
@@ -31,11 +39,12 @@ class VisualizationGraph:
 
     def __init__(self, nodes: list[Node], relationships: list[Relationship]) -> None:
         """
-        A graph to visualize.
-
-        The `VisualizationGraph` class represents a collection of nodes and relationships that can be
-        rendered as an interactive graph visualization. You can customize the appearance of nodes and
-        relationships by setting their properties, colors, sizes, and other visual attributes.
+        Parameters
+        ----------
+        nodes : list[Node]
+            The nodes in the graph.
+        relationships : list[Relationship]
+            The relationships in the graph.
 
         Examples
         --------
@@ -71,19 +80,6 @@ class VisualizationGraph:
         >>> # Use resize_nodes for automatic sizing
         >>> VG.resize_nodes(property="degree", node_radius_min_max=(10, 50))
 
-        Parameters
-        ----------
-        nodes : list[Node]
-            The nodes in the graph.
-        relationships : list[Relationship]
-            The relationships in the graph.
-
-        Attributes
-        ----------
-        nodes : list[Node]
-            The nodes in the graph.
-        relationships : list[Relationship]
-            The relationships in the graph.
         """
         self.nodes = nodes
         self.relationships = relationships
@@ -132,6 +128,12 @@ class VisualizationGraph:
             The maximum allowed number of nodes to render.
         show_hover_tooltip:
             Whether to show an info tooltip when hovering over nodes and relationships.
+
+
+        Example
+        -------
+        Basic rendering of a VisualizationGraph:
+        >>> from neo4j_viz import Node, Relationship, VisualizationGraph
         """
 
         num_nodes = len(self.nodes)

@@ -33,7 +33,10 @@ nbsphinx_execute = "never"
 
 # -- Options for autodoc extension -------------------------------------------
 autodoc_typehints = "description"
+autoclass_content = "both"
 
+# -- Options for napoleon extension -------------------------------------------
+napoleon_use_admonition_for_examples = True
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
