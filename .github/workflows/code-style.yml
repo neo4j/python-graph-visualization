@@ -32,6 +32,7 @@ jobs:
         with:
           python-version: "3.11"
           enable-cache: true
+      - run: uv venv && source .venv/bin/activate
       - run: uv pip install ".[dev, pandas, gds, snowflake]"
 
       - name: Check code style
