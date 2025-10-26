@@ -33,16 +33,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Install uv and set the Python version
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
-          cache-dependency-path: pyproject.toml
-      - run: pip install ".[dev]"
-      - run: pip install ".[pandas]"
-      - run: pip install ".[neo4j]"
-      - run: pip install ".[gds]"
-      - run: pip install ".[snowflake]"
+          enable-cache: true
+      - run: uv sync --extra dev --extra pandas --extra neo4j --extra gds --extra snowflake
 
       - name: Run tests
-        run: pytest tests/
+        run: uv run pytest tests/
