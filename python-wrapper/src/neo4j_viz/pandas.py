@@ -121,8 +121,8 @@ def from_dfs(
     All columns will be included in the visualization graph.
     The following columns will be treated as fields:
 
-        * `id`, and `caption` for the node_dfs
-        * `id`, `source`, `target`, `caption` for the rel_dfs
+        * `id` for the node_dfs
+        * `id`, `source`, `target` for the rel_dfs
 
     Other columns will be included in the `properties` dictionary on the respective node or relationship objects.
 

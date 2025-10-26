@@ -23,27 +23,27 @@ def test_from_df() -> None:
 
     assert VG.nodes[0] == Node(
         id=0,
-        caption="A",
-        properties={"size": 1337, "color": "#FF0000", "instrument": "piano"},
+        caption=None,
+        properties={"size": 1337, "color": "#FF0000", "instrument": "piano", "caption": "A"},
     )
 
     assert VG.nodes[1] == Node(
         id=1,
-        caption="B",
-        properties={"size": 42, "color": "#FF0000", "instrument": "guitar"},
+        caption=None,
+        properties={"size": 42, "color": "#FF0000", "instrument": "guitar", "caption": "B"},
     )
 
     assert len(VG.relationships) == 2
 
     assert VG.relationships[0].source == 0
     assert VG.relationships[0].target == 1
-    assert VG.relationships[0].caption == "REL"
-    assert VG.relationships[0].properties == {"weight": 1.0}
+    assert VG.relationships[0].caption is None
+    assert VG.relationships[0].properties == {"weight": 1.0, "caption": "REL"}
 
     assert VG.relationships[1].source == 1
     assert VG.relationships[1].target == 0
-    assert VG.relationships[1].caption == "REL2"
-    assert VG.relationships[1].properties == {"weight": 2.0}
+    assert VG.relationships[1].caption is None
+    assert VG.relationships[1].properties == {"weight": 2.0, "caption": "REL2"}
 
 
 def test_from_rel_dfs() -> None:
@@ -111,18 +111,20 @@ def test_from_dfs() -> None:
 
     assert len(VG.nodes) == 2
 
-    assert VG.nodes[0] == Node(id=0, caption="A", properties={"size": 1337, "color": "#FF0000"})
-    assert VG.nodes[1] == Node(id=1, caption="B", properties={"size": 42, "color": "#FF0000"})
+    assert VG.nodes[0] == Node(id=0, caption=None, properties={"size": 1337, "color": "#FF0000", "caption": "A"})
+    assert VG.nodes[1] == Node(id=1, caption=None, properties={"size": 42, "color": "#FF0000", "caption": "B"})
 
     assert len(VG.relationships) == 2
 
     assert VG.relationships[0].source == 0
     assert VG.relationships[0].target == 1
-    assert VG.relationships[0].caption == "REL"
+    assert VG.relationships[0].caption is None
+    assert VG.relationships[0].properties == {"caption": "REL"}
 
     assert VG.relationships[1].source == 1
     assert VG.relationships[1].target == 0
-    assert VG.relationships[1].caption == "REL2"
+    assert VG.relationships[1].caption is None
+    assert VG.relationships[1].properties == {"caption": "REL2"}
 
 
 def test_node_errors() -> None:
@@ -186,7 +188,7 @@ def test_from_dfs_no_rels() -> None:
     VG = from_dfs(nodes, [])
 
     assert len(VG.nodes) == 2
-    assert VG.nodes[0] == Node(id=0, caption="A", properties={"size": 1337, "color": "#FF0000"})
-    assert VG.nodes[1] == Node(id=1, caption="B", properties={"size": 42, "color": "#FF0000"})
+    assert VG.nodes[0] == Node(id=0, caption=None, properties={"size": 1337, "color": "#FF0000", "caption": "A"})
+    assert VG.nodes[1] == Node(id=1, caption=None, properties={"size": 42, "color": "#FF0000", "caption": "B"})
 
     assert len(VG.relationships) == 0

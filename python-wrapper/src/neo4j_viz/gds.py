@@ -66,8 +66,8 @@ def from_gds(
 
     By default:
 
-    * the caption of a node will be based on its `labels` property.
-    * the caption of a relationship will be based on its `relationshipType` property.
+    * the caption of a node will be based on its `labels`.
+    * the caption of a relationship will be based on its `relationshipType`.
     * the color of nodes will be set based on their label, unless there are more than 12 unique labels.
 
     All `node_properties` and `db_node_properties` will be included in the visualization graph under the `properties` field.
@@ -163,15 +163,13 @@ def from_gds(
 
     node_df = node_props_df.merge(node_labels_df, on="nodeId")
 
-    if "caption" not in all_actual_node_properties:
-        node_df["caption"] = node_df["labels"].astype(str)
-
-    for rel_df in rel_dfs:
-        if "caption" not in rel_df.columns:
-            rel_df["caption"] = rel_df["relationshipType"]
-
     try:
         VG = _from_dfs(node_df, rel_dfs, dropna=True)
+
+        for node in VG.nodes:
+            node.caption = str(node.properties.get("labels"))
+        for rel in VG.relationships:
+            rel.caption = rel.properties.get("relationshipType")
 
         number_of_colors = node_df["labels"].drop_duplicates().count()
         if number_of_colors <= len(NEO4J_COLORS_DISCRETE):

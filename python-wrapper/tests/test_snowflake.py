@@ -2,6 +2,7 @@ import pytest
 from snowflake.snowpark import Session
 from snowflake.snowpark.types import LongType, StructField, StructType
 
+from neo4j_viz.node import Node
 from neo4j_viz.snowflake import from_snowflake
 
 
@@ -58,20 +59,14 @@ def test_from_snowflake(session_with_minimal_graph: Session) -> None:
         },
     )
 
-    assert len(VG.nodes) == 2
-
-    assert VG.nodes[0].id == 0
-    assert VG.nodes[0].caption == "NODES"
-    assert VG.nodes[0].color is not None
-    assert VG.nodes[0].properties == {"SNOWFLAKEID": 6}
-
-    assert VG.nodes[1].id == 1
-    assert VG.nodes[1].caption == "NODES"
-    assert VG.nodes[0].color is not None
-    assert VG.nodes[1].properties == {"SNOWFLAKEID": 7}
+    assert VG.nodes == [
+        Node(id=0, caption="NODES", color="#ffdf81", properties={"SNOWFLAKEID": 6, "table": "NODES"}),
+        Node(id=1, caption="NODES", color="#ffdf81", properties={"SNOWFLAKEID": 7, "table": "NODES"}),
+    ]
 
     assert len(VG.relationships) == 1
 
     assert VG.relationships[0].source == 0
     assert VG.relationships[0].target == 1
     assert VG.relationships[0].caption == "RELS"
+    assert VG.relationships[0].properties == {"table": "RELS"}

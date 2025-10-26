@@ -101,7 +101,7 @@ class Node(
 
     @staticmethod
     def basic_fields_validation_aliases() -> set[str]:
-        mandatory_fields = ["id", "caption"]
+        mandatory_fields = ["id"]
         by_field = [v.validation_alias.choices for k, v in Node.model_fields.items() if k in mandatory_fields]  # type: ignore
 
         return {str(alias) for aliases in by_field for alias in aliases}

@@ -332,21 +332,18 @@ def from_snowflake(
     node_dfs, rel_dfs, rel_table_names = _map_tables(session, project_model)
 
     for i, node_df in enumerate(node_dfs):
-        node_df["caption"] = project_model.nodeTables[i].split(".")[-1]
-
-    rel_caption_present = False
-    for rel_df in rel_dfs:
-        if "CAPTION" in rel_df.columns:
-            rel_caption_present = True
-            break
-
-    if not rel_caption_present:
-        for i, rel_df in enumerate(rel_dfs):
-            rel_df["caption"] = rel_table_names[i].split(".")[-1]
+        node_df["table"] = project_model.nodeTables[i].split(".")[-1]
+    for i, rel_df in enumerate(rel_dfs):
+        rel_df["table"] = rel_table_names[i].split(".")[-1]
 
     VG = from_dfs(node_dfs, rel_dfs)
 
-    number_of_colors = node_df["caption"].drop_duplicates().count()
+    for node in VG.nodes:
+        node.caption = node.properties.get("table")
+    for rel in VG.relationships:
+        rel.caption = rel.properties.get("table")
+
+    number_of_colors = node_df["table"].drop_duplicates().count()
     if number_of_colors <= len(NEO4J_COLORS_DISCRETE):
         VG.color_nodes(field="caption", color_space=ColorSpace.DISCRETE)
 

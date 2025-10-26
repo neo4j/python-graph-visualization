@@ -112,7 +112,7 @@ class Relationship(
 
     @staticmethod
     def basic_fields_validation_aliases() -> set[str]:
-        basic_fields = ["id", "source", "target", "caption"]
+        basic_fields = ["id", "source", "target"]
         by_field = [
             v.validation_alias.choices  # type: ignore
             for k, v in Relationship.model_fields.items()
