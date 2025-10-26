@@ -32,7 +32,7 @@ jobs:
         with:
           python-version: "3.11"
           enable-cache: true
-      - run: uv sync --extra dev --extra pandas --extra neo4j --extra gds --extra snowflake
+      - run: uv pip install ".[dev, pandas, gds, snowflake]"
 
       - name: Check code style
         run: cd ${GITHUB_WORKSPACE} && uv run bash ./scripts/checkstyle.sh
