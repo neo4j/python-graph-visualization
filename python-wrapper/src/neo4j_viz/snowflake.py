@@ -37,7 +37,7 @@ from snowflake.snowpark.types import (
 )
 
 from neo4j_viz import VisualizationGraph
-from neo4j_viz.colors import ColorSpace
+from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace
 from neo4j_viz.pandas import from_dfs
 
 
@@ -312,43 +312,39 @@ def _map_tables(
 def from_snowflake(
     session: Session,
     project_config: dict[str, Any],
-    node_radius_min_max: Optional[tuple[float, float]] = (3, 60),
 ) -> VisualizationGraph:
     """
     Create a VisualizationGraph from Snowflake tables based on a project configuration.
 
+    By default:
+    * The caption of the nodes will be set to the table name.
+    * The caption of the relationships will be set to the table name.
+    * The color of the nodes will be set based on the caption, unless there are more than 12 node tables used.
+    Otherwise, columns will be included as properties on the nodes and relationships.
+
     Args:
-        session (Session): The Snowflake session to use for querying the tables.
-        project_config (dict[str, Any]): The project configuration dictionary defining node and relationship tables.
-        node_radius_min_max (Optional[tuple[float, float]], optional): Tuple defining the min and max radius for nodes. Defaults to (3, 60).
+        session (Session): An active Snowflake session.
+        project_config (dict[str, Any]): A dictionary representing the project configuration.
     Returns:
-        VisualizationGraph: The constructed visualization graph.
+        VisualizationGraph: The resulting visualization graph.
     """
     project_model = VizProjectConfig.model_validate(project_config, strict=False, context={"session": session})
     node_dfs, rel_dfs, rel_table_names = _map_tables(session, project_model)
 
-    node_caption_present = False
-    for node_df in node_dfs:
-        if "CAPTION" in node_df.columns:
-            node_caption_present = True
-            break
+    for i, node_df in enumerate(node_dfs):
+        node_df["table"] = project_model.nodeTables[i].split(".")[-1]
+    for i, rel_df in enumerate(rel_dfs):
+        rel_df["table"] = rel_table_names[i].split(".")[-1]
 
-    if not node_caption_present:
-        for i, node_df in enumerate(node_dfs):
-            node_df["caption"] = project_model.nodeTables[i].split(".")[-1]
+    VG = from_dfs(node_dfs, rel_dfs)
 
-    rel_caption_present = False
-    for rel_df in rel_dfs:
-        if "CAPTION" in rel_df.columns:
-            rel_caption_present = True
-            break
+    for node in VG.nodes:
+        node.caption = node.properties.get("table")
+    for rel in VG.relationships:
+        rel.caption = rel.properties.get("table")
 
-    if not rel_caption_present:
-        for i, rel_df in enumerate(rel_dfs):
-            rel_df["caption"] = rel_table_names[i].split(".")[-1]
-
-    VG = from_dfs(node_dfs, rel_dfs, node_radius_min_max)
-
-    VG.color_nodes(field="caption", color_space=ColorSpace.DISCRETE)
+    number_of_colors = node_df["table"].drop_duplicates().count()
+    if number_of_colors <= len(NEO4J_COLORS_DISCRETE):
+        VG.color_nodes(field="caption", color_space=ColorSpace.DISCRETE)
 
     return VG
