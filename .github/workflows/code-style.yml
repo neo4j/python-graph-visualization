@@ -35,4 +35,4 @@ jobs:
       - run: uv sync --extra dev --extra pandas --extra neo4j --extra gds --extra snowflake
 
       - name: Check code style
-        run: cd ${GITHUB_WORKSPACE} && uv run ./scripts/checkstyle.sh
+        run: cd ${GITHUB_WORKSPACE} && uv run bash ./scripts/checkstyle.sh
