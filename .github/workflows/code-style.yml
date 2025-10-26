@@ -36,4 +36,4 @@ jobs:
       - run: uv pip install ".[dev, pandas, gds, snowflake]"
 
       - name: Check code style
-        run: cd ${GITHUB_WORKSPACE} && uv run bash ./scripts/checkstyle.sh
+        run: cd ${GITHUB_WORKSPACE} && ./scripts/checkstyle.sh
