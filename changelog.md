@@ -7,7 +7,7 @@
   - `from_gds`
     - Drop parameters size_property, node_radius_min_max. `Use VG.resize_nodes(property=...)` instead
     - rename additional_node_properties to node_properties
-    - Dont derive fields from properties. Use `VG.map_properties_to_fields` instead
+    - Don't derive fields from properties. Use `VG.map_properties_to_fields` instead
   - `from_pandas`
     - Drop `node_radius_min_max` parameter. `VG.resize_nodes(...)` instead
 
@@ -25,6 +25,7 @@
 
 - Validate fields of a node and relationship not only at construction but also on assignment.
 - Allow resizing per node property such as `VG.resize_nodes(property="score")`.
-- Color nodes by label in `fom_gds`.
+- Color nodes by label in `from_gds`.
+- Add `table` property to nodes and relationships created by `from_snowflake`. This is used as a default caption.
 
 ## Other changes

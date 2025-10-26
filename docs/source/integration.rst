@@ -114,7 +114,7 @@ Example
 
 In this small example, we import a graph projection from the GDS library, that has the node properties "pagerank" and
 "componentId".
-We use the "pagerank" property to set the size of the nodes, and the "componentId" property to color the nodes.
+We use the "pagerank" property to compute the size of the nodes, and the "componentId" property to color the nodes.
 
 .. code-block:: python
 
