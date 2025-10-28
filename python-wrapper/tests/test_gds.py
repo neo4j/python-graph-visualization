@@ -62,19 +62,19 @@ def test_from_gds_integration_all_properties(gds: Any) -> None:
         assert sorted(VG.nodes, key=lambda x: x.id) == [
             Node(
                 id=0,
-                caption="['A']",
+                caption="A",
                 color="#ffdf81",
                 properties=dict(size=0.1, labels=["A"], component=float(1), score=1337.0),
             ),
             Node(
                 id=1,
-                caption="['C']",
+                caption="C",
                 color="#f79767",
                 properties=dict(size=0.2, labels=["C"], component=float(4), score=42.0),
             ),
             Node(
                 id=2,
-                caption="['A', 'B']",
+                caption="A:B",
                 color="#c990c0",
                 properties=dict(size=0.3, labels=["A", "B"], component=float(2), score=3.14),
             ),
@@ -167,10 +167,10 @@ def test_from_gds_hetero(gds: Any) -> None:
 
         assert len(VG.nodes) == 4
         assert sorted(VG.nodes, key=lambda x: x.id) == [
-            Node(id=0, caption="['A']", color="#ffdf81", properties=dict(labels=["A"], component=float(1))),
-            Node(id=1, caption="['A']", color="#ffdf81", properties=dict(labels=["A"], component=float(2))),
-            Node(id=2, caption="['B']", color="#c990c0", properties=dict(labels=["B"])),
-            Node(id=3, caption="['B']", color="#c990c0", properties=dict(labels=["B"])),
+            Node(id=0, caption="A", color="#ffdf81", properties=dict(labels=["A"], component=float(1))),
+            Node(id=1, caption="A", color="#ffdf81", properties=dict(labels=["A"], component=float(2))),
+            Node(id=2, caption="B", color="#c990c0", properties=dict(labels=["B"])),
+            Node(id=3, caption="B", color="#c990c0", properties=dict(labels=["B"])),
         ]
 
         assert len(VG.relationships) == 2

@@ -167,7 +167,7 @@ def from_gds(
         VG = _from_dfs(node_df, rel_dfs, dropna=True)
 
         for node in VG.nodes:
-            node.caption = str(node.properties.get("labels"))
+            node.caption = ":".join([label for label in node.properties["labels"]])
         for rel in VG.relationships:
             rel.caption = rel.properties.get("relationshipType")
 
