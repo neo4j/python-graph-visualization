@@ -91,15 +91,6 @@ class Node(
         return self.model_dump(exclude_none=True, by_alias=True)
 
     @staticmethod
-    def all_validation_aliases(exempted_fields: Optional[list[str]] = None) -> set[str]:
-        if exempted_fields is None:
-            exempted_fields = []
-
-        by_field = [v.validation_alias.choices for k, v in Node.model_fields.items() if k not in exempted_fields]  # type: ignore
-
-        return {str(alias) for aliases in by_field for alias in aliases}
-
-    @staticmethod
     def basic_fields_validation_aliases() -> set[str]:
         mandatory_fields = ["id"]
         by_field = [v.validation_alias.choices for k, v in Node.model_fields.items() if k in mandatory_fields]  # type: ignore

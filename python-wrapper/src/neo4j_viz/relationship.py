@@ -98,19 +98,6 @@ class Relationship(
         return self.model_dump(exclude_none=True, by_alias=True)
 
     @staticmethod
-    def all_validation_aliases(exempted_fields: Optional[list[str]] = None) -> set[str]:
-        if exempted_fields is None:
-            exempted_fields = []
-
-        by_field = [
-            v.validation_alias.choices  # type: ignore
-            for k, v in Relationship.model_fields.items()
-            if k not in exempted_fields
-        ]
-
-        return {str(alias) for aliases in by_field for alias in aliases}
-
-    @staticmethod
     def basic_fields_validation_aliases() -> set[str]:
         basic_fields = ["id", "source", "target"]
         by_field = [

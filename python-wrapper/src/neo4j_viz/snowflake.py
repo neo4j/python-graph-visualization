@@ -317,9 +317,11 @@ def from_snowflake(
     Create a VisualizationGraph from Snowflake tables based on a project configuration.
 
     By default:
+
     * The caption of the nodes will be set to the table name.
     * The caption of the relationships will be set to the table name.
     * The color of the nodes will be set based on the caption, unless there are more than 12 node tables used.
+
     Otherwise, columns will be included as properties on the nodes and relationships.
 
     Args:

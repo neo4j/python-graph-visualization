@@ -164,22 +164,9 @@ The ``from_neo4j`` method takes one mandatory positional parameter:
 A ``data`` argument representing either a query result in the shape of a ``neo4j.graph.Graph`` or ``neo4j.Result``, or a
 ``neo4j.Driver`` in which case a simple default query will be executed internally to retrieve the graph data.
 
-We can also provide an optional ``size_property`` parameter, which should refer to a node property,
-and will be used to determine the sizes of the nodes in the visualization.
-
-The ``node_caption`` and ``relationship_caption`` parameters are also optional, and indicate the node and relationship
-properties to use for the captions of each element in the visualization.
-By default, the captions will be set to the node labels relationship types, but you can specify any property that
-exists on these entities.
-
-The last optional property, ``node_radius_min_max``, can be used (and is used by default) to scale the node sizes for
-the visualization.
-It is a tuple of two numbers, representing the radii (sizes) in pixels of the smallest and largest nodes respectively in
-the visualization.
-The node sizes will be scaled such that the smallest node will have the size of the first value, and the largest node
-will have the size of the second value.
-The other nodes will be scaled linearly between these two values according to their relative size.
-This can be useful if node sizes vary a lot, or are all very small or very big.
+The optional ``max_rows`` parameter can be used to limit the number of relationships shown in the visualization.
+By default, it is set to 10.000, meaning that if the database has more than 10.000 rows, a warning will be raised.
+Note, this only applies if the ``data`` parameter is a ``neo4j.Driver``.
 
 
 Example
@@ -269,39 +256,14 @@ The ``from_snowflake`` method takes two mandatory positional parameters:
 * A `project configuration <https://neo4j.com/docs/snowflake-graph-analytics/current/jobs/#jobs-project>`_ as a dictionary, that specifies how you want your tables to be projected as a graph.
   This configuration is the same as the project configuration of the `Neo4j Snowflake Graph Analytics application <https://neo4j.com/docs/snowflake-graph-analytics/current/>`_.
 
-``from_snowflake`` also takes an optional property, ``node_radius_min_max``, that can be used (and is used by default) to
-scale the node sizes for the visualization.
-It is a tuple of two numbers, representing the radii (sizes) in pixels of the smallest and largest nodes respectively in
-the visualization.
-The node sizes will be scaled such that the smallest node will have the size of the first value, and the largest node
-will have the size of the second value.
-The other nodes will be scaled linearly between these two values according to their relative size.
-This can be useful if node sizes vary a lot, or are all very small or very big.
-
-
-Special columns
-~~~~~~~~~~~~~~~
-
-It is possible to modify the visualization directly by including columns of certain specific names in the node and relationship tables.
-
-All such special columns can be found :doc:`here <./api-reference/node>` for nodes and :doc:`here <./api-reference/relationship>` for relationships.
-Though listed in ``snake_case`` here, ``SCREAMING_SNAKE_CASE`` and ``camelCase`` are also supported.
-Some of the most commonly used special columns are:
-
-* **Node sizes**: The sizes of nodes can be controlled by including a column named "SIZE" in node tables.
-  The values in these columns should be of a numeric type. This can be useful for visualizing the relative importance or size of nodes in the graph, for example using a computed centrality score.
-
-* **Captions**: The caption text of nodes and relationships can be controlled by including a column named "CAPTION" in the tables.
-  The values in these columns should be of a string type. This can be useful for displaying additional information about the nodes, such as their names or labels. If no "CAPTION" column is provided, the default captions in the visualization will be the names of the corresponding node and relationship tables.
-
-Please also note that you can further customize the visualization after the `VisualizationGraph` has been created, by using the methods described in the :doc:`Customizing the visualization <./customizing>` section.
+You can further customize the visualization after the `VisualizationGraph` has been created, by using the methods described in the :doc:`Customizing the visualization <./customizing>` section.
 
 
 Default behavior
 ~~~~~~~~~~~~~~~~
 
-Unless there are "CAPTION" columns in the tables, the node and relationship captions will be set to the names of the corresponding tables.
-Similarly, if there are are no "COLOR" node table columns, the nodes will be colored be colored so that nodes from the same table have the same color, and different tables have different colors.
+The node and relationship captions will be set to the names of the corresponding tables.
+The nodes will be colored so that nodes from the same table have the same color, and different tables have different colors.
 
 
 Example

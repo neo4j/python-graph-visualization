@@ -4,13 +4,9 @@
 
 - Do not automatically derive size and caption for `from_neo4j` and `from_gql_create`. Use the `size_property` and `node_caption` parameters to explicitly configure them.
 - Change API of integrations to only provide basic parameters. Any further configuration should happen ons the Visualization Graph object:
-  - `from_gds`
-    - Drop parameters `size_property`, `node_radius_min_max`. Use `VG.resize_nodes(property=...)` instead
-    - rename additional_node_properties to node_properties
-    - Don't derive fields from properties. Use `VG.map_properties_to_fields` instead
   - `from_pandas`
     - Drop `node_radius_min_max` parameter. `VG.resize_nodes(...)` instead
-  - `from_gql_create`
+  - `from_neo4j`, `from_gds`, `from_gql_create`
     - Drop parameters `size_property`, `node_radius_min_max`. Use `VG.resize_nodes(property=...)` instead
     - rename additional_node_properties to node_properties
     - Don't derive fields from properties. Use `VG.map_properties_to_fields` instead
