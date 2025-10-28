@@ -222,20 +222,6 @@ The ``from_gql_create`` method takes one mandatory positional parameter:
 
 * A valid ``query`` representing a GQL ``CREATE`` query as a string.
 
-We can also provide an optional ``size_property`` parameter, which should refer to a node property,
-and will be used to determine the sizes of the nodes in the visualization.
-
-The ``node_caption`` and ``relationship_caption`` parameters are also optional, and indicate the node and relationship properties to use for the captions of each element in the visualization.
-
-The last optional property, ``node_radius_min_max``, can be used (and is used by default) to scale the node sizes for
-the visualization.
-It is a tuple of two numbers, representing the radii (sizes) in pixels of the smallest and largest nodes respectively in
-the visualization.
-The node sizes will be scaled such that the smallest node will have the size of the first value, and the largest node
-will have the size of the second value.
-The other nodes will be scaled linearly between these two values according to their relative size.
-This can be useful if node sizes vary a lot, or are all very small or very big.
-
 
 Example
 ~~~~~~~
