@@ -104,12 +104,7 @@ def test_rel_casing() -> None:
 
 
 def test_all_validation_aliases() -> None:
-    all_aliases = Relationship.all_validation_aliases()
-    assert "CAPTION_ALIGN" in all_aliases
-    assert "captionAlign" in all_aliases
-    assert "caption_align" in all_aliases
-
-    all_aliases = Relationship.all_validation_aliases(exempted_fields=["caption_align"])
-    assert "CAPTION_ALIGN" not in all_aliases
-    assert "captionAlign" not in all_aliases
-    assert "caption_align" not in all_aliases
+    all_aliases = Relationship.basic_fields_validation_aliases()
+    assert "SOURCE_NODE_ID" in all_aliases
+    assert "targetNodeId" in all_aliases
+    assert "source_node_id" in all_aliases

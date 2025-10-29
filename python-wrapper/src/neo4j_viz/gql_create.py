@@ -5,6 +5,7 @@ from typing import Any, Optional
 from pydantic import BaseModel, ValidationError
 
 from neo4j_viz import Node, Relationship, VisualizationGraph
+from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace
 
 
 def _parse_value(value_str: str) -> Any:
@@ -91,10 +92,7 @@ def _parse_value(value_str: str) -> Any:
     return value_str.strip("'\"")
 
 
-def _parse_prop_str(
-    query: str, prop_str: str, prop_start: int, top_level_keys: set[str]
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    top_level: dict[str, Any] = {}
+def _parse_prop_str(query: str, prop_str: str, prop_start: int) -> dict[str, Any]:
     props: dict[str, Any] = {}
     depth = 0
     in_string = None
@@ -115,10 +113,7 @@ def _parse_prop_str(
                 k, v = pair.split(":", 1)
                 k = k.strip().strip("'\"")
 
-                if k in top_level_keys:
-                    top_level[k] = _parse_value(v)
-                else:
-                    props[k] = _parse_value(v)
+                props[k] = _parse_value(v)
 
                 start_idx = i + 1
         else:
@@ -133,17 +128,12 @@ def _parse_prop_str(
         k, v = pair.split(":", 1)
         k = k.strip().strip("'\"")
 
-        if k in top_level_keys:
-            top_level[k] = _parse_value(v)
-        else:
-            props[k] = _parse_value(v)
+        props[k] = _parse_value(v)
 
-    return top_level, props
+    return props
 
 
-def _parse_labels_and_props(
-    query: str, s: str, top_level_keys: set[str]
-) -> tuple[Optional[str], dict[str, Any], dict[str, Any]]:
+def _parse_labels_and_props(query: str, s: str) -> tuple[Optional[str], dict[str, Any]]:
     prop_match = re.search(r"\{(.*)\}", s)
     prop_str = ""
     if prop_match:
@@ -155,9 +145,8 @@ def _parse_labels_and_props(
     final_alias = raw_alias if raw_alias else None
 
     if prop_str:
-        top_level, props = _parse_prop_str(query, prop_str, prop_start, top_level_keys)
+        props = _parse_prop_str(query, prop_str, prop_start)
     else:
-        top_level = {}
         props = {}
 
     label_list = [lbl.strip() for lbl in alias_labels[1:]]
@@ -165,7 +154,7 @@ def _parse_labels_and_props(
         props["__labels"] = props["labels"]
     props["labels"] = sorted(label_list)
 
-    return final_alias, top_level, props
+    return final_alias, props
 
 
 def _get_snippet(q: str, idx: int, context: int = 15) -> str:
@@ -175,20 +164,19 @@ def _get_snippet(q: str, idx: int, context: int = 15) -> str:
     return q[start:end].replace("\n", " ")
 
 
-def from_gql_create(
-    query: str,
-    size_property: Optional[str] = None,
-    node_caption: Optional[str] = "labels",
-    relationship_caption: Optional[str] = "type",
-    node_radius_min_max: Optional[tuple[float, float]] = (3, 60),
-) -> VisualizationGraph:
+def from_gql_create(query: str) -> VisualizationGraph:
     """
     Parse a GQL CREATE query and return a VisualizationGraph object representing the graph it creates.
 
     All node and relationship properties will be included in the visualization graph.
-    If the properties are named as the fields of the `Node` or `Relationship` classes, they will be included as
-    top level fields of the respective objects. Otherwise, they will be included in the `properties` dictionary.
+    All properties of nodes and relationships will be included in the `properties` dictionary of the respective objects.
     Additionally, a "labels" property will be added for nodes and a "type" property for relationships.
+
+    By default:
+
+    * the caption of a node will be based on its `labels`.
+    * the caption of a relationship will be based on its `type`.
+    * the color of nodes will be set based on their label, unless there are more than 12 unique labels.
 
     Please note that this function is not a full GQL parser, it only handles CREATE queries that do not contain
     other clauses like MATCH, WHERE, RETURN, etc, or any Cypher function calls.
@@ -199,15 +187,6 @@ def from_gql_create(
     ----------
     query : str
         The GQL CREATE query to parse
-    size_property : str, optional
-        Property to use for node size, by default None.
-    node_caption : str, optional
-        Property to use as the node caption, by default the node labels will be used.
-    relationship_caption : str, optional
-        Property to use as the relationship caption, by default the relationship type will be used.
-    node_radius_min_max : tuple[float, float], optional
-        Minimum and maximum node radius, by default (3, 60).
-        To avoid tiny or huge nodes in the visualization, the node sizes are scaled to fit in the given range.
     """
 
     query = query.strip()
@@ -251,19 +230,9 @@ def from_gql_create(
     node_pattern = re.compile(r"^\(([^)]*)\)$")
     rel_pattern = re.compile(r"^\(([^)]*)\)-\s*\[\s*:(\w+)\s*(\{[^}]*\})?\s*\]->\(([^)]*)\)$")
 
-    node_top_level_keys = Node.all_validation_aliases(exempted_fields=["id", "size", "caption"])
-    rel_top_level_keys = Relationship.all_validation_aliases(exempted_fields=["id", "source", "target", "caption"])
-
     def _parse_validation_error(e: ValidationError, entity_type: type[BaseModel]) -> None:
         for err in e.errors():
             loc = err["loc"][0]
-            if (loc == "size") and size_property is not None:
-                loc = size_property
-            if loc == "caption":
-                if (entity_type == Node) and (node_caption is not None):
-                    loc = node_caption
-                elif (entity_type == Relationship) and (relationship_caption is not None):
-                    loc = relationship_caption
             raise ValueError(
                 f"Error for {entity_type.__name__.lower()} property '{loc}' with provided input '{err['input']}'. Reason: {err['msg']}"
             )
@@ -277,14 +246,14 @@ def from_gql_create(
         node_m = node_pattern.match(part)
         if node_m:
             alias_labels_props = node_m.group(1).strip()
-            alias, top_level, props = _parse_labels_and_props(query, alias_labels_props, node_top_level_keys)
+            alias, props = _parse_labels_and_props(query, alias_labels_props)
             if not alias:
                 alias = f"_anon_{anonymous_count}"
                 anonymous_count += 1
             if alias not in alias_to_id:
                 alias_to_id[alias] = str(uuid.uuid4())
             try:
-                nodes.append(Node(id=alias_to_id[alias], **top_level, properties=props))
+                nodes.append(Node(id=alias_to_id[alias], properties=props))
             except ValidationError as e:
                 _parse_validation_error(e, Node)
 
@@ -296,14 +265,14 @@ def from_gql_create(
             right_node = rel_m.group(4).strip()
 
             # Parse left node pattern
-            left_alias, left_top_level, left_props = _parse_labels_and_props(query, left_node, node_top_level_keys)
+            left_alias, left_props = _parse_labels_and_props(query, left_node)
             if not left_alias:
                 left_alias = f"_anon_{anonymous_count}"
                 anonymous_count += 1
                 if left_alias not in alias_to_id:
                     alias_to_id[left_alias] = str(uuid.uuid4())
                 try:
-                    nodes.append(Node(id=alias_to_id[left_alias], **left_top_level, properties=left_props))
+                    nodes.append(Node(id=alias_to_id[left_alias], properties=left_props))
                 except ValidationError as e:
                     _parse_validation_error(e, Node)
             elif left_alias not in alias_to_id:
@@ -311,14 +280,14 @@ def from_gql_create(
                 raise ValueError(f"Relationship references unknown node alias: '{left_alias}' near: `{snippet}`.")
 
             # Parse right node pattern
-            right_alias, right_top_level, right_props = _parse_labels_and_props(query, right_node, node_top_level_keys)
+            right_alias, right_props = _parse_labels_and_props(query, right_node)
             if not right_alias:
                 right_alias = f"_anon_{anonymous_count}"
                 anonymous_count += 1
                 if right_alias not in alias_to_id:
                     alias_to_id[right_alias] = str(uuid.uuid4())
                 try:
-                    nodes.append(Node(id=alias_to_id[right_alias], **right_top_level, properties=right_props))
+                    nodes.append(Node(id=alias_to_id[right_alias], properties=right_props))
                 except ValidationError as e:
                     _parse_validation_error(e, Node)
             elif right_alias not in alias_to_id:
@@ -331,9 +300,8 @@ def from_gql_create(
             if rel_props_str:
                 inner_str = rel_props_str.strip("{}").strip()
                 prop_start = query.index(inner_str, query.index(inner_str))
-                top_level, props = _parse_prop_str(query, inner_str, prop_start, rel_top_level_keys)
+                props = _parse_prop_str(query, inner_str, prop_start)
             else:
-                top_level = {}
                 props = {}
             if "type" in props:
                 props["__type"] = props["type"]
@@ -345,7 +313,6 @@ def from_gql_create(
                         id=rel_id,
                         source=alias_to_id[left_alias],
                         target=alias_to_id[right_alias],
-                        **top_level,
                         properties=props,
                     )
                 )
@@ -357,28 +324,15 @@ def from_gql_create(
         snippet = part[:30]
         raise ValueError(f"Invalid element in CREATE near: `{snippet}`.")
 
-    if size_property is not None:
-        try:
-            for node in nodes:
-                node.size = node.properties.get(size_property)
-        except ValidationError as e:
-            _parse_validation_error(e, Node)
-    if node_caption is not None:
-        for node in nodes:
-            if node_caption == "labels":
-                if len(node.properties["labels"]) > 0:
-                    node.caption = ":".join([label for label in node.properties["labels"]])
-            else:
-                node.caption = str(node.properties.get(node_caption))
-    if relationship_caption is not None:
-        for rel in relationships:
-            if relationship_caption == "type":
-                rel.caption = rel.properties["type"]
-            else:
-                rel.caption = str(rel.properties.get(relationship_caption))
-
     VG = VisualizationGraph(nodes=nodes, relationships=relationships)
-    if (node_radius_min_max is not None) and (size_property is not None):
-        VG.resize_nodes(node_radius_min_max=node_radius_min_max)
+
+    for node in VG.nodes:
+        node.caption = ":".join([label for label in node.properties["labels"]])
+    for rel in VG.relationships:
+        rel.caption = rel.properties.get("type")
+
+    number_of_colors = len({str(n.properties.get("labels")) for n in VG.nodes})
+    if number_of_colors <= len(NEO4J_COLORS_DISCRETE):
+        VG.color_nodes(property="labels", color_space=ColorSpace.DISCRETE)
 
     return VG

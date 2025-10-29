@@ -4,12 +4,12 @@
 
 - Do not automatically derive size and caption for `from_neo4j` and `from_gql_create`. Use the `size_property` and `node_caption` parameters to explicitly configure them.
 - Change API of integrations to only provide basic parameters. Any further configuration should happen ons the Visualization Graph object:
-  - `from_gds`
-    - Drop parameters size_property, node_radius_min_max. `Use VG.resize_nodes(property=...)` instead
-    - rename additional_node_properties to node_properties
-    - Don't derive fields from properties. Use `VG.map_properties_to_fields` instead
   - `from_pandas`
     - Drop `node_radius_min_max` parameter. `VG.resize_nodes(...)` instead
+  - `from_neo4j`, `from_gds`, `from_gql_create`
+    - Drop parameters `size_property`, `node_radius_min_max`. Use `VG.resize_nodes(property=...)` instead
+    - rename additional_node_properties to node_properties
+    - Don't derive fields from properties. Use `VG.map_properties_to_fields` instead
 
 ## New features
 
@@ -25,7 +25,7 @@
 
 - Validate fields of a node and relationship not only at construction but also on assignment.
 - Allow resizing per node property such as `VG.resize_nodes(property="score")`.
-- Color nodes by label in `from_gds`.
+- Color nodes by label in `from_gds` and `from_gql_create`.
 - Add `table` property to nodes and relationships created by `from_snowflake`. This is used as a default caption.
 
 ## Other changes
