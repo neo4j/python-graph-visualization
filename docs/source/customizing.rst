@@ -182,16 +182,28 @@ Direct modification of nodes and relationships
 
 Nodes and relationships can also be modified directly by accessing the ``nodes`` and ``relationships`` fields of an
 existing ``VisualizationGraph`` object.
-These attributes list of all the :doc:`Nodes <./api-reference/node>` and
+These fields list of all the :doc:`Nodes <./api-reference/node>` and
 :doc:`Relationships <./api-reference/relationship>` in the graph, respectively.
 
-Each node and relationship has attributes that can be accessed and modified directly, as in the following example:
+Each node and relationship has fields that can be accessed and modified directly, as in the following example:
 
 .. code-block:: python
 
     # VG is a VisualizationGraph object
+
+    # Modify the first node and fifth relationship
     VG.nodes[0].size = 10
     VG.nodes[0].properties["height"] = 170
     VG.relationships[4].caption = "BUYS"
+
+    # Set the coordinates for all nodes from an existing property
+    for node in VG.nodes:
+        node.x = node.properties.get("x")
+        node.y = node.properties.get("y")
+
+    # Change the caption size for all relationships
+    for relationship in VG.relationships:
+        relationship.caption_size = 15
+
 
 Any changes made to the nodes and relationships will be reflected in the next rendering of the graph.
