@@ -1,4 +1,4 @@
-# Changes in 0.5.1
+# Changes in 0.6.0
 
 ## Breaking changes
 
@@ -20,6 +20,7 @@
 - fixed a bug in `from_neo4j`, where the node size would always be set to the `size` property.
 - fixed a bug in `from_neo4j`, where the node caption would always be set to the `caption` property.
 - Color nodes in `from_snowflake` only if there are less than 13 node tables used. This avoids reuse of colors for different tables.
+- fixed a bug in `from_gds`, where properties of type list could not be imported.
 
 ## Improvements
 

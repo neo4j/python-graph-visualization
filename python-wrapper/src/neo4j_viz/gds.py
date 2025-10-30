@@ -151,7 +151,7 @@ def from_gds(
         if property_name is not None and property_name in df.columns:
             df.drop(columns=[property_name], inplace=True)
 
-    node_props_df = pd.concat(node_dfs.values(), ignore_index=True, axis=0).drop_duplicates()
+    node_props_df = pd.concat(node_dfs.values(), ignore_index=True, axis=0).drop_duplicates(subset=["nodeId"])
 
     for lbl, df in node_dfs.items():
         if "labels" in all_actual_node_properties:
