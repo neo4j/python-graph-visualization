@@ -60,8 +60,8 @@ def test_from_snowflake(session_with_minimal_graph: Session) -> None:
     )
 
     assert VG.nodes == [
-        Node(id=0, caption="NODES", color="#ffdf81", properties={"SNOWFLAKEID": 6, "table": "NODES"}),
-        Node(id=1, caption="NODES", color="#ffdf81", properties={"SNOWFLAKEID": 7, "table": "NODES"}),
+        Node(id=0, caption="NODES", color="#ffdf81", properties={"SNOWFLAKEID": 6}),
+        Node(id=1, caption="NODES", color="#ffdf81", properties={"SNOWFLAKEID": 7}),
     ]
 
     assert len(VG.relationships) == 1
@@ -69,4 +69,4 @@ def test_from_snowflake(session_with_minimal_graph: Session) -> None:
     assert VG.relationships[0].source == 0
     assert VG.relationships[0].target == 1
     assert VG.relationships[0].caption == "RELS"
-    assert VG.relationships[0].properties == {"table": "RELS"}
+    assert VG.relationships[0].properties == {}
