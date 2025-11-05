@@ -341,9 +341,9 @@ def from_snowflake(
     VG = from_dfs(node_dfs, rel_dfs)
 
     for node in VG.nodes:
-        node.caption = node.properties.get("table")
+        node.caption = node.properties.pop("table")
     for rel in VG.relationships:
-        rel.caption = rel.properties.get("table")
+        rel.caption = rel.properties.pop("table")
 
     number_of_colors = node_df["table"].drop_duplicates().count()
     if number_of_colors <= len(NEO4J_COLORS_DISCRETE):
