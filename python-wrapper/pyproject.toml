@@ -41,7 +41,7 @@ requires-python = ">=3.10"
 [project.optional-dependencies]
 dev = [
     "ruff==0.14.1",
-    "mypy==1.17.1",
+    "mypy==1.18.2",
     "pytest==8.4.2",
     "selenium==4.32.0",
     "ipykernel==6.30.1",
