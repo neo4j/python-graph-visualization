@@ -294,7 +294,7 @@ class VisualizationGraph:
         property: Optional[str] = None,
         colors: Optional[ColorsType] = None,
         color_space: ColorSpace = ColorSpace.DISCRETE,
-        override: bool = False,
+        override: bool = True,
     ) -> None:
         """
         Color the nodes in the graph based on either a node field, or a node property.
