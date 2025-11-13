@@ -194,6 +194,75 @@ class VisualizationGraph:
 
             node.pinned = node_pinned
 
+    def set_node_captions(
+        self,
+        *,
+        field: Optional[str] = None,
+        property: Optional[str] = None,
+        override: bool = True,
+    ) -> None:
+        """
+        Set the caption for nodes in the graph based on either a node field or a node property.
+
+        Parameters
+        ----------
+        field:
+            The field of the nodes to use as the caption. Must be None if `property` is provided.
+        property:
+            The property of the nodes to use as the caption. Must be None if `field` is provided.
+        override:
+            Whether to override existing captions of the nodes, if they have any.
+
+        Examples
+        --------
+        Given a VisualizationGraph `VG`:
+
+        >>> nodes = [
+        ...    Node(id="0", properties={"name": "Alice", "age": 30}),
+        ...    Node(id="1", properties={"name": "Bob", "age": 25}),
+        ... ]
+        >>> VG = VisualizationGraph(nodes=nodes)
+
+        Set node captions from a property:
+
+        >>> VG.set_node_captions(property="name")
+
+        Set node captions from a field, only if not already set:
+
+        >>> VG.set_node_captions(field="id", override=False)
+
+        Set captions from multiple properties with fallback:
+
+        >>> for node in VG.nodes:
+        ...     caption = node.properties.get("name") or node.properties.get("title") or node.id
+        ...     if override or node.caption is None:
+        ...         node.caption = str(caption)
+        """
+        if not ((field is None) ^ (property is None)):
+            raise ValueError(
+                f"Exactly one of the arguments `field` (received '{field}') and `property` (received '{property}') must be provided"
+            )
+
+        if property:
+            # Use property
+            for node in self.nodes:
+                if not override and node.caption is not None:
+                    continue
+
+                value = node.properties.get(property, "")
+                node.caption = str(value)
+        else:
+            # Use field
+            assert field is not None
+            attribute = to_snake(field)
+
+            for node in self.nodes:
+                if not override and node.caption is not None:
+                    continue
+
+                value = getattr(node, attribute, "")
+                node.caption = str(value)
+
     def resize_nodes(
         self,
         sizes: Optional[dict[NodeIdType, RealNumber]] = None,

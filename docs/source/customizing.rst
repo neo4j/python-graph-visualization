@@ -20,6 +20,45 @@ If you have not yet created a ``VisualizationGraph`` object, please refer to one
    :backlinks: none
 
 
+Setting node captions
+---------------------
+
+Node captions are the text labels displayed on nodes in the visualization.
+
+The ``set_node_captions`` method
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By calling the :meth:`neo4j_viz.VisualizationGraph.set_node_captions` method, you can set node captions based on a
+node field (like ``id``, ``size``, etc.) or a node property (members of the ``Node.properties`` map).
+
+The method accepts an ``override`` parameter (default ``True``) that controls whether to replace existing captions.
+If ``override=False``, only nodes without captions will be updated.
+
+Here's an example of setting node captions from a property:
+
+.. code-block:: python
+
+    # VG is a VisualizationGraph object with nodes that have a "name" property
+    VG.set_node_captions(property="name")
+
+You can also set captions from a node field, and choose not to override existing captions:
+
+.. code-block:: python
+
+    # VG is a VisualizationGraph object
+    VG.set_node_captions(field="id", override=False)
+
+For more complex scenarios where you need fallback logic or want to combine multiple properties, you can iterate over
+nodes directly:
+
+.. code-block:: python
+
+    # VG is a VisualizationGraph object
+    for node in VG.nodes:
+        caption = node.properties.get("name") or node.properties.get("title") or node.id
+        node.caption = str(caption)
+
+
 Coloring nodes
 --------------
 
