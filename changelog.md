@@ -13,4 +13,6 @@
 
 ## Improvements
 
+- Truncate large property values in the rendered output.
+
 ## Other changes

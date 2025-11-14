@@ -38,6 +38,14 @@ class PyNVL {
     if (tooltip !== null) {
       this.hoverInteraction = new HoverInteraction(this.nvl)
 
+      const truncateValue = (value: any, maxLength: number = 100): string => {
+        const strValue = String(value);
+        if (strValue.length <= maxLength) {
+          return strValue;
+        }
+        return `<span class="tooltip-value">${strValue}</span>`;
+      };
+
       this.hoverInteraction.updateCallback('onHover', (element: PyNode | PyRel) => {
         if (element === undefined) {
           tooltip.textContent = "";
@@ -49,7 +57,7 @@ class PyNVL {
 
           let hoverInfo: string = (`<b>Source ID:</b> ${rel.from} </br><b>Target ID:</b> ${rel.to}`)
           for (const [key, value] of Object.entries(element.properties)) {
-            hoverInfo += `</br><b>${key}:</b> ${value}`
+            hoverInfo += `</br><b>${key}:</b> ${truncateValue(value)}`
           }
           tooltip.setHTMLUnsafe(hoverInfo)
 
@@ -59,7 +67,7 @@ class PyNVL {
         } else if ("id" in element) {
           let hoverInfo: string = `<b>ID:</b> ${element.id}`
           for (const [key, value] of Object.entries(element.properties)) {
-            hoverInfo += `</br><b>${key}:</b> ${value}`
+            hoverInfo += `</br><b>${key}:</b> ${truncateValue(value)}`
           }
           tooltip.setHTMLUnsafe(hoverInfo)
 
