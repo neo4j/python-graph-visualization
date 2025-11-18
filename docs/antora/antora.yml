@@ -1,0 +1,6 @@
+name: python-graph-visualization
+title: Neo4j Python Graph Visualization
+version: '0.6'
+start_page: ROOT:index.adoc
+nav:
+- modules/ROOT/content-nav.adoc
