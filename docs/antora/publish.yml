@@ -1,4 +1,4 @@
-# Use this playbook file when you need to build and publish multuple versions of your content together
+# Use this playbook file when you need to build and publish multiple versions of your content together
 site:
   title: Neo4j Docs
   url: https://neo4j.com/docs
@@ -61,4 +61,8 @@ asciidoc:
     neo4j-base-uri: ''
     neo4j-docs-base-uri: /docs
     common-license-page-uri: '{neo4j-docs-base-uri}/license'
+    # Needs to be updated manually for now
+    docs-version: current
+    api-uri: https://neo4j.com/docs/nvl-python/{docs-version}/api-reference
+    tutorials-uri: https://neo4j.com/docs/nvl-python/{docs-version}/tutorials
     
