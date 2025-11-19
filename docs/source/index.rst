@@ -23,10 +23,6 @@ If you have a suggestion on how we can improve the library or want to report a p
    :glob:
    :maxdepth: 1
 
-   installation.rst
-   getting-started.nblink
-   integration.rst
-   rendering.rst
-   customizing.rst
-   api-reference/index.rst
+   Graph Visualization docs <https://neo4j.com/docs/nvl-python/current>
    tutorials/index.rst
+   api-reference/index.rst
