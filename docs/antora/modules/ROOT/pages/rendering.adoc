@@ -1,13 +1,13 @@
 = Rendering a graph
 
-In this section, we will discuss how to render a link:{api-uri}/visualization-graph[`VisualizationGraph` object]
+In this section, we will discuss how to render a link:{api-docs-uri}/visualization-graph[`VisualizationGraph` object]
 to display the graph visualization.
 
 If you have not yet created a `VisualizationGraph` object, refer to one of the following sections:
 
 * xref:getting-started.adoc[Getting started] for creating a visualization graph from scratch using `neo4j-viz`
-  primitives like link:{api-uri}/node[Node] and link:{api-uri}/relationship[Relationship] and
-  link:{api-uri}/visualization-graph>[`VisualizationGraph`] directly.
+  primitives like link:{api-docs-uri}/node[Node] and link:{api-docs-uri}/relationship[Relationship] and
+  link:{api-docs-uri}/visualization-graph>[`VisualizationGraph`] directly.
 * xref:integration.adoc[] for importing data from a Pandas DataFrame or Neo4j GDS projection.
 
 == The `render` method
@@ -17,7 +17,7 @@ This will return a HTML object that will be displayed in an environment that sup
 Jupyter notebooks or streamlit application.
 
 All parameter of the `render` method are optional, and the full list of parameters of them is listed in the API
-reference: link:{api-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.render[neo4j_viz.VisualizationGraph.render()].
+reference: link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.render[neo4j_viz.VisualizationGraph.render()].
 
 The most important parameters to be aware of are the `width` and `height` parameters, which control the size of
 HTML object that will be rendered.

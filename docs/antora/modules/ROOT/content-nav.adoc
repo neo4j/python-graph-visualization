@@ -4,5 +4,5 @@
 * xref:integration.adoc[]
 * xref:rendering.adoc[]
 * xref:customizing.adoc[]
-* link:{tutorials-uri}[Tutorials]
-* link:{api-uri}[API reference]
+* link:{tutorials-docs-uri}[Tutorials]
+* link:{api-docs-uri}[API reference]

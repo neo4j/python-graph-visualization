@@ -18,7 +18,7 @@ It requires and additional dependency to be installed, which you can do by runni
 pip install neo4j-viz[pandas]
 ----
 
-Once you have installed the additional dependency, you can use the link:{api-uri}/from_pandas[`from_pandas`] method
+Once you have installed the additional dependency, you can use the link:{api-docs-uri}/from_pandas[`from_pandas`] method
 to import pandas DataFrames.
 
 The `from_dfs` method takes two mandatory positional parameters:
@@ -26,19 +26,19 @@ The `from_dfs` method takes two mandatory positional parameters:
 * A Pandas `DataFrame`, or iterable (eg. list) of DataFrames representing the nodes of the graph.
   The rows of the DataFrame(s) should represent the individual nodes, and the columns should represent the node
   IDs and attributes.
-  The node ID will be set on the link:{api-uri}/node[Node], Other columns will be a key in each node's properties dictionary, that maps to the node's corresponding value in the column.
+  The node ID will be set on the link:{api-docs-uri}/node[Node], Other columns will be a key in each node's properties dictionary, that maps to the node's corresponding value in the column.
   If the graph has no node properties, the nodes can be derived from the relationships DataFrame alone.
 * A Pandas `DataFrame`, or iterable (eg. list) of DataFrames representing the relationships of the graph.
   The rows of the DataFrame(s) should represent the individual relationships, and the columns should represent the
   relationship IDs and attributes.
-  The relationship id, source and target node IDs will be set on the link:{api-uri}/relationship[Relationship].
+  The relationship id, source and target node IDs will be set on the link:{api-docs-uri}/relationship[Relationship].
   Other columns will be a key in each relationship's _properties_ dictionary, that maps to the relationship's corresponding value in the column.
 
 === Example
 
 In this small example, we import a tiny toy graph representing a social network from two Pandas DataFrames.
-As we can see the column names of the DataFrames map directly to the fields of link:{api-uri}/node[Nodes]
-and link:{api-uri}/relationship[Relationships].
+As we can see the column names of the DataFrames map directly to the fields of link:{api-docs-uri}/node[Nodes]
+and link:{api-docs-uri}/relationship[Relationships].
 
 [source, python]
 ----
@@ -71,7 +71,7 @@ It requires and additional dependency to be installed, which you can do by runni
 pip install neo4j-viz[gds]
 ----
 
-Once you have installed the additional dependency, you can use the link:{api-uri}/from_gds[`from_gds`] method
+Once you have installed the additional dependency, you can use the link:{api-docs-uri}/from_gds[`from_gds`] method
 to import projections from the GDS library.
 
 The `from_gds` method takes two mandatory positional parameters:
@@ -128,7 +128,7 @@ It requires and additional dependency to be installed, which you can do by runni
 pip install neo4j-viz[neo4j]
 ----
 
-Once you have installed the additional dependency, you can use the link:{api-uri}/from_neo4j[`from_neo4j`] method
+Once you have installed the additional dependency, you can use the link:{api-docs-uri}/from_neo4j[`from_neo4j`] method
 to import query results from Neo4j.
 
 The `from_neo4j` method takes one mandatory positional parameter: A `data` argument representing either a query result in the shape of a `neo4j.graph.Graph` or `neo4j.Result`, or a `neo4j.Driver` in which case a simple default query will be executed internally to retrieve the graph data.
@@ -166,7 +166,7 @@ See the link:/tutorials/neo4j-example[Visualizing Neo4j Graphs tutorial] for a m
 
 == GQL `CREATE` query
 
-The `neo4j-viz` library provides convenience for creating visualization graphs from GQL `CREATE` queries via the link:{api-uri}/from_gql_create[`from_gql_create`] method.
+The `neo4j-viz` library provides convenience for creating visualization graphs from GQL `CREATE` queries via the link:{api-docs-uri}/from_gql_create[`from_gql_create`] method.
 
 The `from_gql_create` method takes one mandatory positional parameter:
 
@@ -207,7 +207,7 @@ It requires and additional dependency to be installed, which you can do by runni
 pip install neo4j-viz[snowflake]
 ----
 
-Once you have installed the additional dependency, you can use the link:{api-uri}/from_snowflake[`from_snowflake`] method to import Snowflake tables into a `VisualizationGraph`.
+Once you have installed the additional dependency, you can use the link:{api-docs-uri}/from_snowflake[`from_snowflake`] method to import Snowflake tables into a `VisualizationGraph`.
 
 The `from_snowflake` method takes two mandatory positional parameters:
 
@@ -216,7 +216,7 @@ The `from_snowflake` method takes two mandatory positional parameters:
 * A link:https://neo4j.com/docs/snowflake-graph-analytics/current/jobs/#jobs-project[project configuration] as a dictionary, that specifies how you want your tables to be projected as a graph.
 This configuration is the same as the project configuration of the link:https://neo4j.com/docs/snowflake-graph-analytics/current/[Neo4j Snowflake Graph Analytics application].
 
-You can further customize the visualization after the _VisualizationGraph_ has been created, by using the methods described in the link:{api-uri}/customizing/[Customizing the visualization] section.
+You can further customize the visualization after the _VisualizationGraph_ has been created, by using the methods described in the link:{api-docs-uri}/customizing/[Customizing the visualization] section.
 
 === Default behavior
 

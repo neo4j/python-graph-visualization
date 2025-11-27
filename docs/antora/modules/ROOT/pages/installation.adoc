@@ -13,7 +13,7 @@ In addition, there are a few optional dependencies that you can install to enabl
 
 === Pandas DataFrames `from_dfs` importer
 
-To install the additional dependencies required for the link:{api-uri}/from_pandas[`from_dfs`] importer you can run:
+To install the additional dependencies required for the link:{api-docs-uri}/from_pandas[`from_dfs`] importer you can run:
 
 [source, console]
 ----
@@ -22,7 +22,7 @@ pip install neo4j-viz[pandas]
 
 === Neo4j `from_neo4j` importer
 
-To install the additional dependencies required for the link:{api-uri}/from_neo4j[`from_neo4j`] importer you can run:
+To install the additional dependencies required for the link:{api-docs-uri}/from_neo4j[`from_neo4j`] importer you can run:
 
 [source, console]
 ----
@@ -31,7 +31,7 @@ pip install neo4j-viz[neo4j]
 
 === Neo4j Graph Data Science `from_gds` importer
 
-To install the additional dependencies required for the link:{api-uri}/from_gds[`from_gds`] importer you can run:
+To install the additional dependencies required for the link:{api-docs-uri}/from_gds[`from_gds`] importer you can run:
 
 [source, console]
 ----
@@ -40,7 +40,7 @@ pip install neo4j-viz[gds]
 
 === Neo4j Graph Data Science `from_snowflake` importer
 
-To install the additional dependencies required for the link:{api-uri}/from_snowflake[`from_snowflake`] importer you can run:
+To install the additional dependencies required for the link:{api-docs-uri}/from_snowflake[`from_snowflake`] importer you can run:
 
 [source, console]
 ----
@@ -49,7 +49,7 @@ pip install neo4j-viz[snowflake]
 
 === Notebook tutorials
 
-To install all the additional dependencies required for the link:{tutorials-uri}[notebook examples] you can run:
+To install all the additional dependencies required for the link:{tutorials-docs-uri}[notebook examples] you can run:
 
 [source, console]
 ----

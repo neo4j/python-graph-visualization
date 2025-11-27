@@ -1,6 +1,6 @@
 = Customizing the visualization
 
-Once created, a link:{api-uri}/visualization-graph[`VisualizationGraph` object] can be modified in various ways
+Once created, a link:{api-docs-uri}/visualization-graph[`VisualizationGraph` object] can be modified in various ways
 to adjust what the visualization looks like the next time you render it.
 In this section we will discuss how to color, size, and pin nodes, as well as how to directly modify nodes and
 relationships of existing `VisualizationGraph` objects.
@@ -8,8 +8,8 @@ relationships of existing `VisualizationGraph` objects.
 If you have not yet created a `VisualizationGraph` object, refer to one of the following sections:
 
 * xref:getting-started.adoc[Getting started] for creating a visualization graph from scratch using `neo4j-viz`
-  primitives like link:{api-uri}/node/[Node] and link:{api-uri}/relationship/[Relationship] and
-  link:{api-uri}/visualization-graph[`VisualizationGraph`] directly.
+  primitives like link:{api-docs-uri}/node/[Node] and link:{api-docs-uri}/relationship/[Relationship] and
+  link:{api-docs-uri}/visualization-graph[`VisualizationGraph`] directly.
 * xref:integration.adoc[] for importing data from a Pandas DataFrame or Neo4j GDS projection.
 
 == Setting node captions
@@ -53,16 +53,16 @@ for node in VG.nodes:
 
 Nodes can be colored directly by providing them with a color field, upon creation.
 This can for example be done by passing a color as a string to the `color` parameter of the
-link:{api-uri}/node[Node] object.
+link:{api-docs-uri}/node[Node] object.
 
 Alternatively, you can color nodes based on a field or property of the nodes after a `VisualizationGraph` object has been
 created.
 
 === The `color_nodes` method
 
-By calling the link:{api-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.color_nodes[`neo4j_viz.VisualizationGraph.color_nodes()`] method, you can color nodes based on a node field or property (members of the `Node.properties` map).
+By calling the link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.color_nodes[`neo4j_viz.VisualizationGraph.color_nodes()`] method, you can color nodes based on a node field or property (members of the `Node.properties` map).
 
-It's possible to color the nodes based on a discrete or continuous color space (see link:{api-uri}/colors[`ColorSpace`]).
+It's possible to color the nodes based on a discrete or continuous color space (see link:{api-docs-uri}/colors[`ColorSpace`]).
 In the discrete case, a new color from the `colors` provided is assigned to each unique value of the node field/property.
 In the continuous case, the `colors` should be a list of colors representing a range that are used to
 create a gradient of colors based on the values of the node field/property.
@@ -134,13 +134,13 @@ Since we only provided five colors in the range, the granularity of the gradient
 == Sizing nodes
 
 Nodes can be given a size directly by providing them with a size field, upon creation.
-This can for example be done by passing a size as an integer to the `size` parameter of the link:{api-uri}/node[Node] object.
+This can for example be done by passing a size as an integer to the `size` parameter of the link:{api-docs-uri}/node[Node] object.
 
 Alternatively, you can size nodes after a `VisualizationGraph` object has been created.
 
 === The `resize_nodes` method
 
-By calling the link:{api-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.resize_nodes[`neo4j_viz.VisualizationGraph.resize_nodes()`] method, you can resize nodes by:
+By calling the link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.resize_nodes[`neo4j_viz.VisualizationGraph.resize_nodes()`] method, you can resize nodes by:
 
 * passing new nodes sizes as a dictionary `sizes`, mapping node IDs to sizes in pixels, or
 * providing a tuple of two numbers `node_radius_min_max`: minimum and maximum radii (sizes) in pixels to which the
@@ -173,13 +173,13 @@ layout algorithm.
 This can be useful if you want to keep a node in a specific position, for example to highlight it.
 
 Nodes can be pinned directly upon creation.
-This can for example be done by passing `pinned=True` to the link:{api-uri}/node[Node] object.
+This can for example be done by passing `pinned=True` to the link:{api-docs-uri}/node[Node] object.
 
 Alternatively, you can toggle node pinning after a `VisualizationGraph` object has been created.
 
 === The `toggle_nodes_pinned` method
 
-By calling the link:{api-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.toggle_nodes_pinned[`neo4j_viz.VisualizationGraph.toggle_nodes_pinned()`] method, you can toggle whether nodes should be
+By calling the link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.toggle_nodes_pinned[`neo4j_viz.VisualizationGraph.toggle_nodes_pinned()`] method, you can toggle whether nodes should be
 pinned or not.
 This method takes dictionary that maps node IDs to boolean values, where `True` means that the node is pinned, and
 `False` means that the node is not pinned.
@@ -196,7 +196,7 @@ VG.toggle_nodes_pinned(1337: True, 42: False)})
 
 Nodes and relationships can also be modified directly by accessing the `nodes` and `relationships` fields of an
 existing `VisualizationGraph` object.
-These fields list of all the link:{api-uri}/node[Nodes] and link:{api-uri}/relationship[Relationships] in the graph, respectively.
+These fields list of all the link:{api-docs-uri}/node[Nodes] and link:{api-docs-uri}/relationship[Relationships] in the graph, respectively.
 
 Each node and relationship has attributes that can be accessed and modified directly, as in the following example:
 
