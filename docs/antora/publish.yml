@@ -63,6 +63,6 @@ asciidoc:
     common-license-page-uri: '{neo4j-docs-base-uri}/license'
     # Needs to be updated manually for now
     api-docs-version: 0.6
-    api-docs-uri: https://neo4j.com/docs/nvl-python/{api-docs-version}/api-reference
-    tutorials-docs-uri: https://neo4j.com/docs/nvl-python/{api-docs-version}/tutorials
+    api-docs-uri: https://neo4j.com/docs/python-graph-visualization/{api-docs-version}/reference/api-reference
+    tutorials-docs-uri: https://neo4j.com/docs/python-graph-visualization/{api-docs-version}/reference/tutorials
     
