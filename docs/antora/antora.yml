@@ -4,3 +4,9 @@ version: '0.6'
 start_page: ROOT:index.adoc
 nav:
 - modules/ROOT/content-nav.adoc
+asciidoc:
+  attributes:
+    # Version needs to be updated manually for now
+    api-docs-version: '0.6'
+    api-docs-uri: '{neo4j-docs-base-uri}/python-graph-visualization/{api-docs-version}/reference/api-reference'
+    tutorials-docs-uri: '{neo4j-docs-base-uri}/python-graph-visualization/{api-docs-version}/reference/tutorials'

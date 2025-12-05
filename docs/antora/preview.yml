@@ -59,5 +59,6 @@ asciidoc:
     neo4j-base-uri: https://neo4j.com
     neo4j-docs-base-uri: '{neo4j-base-uri}/docs'
     common-license-page-uri: '{neo4j-docs-base-uri}/license'
+    # Uses a local server to preview Sphinx docs
     api-docs-uri: http://localhost:9000/api-reference
     tutorials-docs-uri: http://localhost:9000/tutorials
