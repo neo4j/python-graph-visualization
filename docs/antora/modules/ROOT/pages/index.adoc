@@ -1,0 +1,10 @@
+= Introduction
+
+This is the documentation for the `neo4j-viz` Python library by Neo4j.
+The library allows you to visualize graph data interactively in Python using a simple API.
+
+The library wraps the link:https://neo4j.com/docs/nvl/current/[Neo4j Visualization JavaScript library (NVL)], and provides additional features for working with graph data in Python.
+Notably, there are convenience methods for importing data from source such as link:https://pandas.pydata.org/[Pandas DataFrames], link:https://neo4j.com/docs/graph-data-science/current/[Neo4j Graph Data Science], link:https://neo4j.com/docs/python-manual/current/[Neo4j Database], and link:https://docs.snowflake.com/[Snowflake tables].
+
+The source code is available on link:https://github.com/neo4j/python-graph-visualization[GitHub].
+If you have a suggestion on how we can improve the library or want to report a problem, you can create a link:https://github.com/neo4j/python-graph-visualization/issues/new[new issue].
