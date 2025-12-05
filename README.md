@@ -3,7 +3,7 @@
 [![Latest version](https://img.shields.io/pypi/v/neo4j-viz)](https://pypi.org/project/neo4j-viz/)
 [![PyPI downloads month](https://img.shields.io/pypi/dm/neo4j-viz)](https://pypi.org/project/neo4j-viz/)
 ![Python versions](https://img.shields.io/pypi/pyversions/neo4j-viz)
-[![Documentation](https://img.shields.io/badge/Documentation-latest-blue)](https://neo4j.com/docs/nvl-python/preview/)
+[![Documentation](https://img.shields.io/badge/Documentation-latest-blue)](https://neo4j.com/docs/python-graph-visualization/)
 [![Discord](https://img.shields.io/discord/787399249741479977?label=Chat&logo=discord)](https://discord.gg/neo4j)
 [![Community forum](https://img.shields.io/website?down_color=lightgrey&down_message=offline&label=Forums&logo=discourse&up_color=green&up_message=online&url=https%3A%2F%2Fcommunity.neo4j.com%2F)](https://community.neo4j.com)
 [![License](https://img.shields.io/pypi/l/neo4j-viz)](https://pypi.org/project/neo4j-viz/)
@@ -17,38 +17,35 @@ The package wraps the [Neo4j Visualization JavaScript library (NVL)](https://neo
 
 ![Example Graph](examples/example_cora_graph.png)
 
-
 ## Some notable features
 
-* Easy to import graphs represented as:
-  * projections in the Neo4j Graph Data Science (GDS) library
-  * graphs from Neo4j query results
-  * pandas DataFrames
-* Node features:
-  * Sizing
-  * Colors
-  * Captions
-  * Pinning
-  * On hover tooltip
-* Relationship features:
-  * Colors
-  * Captions
-  * On hover tooltip
-* Graph features:
-  * Zooming
-  * Panning
-  * Moving nodes
-  * Using different layouts
-* Additional convenience functionality for:
-  * Resizing nodes, optionally including scale normalization
-  * Coloring nodes based on a property
-  * Toggle whether nodes should be pinned or not
+- Easy to import graphs represented as:
+  - projections in the Neo4j Graph Data Science (GDS) library
+  - graphs from Neo4j query results
+  - pandas DataFrames
+- Node features:
+  - Sizing
+  - Colors
+  - Captions
+  - Pinning
+  - On hover tooltip
+- Relationship features:
+  - Colors
+  - Captions
+  - On hover tooltip
+- Graph features:
+  - Zooming
+  - Panning
+  - Moving nodes
+  - Using different layouts
+- Additional convenience functionality for:
+  - Resizing nodes, optionally including scale normalization
+  - Coloring nodes based on a property
+  - Toggle whether nodes should be pinned or not
 
 Please note that this list is by no means exhaustive.
 
-
 ## Getting started
-
 
 ### Installation
 
@@ -57,7 +54,6 @@ Simply install with pip:
 ```sh
 pip install neo4j-viz
 ```
-
 
 ### Basic usage
 
@@ -110,11 +106,9 @@ This will return a `IPython.display.HTML` object that can be rendered in a Jupyt
 
 Please refer to the [documentation](https://neo4j.com/docs/nvl-python/preview/) for more details on the API and usage.
 
-
 ### Examples
 
-For some Jupyter Notebook and streamlit examples, checkout the [/examples](/examples)  directory.
-
+For some Jupyter Notebook and streamlit examples, checkout the [/examples](/examples) directory.
 
 ## Contributing
 
