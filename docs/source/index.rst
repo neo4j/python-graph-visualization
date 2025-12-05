@@ -23,6 +23,6 @@ If you have a suggestion on how we can improve the library or want to report a p
    :glob:
    :maxdepth: 1
 
-   Graph Visualization docs <https://neo4j.com/docs/nvl-python/current>
+   Graph Visualization docs <https://neo4j.com/docs/python-graph-visualization/current>
    tutorials/index.rst
    api-reference/index.rst
