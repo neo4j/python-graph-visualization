@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neo4j-viz"
-version = "0.7.1"
+version = "1.0.0"
 description = "A simple graph visualization tool"
 readme = "README.md"
 authors = [{ name = "Neo4j", email = "team-gds@neo4j.org" }]
 license = "GPL-3.0-only"
 license-files = [ "LICENSE" ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
@@ -75,7 +75,7 @@ notebook = [
 Homepage = "https://neo4j.com/"
 Repository = "https://github.com/neo4j/python-graph-visualization"
 Issues = "https://github.com/neo4j/python-graph-visualization/issues"
-Documentation = "https://neo4j.com/docs/nvl-python/preview"
+Documentation = "https://neo4j.com/docs/python-graph-visualization/"
 
 [tool.setuptools]
 include-package-data = true
