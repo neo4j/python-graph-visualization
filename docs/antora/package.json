@@ -1,6 +1,6 @@
 {
   "name": "python-graph-visualization",
-  "version": "0.6.1",
+  "version": "1.0.0",
   "description": "Neo4j Python Graph Visualization",
   "main": "server.js",
   "scripts": {
