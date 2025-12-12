@@ -1,9 +1,10 @@
 = Integration with other libraries
 
-In addition to creating graphs from scratch, you can import and visualize data directly from external sources includingthe following:
+In addition to creating graphs from scratch, you can import and visualize data directly from external sources such as:
 
 * xref:integration/pandas.adoc[]
 * xref:integration/gds.adoc[]
 * xref:integration/neo4j.adoc[]
-* xref:integration/gql.adoc[]
 * xref:integration/snowflake.adoc[]
+
+You can also visualize the effect of running a xref:integration/gql.adoc[GQL `create` query] without having to run it on a Neo4j database.
