@@ -1,7 +1,6 @@
 = Integration with other libraries
 
-In addition to creating graphs from scratch, with `neo4j-viz` as is shown in the
-xref:getting-started.adoc[], you can also import data directly from external sources, including:
+In addition to creating graphs from scratch, you can import and visualize data directly from external sources includingthe following:
 
 * xref:integration/pandas.adoc[]
 * xref:integration/gds.adoc[]
