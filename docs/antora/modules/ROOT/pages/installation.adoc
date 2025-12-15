@@ -1,6 +1,6 @@
 = Installation
 
-To install the latest version of the library, run:
+You can install the latest version of the library with `pip`:
 
 [source, console]
 ----
@@ -9,47 +9,16 @@ pip install neo4j-viz
 
 == Optional dependencies
 
-In addition, there are a few optional dependencies that you can install to enable additional features of the library.
+There are a few optional dependencies that you can install to enable additional features of the library.
 
-=== Pandas DataFrames `from_dfs` importer
+=== Integration with external sources
 
-To install the additional dependencies required for the link:{api-docs-uri}/from_pandas[`from_dfs`] importer you can run:
-
-[source, console]
-----
-pip install neo4j-viz[pandas]
-----
-
-=== Neo4j `from_neo4j` importer
-
-To install the additional dependencies required for the link:{api-docs-uri}/from_neo4j[`from_neo4j`] importer you can run:
-
-[source, console]
-----
-pip install neo4j-viz[neo4j]
-----
-
-=== Neo4j Graph Data Science `from_gds` importer
-
-To install the additional dependencies required for the link:{api-docs-uri}/from_gds[`from_gds`] importer you can run:
-
-[source, console]
-----
-pip install neo4j-viz[gds]
-----
-
-=== Neo4j Graph Data Science `from_snowflake` importer
-
-To install the additional dependencies required for the link:{api-docs-uri}/from_snowflake[`from_snowflake`] importer you can run:
-
-[source, console]
-----
-pip install neo4j-viz[snowflake]
-----
+The library can import data directly from xref:integration/index.adoc[external sources].
+Each integration page includes installation instructions for the needed dependencies.
 
 === Notebook tutorials
 
-To install all the additional dependencies required for the link:{tutorials-docs-uri}[notebook examples] you can run:
+You need to install some additional dependencies to run the link:{tutorials-docs-uri}[Jupyter notebook tutorials]:
 
 [source, console]
 ----

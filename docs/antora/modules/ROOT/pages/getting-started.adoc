@@ -86,6 +86,6 @@ Now that we have covered the basics of creating and rendering a visualization gr
 Here are some suggestions for what to do next:
 
 * Browse the link:{tutorials-docs-uri}[notebook examples] for more examples and use cases
-* Learn about the xref:integration.adoc[integrations] with other libraries such as Neo4j GDS and Pandas
+* Learn about the xref:integration/index.adoc[integrations] with other libraries such as Neo4j GDS and Pandas
 * Check out the xref:rendering.adoc[rendering options] and convenience methods of `VisualizationGraph`
 * Read about our link:{api-docs-uri}/[API reference]
