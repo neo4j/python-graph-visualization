@@ -1,4 +1,4 @@
-= Visualizing other data sources
+= Visualizing existing data
 
 In addition to creating graphs from scratch, you can import and visualize data directly from external sources such as:
 
