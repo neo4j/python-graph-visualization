@@ -25,6 +25,7 @@
   "dependencies": {
     "@neo4j-antora/aliases-redirects": "^0.2.5",
     "@neo4j-antora/antora-add-notes": "^0.3.2",
+    "@neo4j-antora/antora-page-roles": "^0.3.2",
     "@neo4j-antora/mark-terms": "^1.1.0",
     "@neo4j-antora/roles-labels": "^0.1.1",
     "@neo4j-antora/selector-labels": "^0.1.1",

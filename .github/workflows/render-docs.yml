@@ -41,4 +41,4 @@ jobs:
           version: 3.6.2
 
       - name: Render ref docs
-        run: uv run bash ../scripts/render_docs.sh
+        run: uv run bash ../scripts/render_api_docs.sh
