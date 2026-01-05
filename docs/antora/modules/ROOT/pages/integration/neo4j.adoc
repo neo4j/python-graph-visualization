@@ -42,4 +42,4 @@ with GraphDatabase.driver(URI, auth=auth) as driver:
 VG = from_neo4j(result)
 ----
 
-See the link:/tutorials/neo4j-example[Visualizing Neo4j Graphs tutorial] for a more extensive example.
+See the link:{tutorials-docs-uri}/neo4j-example[Visualizing Neo4j Graphs tutorial] for a more extensive example.

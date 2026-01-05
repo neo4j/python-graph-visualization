@@ -34,7 +34,7 @@ jobs:
         with:
           python-version: "3.11"
           enable-cache: true
-      - run: uv sync --extra dev --extra pandas --extra snowflake
+      - run: uv sync --group dev --extra pandas --extra snowflake
 
       - name: Run tests
         env:

@@ -33,7 +33,7 @@ jobs:
         with:
           python-version: "3.11"
           enable-cache: true
-      - run: uv sync --extra dev --extra pandas --extra neo4j --extra gds --extra snowflake --extra docs
+      - run: uv sync --group dev --group docs --extra pandas --extra neo4j --extra gds --extra snowflake
 
       - name: Setup pandoc
         uses: pandoc/actions/setup@v1
@@ -41,4 +41,4 @@ jobs:
           version: 3.6.2
 
       - name: Render ref docs
-        run: uv run bash ../scripts/render_docs.sh
+        run: uv run bash ../scripts/render_api_docs.sh

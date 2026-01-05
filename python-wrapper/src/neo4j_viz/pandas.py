@@ -69,6 +69,9 @@ def _parse_nodes(node_dfs: DFS_TYPE, dropna: bool = False) -> list[Node]:
             mandatory_fields = {}
             properties = {}
             for key, value in row.to_dict().items():
+                if not isinstance(key, str):
+                    key = str(key)
+
                 if key in basic_node_fields_aliases:
                     mandatory_fields[key] = value
                 else:
@@ -98,6 +101,9 @@ def _parse_relationships(rel_dfs: DFS_TYPE, dropna: bool = False) -> list[Relati
             mandatory_fields = {}
             properties = {}
             for key, value in row.to_dict().items():
+                if not isinstance(key, str):
+                    key = str(key)
+
                 if key in basic_rel_field_aliases:
                     mandatory_fields[key] = value
                 else:
