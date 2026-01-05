@@ -6,5 +6,4 @@ set -o xtrace
 
 cd docs/antora
 npm install
-npm install @neo4j-antora/antora-page-roles --save
 npm run start
