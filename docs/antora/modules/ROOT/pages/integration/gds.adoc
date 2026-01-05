@@ -53,4 +53,4 @@ VG = from_gds(
 VG.color_nodes(property="componentId")
 ----
 
-See the link:/tutorials/gds-example[Visualizing Neo4j Graph Data Science (GDS) Graphs tutorial] for a more extensive example.
+See the link:{tutorials-docs-uri}/gds-example[Visualizing Neo4j Graph Data Science (GDS) Graphs tutorial] for a more extensive example.

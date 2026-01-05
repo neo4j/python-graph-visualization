@@ -84,4 +84,4 @@ VG = from_snowflake(
 )
 ----
 
-For a full example of the `from_snowflake` importer in action, please see the link:http://localhost:9000/tutorials/snowflake-example/[Visualizing Snowflake Tables tutorial].
+For a full example of the `from_snowflake` importer in action, please see the link:{tutorials-docs-uri}/snowflake-example/[Visualizing Snowflake Tables tutorial].
