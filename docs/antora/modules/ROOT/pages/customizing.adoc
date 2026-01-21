@@ -107,7 +107,7 @@ In theses cases, all nodes with the same caption will get the same color.
 
 If there are fewer colors than unique values for the node `field` or `property` provided, the colors will be reused in a cycle.
 To avoid that, you could use a larger palette or extend one with additional colors.
-Refer to the link:/tutorials/gds-example[Visualizing Neo4j Graph Data Science (GDS) Graphs tutorial] for an example on how
+Refer to the link:{tutorials-docs-uri}/gds-example[Visualizing Neo4j Graph Data Science (GDS) Graphs tutorial] for an example on how
 to do the latter.
 
 ==== By continuous color space
