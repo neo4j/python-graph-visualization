@@ -38,7 +38,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
-      - run: uv sync --extra dev --extra pandas --extra neo4j --extra gds --extra snowflake
+      - run: uv sync --group dev --extra pandas --extra neo4j --extra gds --extra snowflake
 
       - name: Run tests
         run: uv run pytest tests/
