@@ -404,6 +404,7 @@ class VisualizationGraph:
         >>> VG = VisualizationGraph(nodes=nodes)
 
         Color nodes based on a discrete field such as "label":
+
         >>> VG.color_nodes(field="label", color_space=ColorSpace.DISCRETE)
 
         Color nodes based on a continuous field such as "score":
@@ -510,6 +511,7 @@ class VisualizationGraph:
         >>> VG = VisualizationGraph(nodes=nodes, relationships=relationships)
 
         Color relationships based on a discrete field such as "caption":
+
         >>> VG.color_relationships(field="caption", color_space=ColorSpace.DISCRETE)
 
         Color relationships based on a continuous field such as "score":
