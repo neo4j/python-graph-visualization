@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Iterable
-from typing import Any, Callable, Hashable, Optional, Union
+from collections.abc import Iterable, Hashable
+from typing import Any, Callable
 
 from IPython.display import HTML
 from pydantic.alias_generators import to_snake
@@ -21,8 +21,6 @@ from .options import (
 )
 from .relationship import Relationship
 
-
-# TODO helper for map properties to fields. helper for set caption (simplicity)
 class VisualizationGraph:
     """
     A graph to visualize.
@@ -86,13 +84,13 @@ class VisualizationGraph:
 
     def render(
         self,
-        layout: Optional[Layout] = None,
-        layout_options: Union[dict[str, Any], LayoutOptions, None] = None,
+        layout: Layout | None = None,
+        layout_options: dict[str, Any] | LayoutOptions | None = None,
         renderer: Renderer = Renderer.CANVAS,
         width: str = "100%",
         height: str = "600px",
-        pan_position: Optional[tuple[float, float]] = None,
-        initial_zoom: Optional[float] = None,
+        pan_position: tuple[float, float] | None = None,
+        initial_zoom: float | None = None,
         min_zoom: float = 0.075,
         max_zoom: float = 10,
         allow_dynamic_min_zoom: bool = True,
@@ -197,8 +195,8 @@ class VisualizationGraph:
     def set_node_captions(
         self,
         *,
-        field: Optional[str] = None,
-        property: Optional[str] = None,
+        field: str | None = None,
+        property: str | None = None,
         override: bool = True,
     ) -> None:
         """
@@ -265,9 +263,9 @@ class VisualizationGraph:
 
     def resize_nodes(
         self,
-        sizes: Optional[dict[NodeIdType, RealNumber]] = None,
-        node_radius_min_max: Optional[tuple[RealNumber, RealNumber]] = (3, 60),
-        property: Optional[str] = None,
+        sizes: dict[NodeIdType, RealNumber] | None = None,
+        node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
+        property: str | None = None,
     ) -> None:
         """
         Resize the nodes in the graph.
@@ -359,9 +357,9 @@ class VisualizationGraph:
     def color_nodes(
         self,
         *,
-        field: Optional[str] = None,
-        property: Optional[str] = None,
-        colors: Optional[ColorsType] = None,
+        field: str | None = None,
+        property: str | None = None,
+        colors: ColorsType | None = None,
         color_space: ColorSpace = ColorSpace.DISCRETE,
         override: bool = True,
     ) -> None:
@@ -428,6 +426,7 @@ class VisualizationGraph:
 
             def node_to_attr(node: Node) -> Any:
                 return node.properties.get(attribute)
+
         else:
             assert field is not None
             attribute = to_snake(field)
@@ -456,39 +455,150 @@ class VisualizationGraph:
             }
 
         if isinstance(colors, dict):
-            self._color_nodes_dict(colors, override, node_to_attr)
+            self._color_items_dict(self.nodes, colors, override, node_to_attr)
         else:
-            self._color_nodes_iter(attribute, colors, override, node_to_attr)
+            self._color_items_iter(self.nodes, attribute, colors, override, node_to_attr)
 
-    def _color_nodes_dict(
-        self, colors: dict[str, ColorType], override: bool, node_to_attr: Callable[[Node], Any]
+    def color_relationships(
+        self,
+        *,
+        field: str | None = None,
+        property: str | None = None,
+        colors: ColorsType | None = None,
+        color_space: ColorSpace = ColorSpace.DISCRETE,
+        override: bool = True,
     ) -> None:
-        for node in self.nodes:
-            color = colors.get(node_to_attr(node))
+        """
+        Color the relationships in the graph based on either a relationship field, or a relationship property.
+
+        It's possible to color the relationships based on a discrete or continuous color space. In the discrete case,
+        a new color from the `colors` provided is assigned to each unique value of the relationship field/property.
+        In the continuous case, the `colors` should be a list of colors representing a range that are used to
+        create a gradient of colors based on the values of the relationship field/property.
+
+        Parameters
+        ----------
+        field:
+            The field of the relationships to base the coloring on. The type of this field must be hashable, or be a
+            list, set or dict containing only hashable types. Must be None if `property` is provided.
+        property:
+            The property of the relationships to base the coloring on. The type of this property must be hashable, or be a
+            list, set or dict containing only hashable types. Must be None if `field` is provided.
+        colors:
+            The colors to use for the relationships.
+            If `color_space` is `ColorSpace.DISCRETE`, the colors can be a dictionary mapping from field/property value
+            to color, or an iterable of colors in which case the colors are used in order.
+            If `color_space` is `ColorSpace.CONTINUOUS`, the colors must be a list of colors representing a range.
+            Allowed color values are for example “#FF0000”, “red” or (255, 0, 0) (full list: https://docs.pydantic.dev/2.0/usage/types/extra_types/color_types/).
+            The default colors are the Neo4j graph colors.
+        color_space:
+            The type of space of the provided `colors`. Either `ColorSpace.DISCRETE` or `ColorSpace.CONTINUOUS`. It determines whether
+            colors are assigned based on unique field/property values or a gradient of the values of the field/property.
+        override:
+            Whether to override existing colors of the relationships, if they have any.
+
+        Examples
+        --------
+
+        Given a VisualizationGraph `VG`:
+
+        >>> nodes = [Node(id="0"), Node(id="1")]
+        >>> relationships = [
+        ...    Relationship(source="0", target="1", caption="ACTED_IN", properties={"score": 10}),
+        ...    Relationship(source="1", target="0", caption="DIRECTED", properties={"score": 20}),
+        ... ]
+        >>> VG = VisualizationGraph(nodes=nodes, relationships=relationships)
+
+        Color relationships based on a discrete field such as "caption":
+        >>> VG.color_relationships(field="caption", color_space=ColorSpace.DISCRETE)
+
+        Color relationships based on a continuous field such as "score":
+
+        >>> VG.color_relationships(property="score", color_space=ColorSpace.CONTINUOUS)
+        """
+        if not ((field is None) ^ (property is None)):
+            raise ValueError(
+                f"Exactly one of the arguments `field` (received '{field}') and `property` (received '{property}') must be provided"
+            )
+
+        if field is None:
+            assert property is not None
+            attribute = property
+
+            def rel_to_attr(rel: Relationship) -> Any:
+                return rel.properties.get(attribute)
+
+        else:
+            assert field is not None
+            attribute = to_snake(field)
+
+            def rel_to_attr(rel: Relationship) -> Any:
+                return getattr(rel, attribute)
+
+        if color_space == ColorSpace.DISCRETE:
+            if colors is None:
+                colors = NEO4J_COLORS_DISCRETE
+        else:
+            rel_map = {rel.id: rel_to_attr(rel) for rel in self.relationships if rel_to_attr(rel) is not None}
+            normalized_map = self._normalize_values(rel_map)
+
+            if colors is None:
+                colors = NEO4J_COLORS_CONTINUOUS
+
+            if not isinstance(colors, list):
+                raise ValueError("For continuous properties, `colors` must be a list of colors representing a range")
+
+            num_colors = len(colors)
+            colors = {
+                rel_to_attr(rel): colors[round(normalized_map[rel.id] * (num_colors - 1))]
+                for rel in self.relationships
+                if rel_to_attr(rel) is not None
+            }
+
+        if isinstance(colors, dict):
+            self._color_items_dict(self.relationships, colors, override, rel_to_attr)
+        else:
+            self._color_items_iter(self.relationships, attribute, colors, override, rel_to_attr)
+
+    def _color_items_dict(
+        self,
+        items: list[Node] | list[Relationship],
+        colors: dict[Hashable, ColorType],
+        override: bool,
+        item_to_attr: Callable[[Node], Any] | Callable[[Relationship], Any],
+    ) -> None:
+        for item in items:
+            color = colors.get(item_to_attr(item))
 
             if color is None:
                 continue
 
-            if node.color is not None and not override:
+            if item.color is not None and not override:
                 continue
 
             if not isinstance(color, Color):
-                node.color = Color(color)
+                item.color = Color(color)
             else:
-                node.color = color
+                item.color = color
 
-    def _color_nodes_iter(
-        self, attribute: str, colors: Iterable[ColorType], override: bool, node_to_attr: Callable[[Node], Any]
+    def _color_items_iter(
+        self,
+        items: list[Node] | list[Relationship],
+        attribute: str,
+        colors: Iterable[ColorType],
+        override: bool,
+        item_to_attr: Callable[[Node], Any] | Callable[[Relationship], Any],
     ) -> None:
         exhausted_colors = False
         prop_to_color = {}
         colors_iter = iter(colors)
-        for node in self.nodes:
-            raw_prop = node_to_attr(node)
+        for item in items:
+            raw_prop = item_to_attr(item)
             try:
                 prop = self._make_hashable(raw_prop)
             except ValueError:
-                raise ValueError(f"Unable to color nodes by unhashable property type '{type(raw_prop)}'")
+                item_type = "nodes" if isinstance(item, Node) else "relationships"
+                raise ValueError(f"Unable to color {item_type} by unhashable property type '{type(raw_prop)}'")
 
             if prop not in prop_to_color:
                 next_color = next(colors_iter, None)
@@ -500,13 +610,13 @@ class VisualizationGraph:
 
             color = prop_to_color[prop]
 
-            if node.color is not None and not override:
+            if item.color is not None and not override:
                 continue
 
             if not isinstance(color, Color):
-                node.color = Color(color)
+                item.color = Color(color)
             else:
-                node.color = color
+                item.color = color
 
         if exhausted_colors:
             warnings.warn(
