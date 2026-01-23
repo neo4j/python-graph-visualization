@@ -5,6 +5,8 @@
 
 ## New features
 
+* Added a new utility function to color relationships `VisualizationGraph.color_relationships`
+
 
 ## Bug fixes
 
