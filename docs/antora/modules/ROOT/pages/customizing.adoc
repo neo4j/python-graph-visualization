@@ -141,12 +141,16 @@ Since we only provided five colors in the range, the granularity of the gradient
 
 `palettable` and `matplotlib` are great libraries to use to create custom color gradients.
 
-== Sizing nodes
+== Sizing nodes and relationships
 
 Nodes can be given a size directly by providing them with a size field, upon creation.
-This can for example be done by passing a size as an integer to the `size` parameter of the link:{api-docs-uri}/node[Node] object.
+This can be done by passing a size as an integer to the `size` parameter of the link:{api-docs-uri}/node[Node] object.
 
-Alternatively, you can size nodes after a `VisualizationGraph` object has been created.
+
+Relationships can be given a width directly by providing them with a width field, upon creation.
+This can be done by passing a size as an integer to the `width` parameter of the link:{api-docs-uri}/relationship[Relationship] object.
+
+Alternatively, you can resize them after a `VisualizationGraph` object has been created.
 
 === The `resize_nodes` method
 
@@ -175,6 +179,31 @@ VG.resize_nodes(sizes={42: 88}, node_radius_min_max=(5, 20))
 ----
 
 Note that means that also the node with ID 42 will be scaled to be between 5 and 20 pixels in size.
+
+=== The `resize_relationships` method
+
+By calling the link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.resize_relationships[`neo4j_viz.VisualizationGraph.resize_relationships()`] method, you can resize relationship widths by:
+
+* passing new widths as a dictionary `widths`, mapping relationship IDs to widths in pixels, or
+* providing a `property` name of the relationships to use for sizing.
+
+In the following example, we resize the relationship with ID "r1" to have a width of 5:
+
+[source, python]
+----
+# VG is a VisualizationGraph object
+VG.resize_relationships(widths={"r1": 5})
+----
+
+You can also resize relationships based on a property:
+
+[source, python]
+----
+# VG is a VisualizationGraph object
+VG.resize_relationships(property="weight")
+----
+
+Unlike `resize_nodes`, relationship widths are used as-is and are not scaled to a specific range.
 
 == Pinning nodes
 

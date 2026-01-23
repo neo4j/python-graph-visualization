@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Iterable, Hashable
+from collections.abc import Hashable, Iterable
 from typing import Any, Callable
 
 from IPython.display import HTML
@@ -20,6 +20,7 @@ from .options import (
     construct_layout_options,
 )
 from .relationship import Relationship
+
 
 class VisualizationGraph:
     """
@@ -332,6 +333,57 @@ class VisualizationGraph:
 
             node.size = size
 
+    def resize_relationships(
+        self,
+        widths: dict[str | int, RealNumber] | None = None,
+        property: str | None = None,
+    ) -> None:
+        """
+        Resize the width of relationships in the graph.
+
+        Parameters
+        ----------
+        widths:
+            A dictionary mapping from relationship ID to the new width of the relationship.
+            If a relationship ID is not in the dictionary, the width of the relationship is not changed.
+            Must be None if `property` is provided.
+        property:
+            The property of the relationships to use for sizing. Must be None if `widths` is provided.
+        """
+        if widths is not None and property is not None:
+            raise ValueError("At most one of the arguments `widths` and `property` can be provided")
+
+        if widths is None and property is None:
+            raise ValueError("At least one of `widths` or `property` must be given")
+
+        # Gather relationship widths
+        all_widths = {}
+        if widths is not None:
+            for rel in self.relationships:
+                width = widths.get(rel.id, rel.width)
+                if width is not None:
+                    all_widths[rel.id] = width
+        elif property is not None:
+            for rel in self.relationships:
+                width = rel.properties.get(property, rel.width)
+                if width is not None:
+                    all_widths[rel.id] = width
+
+        # Validate and apply relationship widths
+        for rel in self.relationships:
+            width = all_widths.get(rel.id)
+
+            if width is None:
+                continue
+
+            if not isinstance(width, (int, float)):
+                raise ValueError(f"Width for relationship '{rel.id}' must be a real number, but was {width}")
+
+            if width <= 0:
+                raise ValueError(f"Width for relationship '{rel.id}' must be positive, but was {width}")
+
+            rel.width = width
+
     @staticmethod
     def _normalize_values(
         node_map: dict[NodeIdType, RealNumber], min_max: tuple[float, float] = (0, 1)
@@ -567,7 +619,7 @@ class VisualizationGraph:
         items: list[Node] | list[Relationship],
         colors: dict[Hashable, ColorType],
         override: bool,
-        item_to_attr: Callable[[Node], Any] | Callable[[Relationship], Any],
+        item_to_attr: Callable[[Any], Any] | Callable[[Any], Any],
     ) -> None:
         for item in items:
             color = colors.get(item_to_attr(item))
@@ -589,7 +641,7 @@ class VisualizationGraph:
         attribute: str,
         colors: Iterable[ColorType],
         override: bool,
-        item_to_attr: Callable[[Node], Any] | Callable[[Relationship], Any],
+        item_to_attr: Callable[[Any], Any],
     ) -> None:
         exhausted_colors = False
         prop_to_color = {}
