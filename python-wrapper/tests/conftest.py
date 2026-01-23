@@ -42,7 +42,7 @@ def aura_ds_instance() -> Generator[Any, None, None]:
     id, dbms_connection_info = create_aurads_instance(api)
 
     # setting as environment variables to run notebooks with this connection
-    os.environ["NEO4J_URI"] = dbms_connection_info.uri
+    os.environ["NEO4J_URI"] = dbms_connection_info.get_uri()
     assert isinstance(dbms_connection_info.username, str)
     os.environ["NEO4J_USER"] = dbms_connection_info.username
     assert isinstance(dbms_connection_info.password, str)
