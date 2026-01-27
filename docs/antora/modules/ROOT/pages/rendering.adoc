@@ -7,7 +7,7 @@ If you have not yet created a `VisualizationGraph` object, refer to one of the f
 
 * xref:getting-started.adoc[Getting started] for creating a visualization graph from scratch using `neo4j-viz`
   primitives like link:{api-docs-uri}/node[Node] and link:{api-docs-uri}/relationship[Relationship] and
-  link:{api-docs-uri}/visualization-graph>[`VisualizationGraph`] directly.
+  link:{api-docs-uri}/visualization-graph[`VisualizationGraph`] directly.
 * xref:integration/index.adoc[] for importing data from a Pandas DataFrame or Neo4j GDS projection.
 
 == The `render` method
