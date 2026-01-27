@@ -43,7 +43,7 @@ But you can disable this by passing `show_hover_tooltip=False`.
 
 === Examples
 
-Refer to the xref:getting-started.adoc[] and the link:/tutorials/index[tutorials] for
+Refer to the xref:getting-started.adoc[] and the link:{tutorials-docs-uri}[tutorials] for
 examples of `render` method usage.
 
 == Exporting to HTML
