@@ -36,7 +36,7 @@ def aura_ds_instance() -> Generator[Any, None, None]:
         yield None
         return
 
-    from gds_helper import aura_api, create_aurads_instance
+    from tests.gds_helper import aura_api, create_aurads_instance
 
     api = aura_api()
     id, dbms_connection_info = create_aurads_instance(api)
@@ -56,8 +56,9 @@ def aura_ds_instance() -> Generator[Any, None, None]:
 
 @pytest.fixture(scope="package")
 def gds(aura_ds_instance: Any) -> Generator[Any, None, None]:
-    from gds_helper import connect_to_plugin_gds
     from graphdatascience import GraphDataScience
+
+    from tests.gds_helper import connect_to_plugin_gds
 
     if aura_ds_instance:
         yield GraphDataScience(
@@ -85,10 +86,11 @@ def neo4j_driver(aura_ds_instance: Any) -> Generator[Any, None, None]:
         NEO4J_URI = os.environ.get("NEO4J_URI", "neo4j://localhost:7687")
         driver = neo4j.GraphDatabase.driver(NEO4J_URI)
 
-    driver.verify_connectivity()
-    yield driver
-
-    driver.close()
+    try:
+        driver.verify_connectivity()
+        yield driver
+    finally:
+        driver.close()
 
 
 @pytest.fixture(scope="package")
