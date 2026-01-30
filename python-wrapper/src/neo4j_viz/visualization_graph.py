@@ -619,7 +619,7 @@ class VisualizationGraph:
         items: list[Node] | list[Relationship],
         colors: dict[Hashable, ColorType],
         override: bool,
-        item_to_attr: Callable[[Any], Any] | Callable[[Any], Any],
+        item_to_attr: Callable[[Any], Any],
     ) -> None:
         for item in items:
             color = colors.get(item_to_attr(item))
