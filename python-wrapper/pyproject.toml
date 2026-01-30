@@ -72,6 +72,7 @@ notebook = [
     "palettable>=3.3.3",
     "matplotlib>=3.9.4",
     "snowflake-snowpark-python==1.42.0",
+    "dotenv"
 ]
 
 [project.urls]
@@ -100,6 +101,14 @@ neo4j_viz = [
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
+markers =  [
+    "requires_neo4j_and_gds: mark a test as a requiring a Neo4j instance with GDS running",
+    "requires_snowflake: mark a test as a requiring a Snowflake connection"
+]
+filterwarnings = [
+    "error",
+    "ignore:Jupyter is migrating its paths to use standard platformdirs:DeprecationWarning"
+]
 
 [tool.ruff]
 line-length = 120

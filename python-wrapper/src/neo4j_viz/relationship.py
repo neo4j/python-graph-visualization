@@ -64,6 +64,8 @@ class Relationship(
     caption_size: Optional[Union[int, float]] = Field(None, gt=0.0, description="The size of the caption text")
     #: The color of the relationship. Allowed input is for example "#FF0000", "red" or (255, 0, 0)
     color: Optional[ColorType] = Field(None, description="The color of the relationship")
+    # The width of the relationship
+    width: Optional[int | float] = Field(None, gt=0.0, description="The width of the relationship")
     #: Additional properties of the relationship that do not directly impact the visualization
     properties: dict[str, Any] = Field(
         default_factory=dict,
