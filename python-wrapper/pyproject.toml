@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neo4j-viz"
-version = "1.0.1"
+version = "1.1.0"
 description = "A simple graph visualization tool"
 readme = "README.md"
 authors = [{ name = "Neo4j", email = "team-gds@neo4j.org" }]
@@ -47,15 +47,15 @@ snowflake = ["snowflake-snowpark-python>=1, <2"]
 
 [dependency-groups]
 dev = [
-    "ruff==0.14.1",
-    "mypy==1.18.2",
+    "ruff==0.14.13",
+    "mypy==1.19.1",
     "pytest==8.4.2",
-    "selenium==4.38.0",
-    "ipykernel==6.30.1",
+    "selenium==4.40.0",
+    "ipykernel==7.1.0",
     "palettable==3.3.3",
     "pytest-mock==3.15.1",
     "nbconvert==7.16.6",
-    "streamlit==1.51.0",
+    "streamlit==1.53.0",
     "matplotlib>=3.9.4",
 ]
 docs = [
@@ -72,6 +72,7 @@ notebook = [
     "palettable>=3.3.3",
     "matplotlib>=3.9.4",
     "snowflake-snowpark-python==1.42.0",
+    "dotenv"
 ]
 
 [project.urls]
@@ -100,6 +101,14 @@ neo4j_viz = [
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
+markers =  [
+    "requires_neo4j_and_gds: mark a test as a requiring a Neo4j instance with GDS running",
+    "requires_snowflake: mark a test as a requiring a Snowflake connection"
+]
+filterwarnings = [
+    "error",
+    "ignore:Jupyter is migrating its paths to use standard platformdirs:DeprecationWarning"
+]
 
 [tool.ruff]
 line-length = 120

@@ -13,6 +13,7 @@ def test_rels_with_all_options() -> None:
         caption_align=CaptionAlignment.TOP,
         caption_size=12,
         color="#FF0000",
+        width=10,
     )
 
     assert rel.to_dict() == {
@@ -23,6 +24,7 @@ def test_rels_with_all_options() -> None:
         "captionAlign": "top",
         "captionSize": 12,
         "color": "#ff0000",
+        "width": 10,
         "properties": {},
     }
 
