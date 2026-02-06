@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neo4j-viz"
-version = "1.0.1"
+version = "1.1.0"
 description = "A simple graph visualization tool"
 readme = "README.md"
 authors = [{ name = "Neo4j", email = "team-gds@neo4j.org" }]
