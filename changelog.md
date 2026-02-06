@@ -1,4 +1,4 @@
-# Changes in 1.1.0
+# Changes in 1.2.0
 
 ## Breaking changes
 
