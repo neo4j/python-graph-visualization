@@ -59,6 +59,13 @@ To build the Python packages, run inside the `python-wrapper` folder:
 pip install . # run with --editable for development mode
 ```
 
+Alternatively, you can use [uv](https://docs.astral.sh/uv/) which also installs dev tools (ruff, mypy, pytest, etc.):
+
+```sh
+cd python-wrapper
+uv sync --group dev
+```
+
 To rebuild the JavaScript applet, run inside the `js-applet` folder:
 
 ```sh
@@ -68,21 +75,33 @@ yarn build    # Build JavaScript resources to be used by Python code
 
 This will build the app and copy the relevant files to the python wrapper
 
+### Dev server (hot reloading)
+
+For live-reloading the JS component in a Jupyter notebook while developing:
+
+```sh
+# Terminal 1 — start Vite dev server
+cd js-applet
+yarn dev               # serves on http://localhost:5173
+
+# Terminal 2 — launch Jupyter with dev mode enabled
+NEO4J_VIZ_DEV=1 jupyter lab
+```
+
+When `NEO4J_VIZ_DEV=1` is set, the widget loads JS from the Vite dev server instead of the bundled files. Any change to `js-applet/src/` will hot-reload in active widget cells without re-executing them.
 
 ## Specifically for this project
 
 In this section, we will provide some more specific information about how to work with this particular project.
 
-
 ### Python development environment
 
- * Install Python 3.9+
- * [Install pip](https://pip.pypa.io/en/stable/installation/)
- * Install the project's Python dependencies:
-   ```bash
-   pip install -e .
-   pip install ".[dev]"
-   ```
+- Install Python 3.10+
+- [Install pip](https://pip.pypa.io/en/stable/installation/)
+- Install the project's Python dependencies:
+  ```bash
+  pip install -e .
+  ```
 
 ### Testing
 
@@ -121,18 +140,16 @@ pytest tests/ --include-snowflake
 
 The project contains of three parts:
 
-- a JavaScript applet whith a basic NVL implementation under the `js-applect` folder
+- a JavaScript applet under the `js-applet` folder
 - a Python package which loads the applet and offers convenience functions to pass data to the applet
-- Jupyter notebooks to test the NVL Python wrapper
+- Jupyter notebooks to test the Python wrapper
 
+### JavaScript configs
 
-### JavaScipts configs
-
-* `babel.config.js` - Config for the JavaScript compiler
-* `tsconfig.json` - Configuration for TypeScript code
-* `package.json` - For yarn, define dependencies and `build` target
-* `webpack.config.js` - Config for bundling JS parts
-
+- `vite.config.ts` - Vite config for the lib build (widget.js + style.css for anywidget)
+- `vite.config.html.ts` - Vite config for the HTML singlefile build (self-contained index.html)
+- `tsconfig.json` - Configuration for TypeScript code
+- `package.json` - For yarn, define dependencies and `build` target
 
 ### Python
 

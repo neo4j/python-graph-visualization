@@ -98,7 +98,6 @@ neo4j_viz = [
     "resources/nvl_entrypoint/widget.js",
     "resources/nvl_entrypoint/style.css",
     "resources/nvl_entrypoint/index.html",
-    "resources/icons/*.svg",
     "py.typed"
 ]
 
