@@ -1,0 +1,32 @@
+= GQL `CREATE` queries
+
+The `neo4j-viz` library provides convenience for creating visualization graphs from link:https://neo4j.com/docs/cypher-manual/current/clauses/create/[GQL `CREATE` queries] via the `from_gql_create` method.
+
+The link:{api-docs-uri}/from_gql_create[`from_gql_create`] method takes one mandatory positional parameter:
+
+* A valid `query` representing a GQL `CREATE` query as a string.
+
+== Example
+
+In this small example, we create a visualization graph from a GQL `CREATE` query.
+
+[source, python]
+----
+from neo4j_viz.gql_create import from_gql_create
+
+query = """
+        CREATE
+          (a:User {name: 'Alice', age: 23}),
+          (b:User {name: 'Bridget', age: 34}),
+          (c:User {name: 'Charles', age: 45}),
+          (d:User {name: 'Dana', age: 56}),
+          (e:User {name: 'Eve', age: 67}),
+          (f:User {name: 'Fawad', age: 78}),
+          (a)-[:LINK {weight: 0.5}]->(b),
+          (a)-[:LINK {weight: 4}]->(c),
+          (e)-[:LINK {weight: 1.1}]->(d),
+          (e)-[:LINK {weight: -2}]->(f);
+        """
+
+VG = from_gql_create(query)
+----

@@ -22,6 +22,9 @@ class CaptionAlignment(str, Enum):
 @enum_tools.documentation.document_enum
 class Layout(str, Enum):
     FORCE_DIRECTED = "forcedirected"
+    """
+    The force-directed layout uses a physics simulation to position the nodes.
+    """
     HIERARCHICAL = "hierarchical"
     """
     The nodes are then arranged by the directionality of their relationships

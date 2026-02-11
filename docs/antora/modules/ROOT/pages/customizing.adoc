@@ -1,0 +1,261 @@
+= Customizing the visualization
+
+Once created, a link:{api-docs-uri}/visualization-graph[`VisualizationGraph` object] can be modified in various ways
+to adjust what the visualization looks like the next time you render it.
+In this section we will discuss how to color, size, and pin nodes, as well as how to directly modify nodes and
+relationships of existing `VisualizationGraph` objects.
+
+If you have not yet created a `VisualizationGraph` object, refer to one of the following sections:
+
+* xref:getting-started.adoc[Getting started] for creating a visualization graph from scratch using `neo4j-viz`
+  primitives like link:{api-docs-uri}/node/[Node] and link:{api-docs-uri}/relationship/[Relationship] and
+  link:{api-docs-uri}/visualization-graph[`VisualizationGraph`] directly.
+* xref:integration/index.adoc[] for importing data from a Pandas DataFrame or Neo4j GDS projection.
+
+== Setting node captions
+
+Node captions are the text labels displayed on nodes in the visualization.
+
+=== The `set_node_captions` method
+
+By calling the `neo4j_viz.VisualizationGraph.set_node_captions()` method, you can set node captions based on a node field (like `id`, `size`, etc.) or a node property (members of the `Node.properties` map).
+
+The method accepts an `override` parameter (default `True`) that controls whether to replace existing captions.
+If `override=False`, only nodes without captions will be updated.
+
+Here is an example of setting node captions from a property:
+
+[source, python]
+----
+# VG is a VisualizationGraph object with nodes that have a "name" property
+VG.set_node_captions(property="name")
+----
+
+You can also set captions from a node field, and choose not to override existing captions:
+
+[source, python]
+----
+# VG is a VisualizationGraph object
+VG.set_node_captions(field="id", override=False)
+----
+
+For more complex scenarios where you need fallback logic or want to combine multiple properties, you can iterate over nodes directly:
+
+[source, python]
+----
+# VG is a VisualizationGraph object
+for node in VG.nodes:
+    caption = node.properties.get("name") or node.properties.get("title") or node.id
+    node.caption = str(caption)
+----
+
+== Coloring the graph
+
+Nodes and relationships can be colored directly by providing them with a color field, upon creation.
+This can be done by passing a color as a string to the `color` parameter of the
+link:{api-docs-uri}/node[Node] or link:{api-docs-uri}/relationship[Relationship] object.
+
+Alternatively, you can color nodes or relationships based on a field or property after a `VisualizationGraph` object has been
+created.
+
+=== The `color_nodes` and `color_relationships` methods
+
+By calling the link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.color_nodes[`neo4j_viz.VisualizationGraph.color_nodes()`] or link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.color_relationships[`neo4j_viz.VisualizationGraph.color_relationships()`] method, you can color nodes or relationships based on a field or property (members of the `Node.properties` or `Relationship.properties` map).
+
+It's possible to color them based on a discrete or continuous color space (see link:{api-docs-uri}/colors[`ColorSpace`]).
+In the discrete case, a new color from the `colors` provided is assigned to each unique value of the field/property.
+In the continuous case, the `colors` should be a list of colors representing a range that are used to
+create a gradient of colors based on the values of the field/property.
+
+By default the Neo4j color palette, that works for both light and dark mode, will be used.
+If you want to use a different color palette, you can pass a dictionary or iterable of colors as the `colors`
+parameter.
+A color value can for example be either strings like "blue", or hexadecimal color codes like "#FF0000", or even a tuple of RGB values like (255, 0, 255).
+
+If some nodes or relationships already have a `color` set, you can choose whether or not to override it with the `override`
+parameter.
+
+==== By discrete color space
+
+To not use the default colors, we can provide a list of custom colors based on a discrete field to the coloring methods:
+
+[source, python]
+----
+from neo4j_viz.colors import ColorSpace
+
+# VG is a VisualizationGraph object
+VG.color_nodes(
+    field="caption",
+    colors=["red", "#7fffd4", (255, 255, 255, 0.5), "hsl(270, 60%, 70%)"],
+    color_space=ColorSpace.DISCRETE
+)
+
+# Color relationships based on their caption
+VG.color_relationships(field="caption")
+----
+
+The full set of allowed values for colors are listed link:https://docs.pydantic.dev/2.0/usage/types/extra_types/color_types/[here].
+
+Instead of defining your own colors, you could also for example use the color palettes from the link:https://jiffyclub.github.io/palettable/[`palettable` library] as in this snippet:
+
+[source, python]
+----
+from palettable.wesanderson import Moonrise1_5
+
+# VG is a VisualizationGraph object
+VG.color_nodes(field="caption", colors=Moonrise1_5.colors)  # ColorSpace.DISCRETE is default
+----
+
+In theses cases, all items with the same field value will get the same color.
+
+If there are fewer colors than unique values for the `field` or `property` provided, the colors will be reused in a cycle.
+To avoid that, you could use a larger palette or extend one with additional colors.
+Refer to the link:{tutorials-docs-uri}/gds-example[Visualizing Neo4j Graph Data Science (GDS) Graphs tutorial] for an example on how
+to do the latter.
+
+==== By continuous color space
+
+To not use the default colors, we can provide a list of custom colors representing a range:
+
+[source, python]
+----
+from neo4j_viz.colors import ColorSpace
+
+# VG is a VisualizationGraph object
+VG.color_nodes(
+    property="centrality_score",
+    colors=[(255, 0, 0), (191, 64, 0), (128, 128, 0), (64, 191, 0), (0, 255, 0)],  # From red to green
+    color_space=ColorSpace.CONTINUOUS
+)
+
+# Color relationships based on a "weight" property
+VG.color_relationships(
+    property="weight",
+    colors=["#E0E0E0", "#000000"],  # From light grey to black
+    color_space=ColorSpace.CONTINUOUS
+)
+----
+
+In these cases, the nodes or relationships will be colored based on the value of the property, with the lowest values being colored with the first color and the highest values being colored with the last color.
+Since we only provided five colors in the range, the granularity of the gradient will be limited to five steps.
+
+`palettable` and `matplotlib` are great libraries to use to create custom color gradients.
+
+== Sizing nodes and relationships
+
+Nodes can be given a size directly by providing them with a size field, upon creation.
+This can be done by passing a size as an integer to the `size` parameter of the link:{api-docs-uri}/node[Node] object.
+
+
+Relationships can be given a width directly by providing them with a width field, upon creation.
+This can be done by passing a size as an integer to the `width` parameter of the link:{api-docs-uri}/relationship[Relationship] object.
+
+Alternatively, you can resize them after a `VisualizationGraph` object has been created.
+
+=== The `resize_nodes` method
+
+By calling the link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.resize_nodes[`neo4j_viz.VisualizationGraph.resize_nodes()`] method, you can resize nodes by:
+
+* passing new nodes sizes as a dictionary `sizes`, mapping node IDs to sizes in pixels, or
+* providing a tuple of two numbers `node_radius_min_max`: minimum and maximum radii (sizes) in pixels to which the
+  nodes will be scaled.
+
+Or you could provide both `sizes` and `node_radius_min_max`, in which case the dictionary will be used to first set
+the sizes of the nodes, and then the minimum and maximum values of the tuple will be subsequently used to scale the
+sizes to the provided range.
+
+If you provide only the `node_radius_min_max` parameter, the sizes of the nodes will be scaled such that the smallest
+node will have the size of the first value, and the largest node will have the size of the second value.
+The other nodes will be scaled linearly between these two values according to their relative size.
+This can be useful if node sizes vary a lot, or are all very small or very big.
+
+In the following example, we resize the node with ID 42 to have a size of 88 pixels, and then scales all nodes to have
+sizes between 5 and 20 pixels:
+
+[source, python]
+----
+# VG is a VisualizationGraph object
+VG.resize_nodes(sizes={42: 88}, node_radius_min_max=(5, 20))
+----
+
+Note that means that also the node with ID 42 will be scaled to be between 5 and 20 pixels in size.
+
+=== The `resize_relationships` method
+
+By calling the link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.resize_relationships[`neo4j_viz.VisualizationGraph.resize_relationships()`] method, you can resize relationship widths by:
+
+* passing new widths as a dictionary `widths`, mapping relationship IDs to widths in pixels, or
+* providing a `property` name of the relationships to use for sizing.
+
+In the following example, we resize the relationship with ID "r1" to have a width of 5:
+
+[source, python]
+----
+# VG is a VisualizationGraph object
+VG.resize_relationships(widths={"r1": 5})
+----
+
+You can also resize relationships based on a property:
+
+[source, python]
+----
+# VG is a VisualizationGraph object
+VG.resize_relationships(property="weight")
+----
+
+Unlike `resize_nodes`, relationship widths are used as-is and are not scaled to a specific range.
+
+== Pinning nodes
+
+Nodes can be pinned to their current position in the visualization, so that they will not be moved by the force-directed
+layout algorithm.
+This can be useful if you want to keep a node in a specific position, for example to highlight it.
+
+Nodes can be pinned directly upon creation.
+This can for example be done by passing `pinned=True` to the link:{api-docs-uri}/node[Node] object.
+
+Alternatively, you can toggle node pinning after a `VisualizationGraph` object has been created.
+
+=== The `toggle_nodes_pinned` method
+
+By calling the link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.toggle_nodes_pinned[`neo4j_viz.VisualizationGraph.toggle_nodes_pinned()`] method, you can toggle whether nodes should be
+pinned or not.
+This method takes dictionary that maps node IDs to boolean values, where `True` means that the node is pinned, and
+`False` means that the node is not pinned.
+
+In the following example, we pin the node with ID 1337 and unpin the node with ID 42:
+
+[source, python]
+----
+# VG is a VisualizationGraph object
+VG.toggle_nodes_pinned(1337: True, 42: False)})
+----
+
+== Direct modification of nodes and relationships
+
+Nodes and relationships can also be modified directly by accessing the `nodes` and `relationships` fields of an
+existing `VisualizationGraph` object.
+These fields list of all the link:{api-docs-uri}/node[Nodes] and link:{api-docs-uri}/relationship[Relationships] in the graph, respectively.
+
+Each node and relationship has attributes that can be accessed and modified directly, as in the following example:
+
+[source, python]
+----
+# VG is a VisualizationGraph object
+
+# Modify the first node and fifth relationship
+VG.nodes[0].size = 10
+VG.nodes[0].properties["height"] = 170
+VG.relationships[4].caption = "BUYS"
+
+# Set the coordinates for all nodes from an existing property
+for node in VG.nodes:
+    node.x = node.properties.get("x")
+    node.y = node.properties.get("y")
+
+# Change the caption size for all relationships
+for relationship in VG.relationships:
+    relationship.caption_size = 15
+----
+
+Any changes made to the nodes and relationships will be reflected in the next rendering of the graph.

@@ -13,4 +13,5 @@ GIT_ROOT=$(git rev-parse --show-toplevel)
     make clean html
 )
 
-python3 -m http.server 8000 -d "${GIT_ROOT}/docs/build/html"
+echo http://localhost:9000
+python3 -m http.server 9000 -d "${GIT_ROOT}/docs/build"

@@ -254,3 +254,39 @@ def test_color_nodes_unhashable() -> None:
     VG = VisualizationGraph(nodes=nodes, relationships=[])
     with pytest.raises(ValueError, match="Unable to color nodes by unhashable property type '<class 'list'>'"):
         VG.color_nodes(property="list_of_lists", colors=["#000000"])
+
+
+def test_color_nodes_default_override() -> None:
+    """Test that the default value of override is True (colors are overridden by default)."""
+    nodes = [
+        Node(id="4:d09f48a4-5fca-421d-921d-a30a896c604d:0", caption="Person", color="#FF0000"),
+        Node(id="4:d09f48a4-5fca-421d-921d-a30a896c604d:6", caption="Product", color="#FF0000"),
+        Node(id="4:d09f48a4-5fca-421d-921d-a30a896c604d:11", caption="Product", color="#FF0000"),
+    ]
+
+    VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+    # Call without specifying override - should use default (True) and override existing colors
+    VG.color_nodes(field="caption", colors={"Person": "#000000", "Product": "#00FF00"})
+
+    assert VG.nodes[0].color == Color("#000000")
+    assert VG.nodes[1].color == Color("#00ff00")
+    assert VG.nodes[2].color == Color("#00ff00")  # Should be overridden to #00ff00
+
+
+def test_color_nodes_override_false() -> None:
+    """Test that override=False preserves existing colors."""
+    nodes = [
+        Node(id="4:d09f48a4-5fca-421d-921d-a30a896c604d:0", caption="Person", color="#FF0000"),
+        Node(id="4:d09f48a4-5fca-421d-921d-a30a896c604d:6", caption="Product", color="#FF0000"),
+        Node(id="4:d09f48a4-5fca-421d-921d-a30a896c604d:11", caption="Product"),
+    ]
+
+    VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+    # Call with override=False - should preserve existing colors
+    VG.color_nodes(field="caption", colors={"Person": "#000000", "Product": "#00FF00"}, override=False)
+
+    assert VG.nodes[0].color == Color("#ff0000")  # Should keep existing color
+    assert VG.nodes[1].color == Color("#ff0000")  # Should keep existing color
+    assert VG.nodes[2].color == Color("#00ff00")  # Should get new color (no existing color)

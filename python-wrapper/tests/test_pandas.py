@@ -1,6 +1,5 @@
 import pytest
 from pandas import DataFrame
-from pydantic_extra_types.color import Color
 
 from neo4j_viz.node import Node
 from neo4j_viz.pandas import from_dfs
@@ -18,33 +17,33 @@ def test_from_df() -> None:
             "weight": [1.0, 2.0],
         }
     )
-    VG = from_dfs(nodes, relationships, node_radius_min_max=(42, 1337))
+    VG = from_dfs(nodes, relationships)
 
     assert len(VG.nodes) == 2
 
-    assert VG.nodes[0].id == 0
-    assert VG.nodes[0].caption == "A"
-    assert VG.nodes[0].size == 1337
-    assert VG.nodes[0].color == Color("#ff0000")
-    assert VG.nodes[0].properties == {"instrument": "piano"}
+    assert VG.nodes[0] == Node(
+        id=0,
+        caption=None,
+        properties={"size": 1337, "color": "#FF0000", "instrument": "piano", "caption": "A"},
+    )
 
-    assert VG.nodes[1].id == 1
-    assert VG.nodes[1].caption == "B"
-    assert VG.nodes[1].size == 42
-    assert VG.nodes[1].color == Color("#ff0000")
-    assert VG.nodes[1].properties == {"instrument": "guitar"}
+    assert VG.nodes[1] == Node(
+        id=1,
+        caption=None,
+        properties={"size": 42, "color": "#FF0000", "instrument": "guitar", "caption": "B"},
+    )
 
     assert len(VG.relationships) == 2
 
     assert VG.relationships[0].source == 0
     assert VG.relationships[0].target == 1
-    assert VG.relationships[0].caption == "REL"
-    assert VG.relationships[0].properties == {"weight": 1.0}
+    assert VG.relationships[0].caption is None
+    assert VG.relationships[0].properties == {"weight": 1.0, "caption": "REL"}
 
     assert VG.relationships[1].source == 1
     assert VG.relationships[1].target == 0
-    assert VG.relationships[1].caption == "REL2"
-    assert VG.relationships[1].properties == {"weight": 2.0}
+    assert VG.relationships[1].caption is None
+    assert VG.relationships[1].properties == {"weight": 2.0, "caption": "REL2"}
 
 
 def test_from_rel_dfs() -> None:
@@ -108,29 +107,24 @@ def test_from_dfs() -> None:
             }
         ),
     ]
-    VG = from_dfs(nodes, relationships, node_radius_min_max=(42, 1337))
+    VG = from_dfs(nodes, relationships)
 
     assert len(VG.nodes) == 2
 
-    assert VG.nodes[0].id == 0
-    assert VG.nodes[0].caption == "A"
-    assert VG.nodes[0].size == 1337
-    assert VG.nodes[0].color == Color("#ff0000")
-
-    assert VG.nodes[1].id == 1
-    assert VG.nodes[1].caption == "B"
-    assert VG.nodes[1].size == 42
-    assert VG.nodes[0].color == Color("#ff0000")
+    assert VG.nodes[0] == Node(id=0, caption=None, properties={"size": 1337, "color": "#FF0000", "caption": "A"})
+    assert VG.nodes[1] == Node(id=1, caption=None, properties={"size": 42, "color": "#FF0000", "caption": "B"})
 
     assert len(VG.relationships) == 2
 
     assert VG.relationships[0].source == 0
     assert VG.relationships[0].target == 1
-    assert VG.relationships[0].caption == "REL"
+    assert VG.relationships[0].caption is None
+    assert VG.relationships[0].properties == {"caption": "REL"}
 
     assert VG.relationships[1].source == 1
     assert VG.relationships[1].target == 0
-    assert VG.relationships[1].caption == "REL2"
+    assert VG.relationships[1].caption is None
+    assert VG.relationships[1].properties == {"caption": "REL2"}
 
 
 def test_node_errors() -> None:
@@ -152,11 +146,6 @@ def test_node_errors() -> None:
             "instrument": ["piano", "guitar"],
         }
     )
-    with pytest.raises(
-        ValueError,
-        match=r"Error for node column 'size' with provided input 'aaa'. Reason: Input should be a valid integer, unable to parse string as an integer",
-    ):
-        from_dfs(nodes, [])
 
 
 def test_rel_errors() -> None:
@@ -176,17 +165,30 @@ def test_rel_errors() -> None:
     ):
         from_dfs(nodes, relationships)
 
-    relationships = DataFrame(
-        {
-            "source": [0, 1],
-            "target": [1, 0],
-            "caption": ["REL", "REL2"],
-            "caption_size": [1.0, -300],
-            "weight": [1.0, 2.0],
-        }
-    )
-    with pytest.raises(
-        ValueError,
-        match=r"Error for relationship column 'caption_size' with provided input '-300.0'. Reason: Input should be greater than 0",
-    ):
-        from_dfs(nodes, relationships)
+
+def test_from_dfs_no_rels() -> None:
+    nodes = [
+        DataFrame(
+            {
+                "id": [0],
+                "caption": ["A"],
+                "size": [1337],
+                "color": "#FF0000",
+            }
+        ),
+        DataFrame(
+            {
+                "id": [1],
+                "caption": ["B"],
+                "size": [42],
+                "color": "#FF0000",
+            }
+        ),
+    ]
+    VG = from_dfs(nodes, [])
+
+    assert len(VG.nodes) == 2
+    assert VG.nodes[0] == Node(id=0, caption=None, properties={"size": 1337, "color": "#FF0000", "caption": "A"})
+    assert VG.nodes[1] == Node(id=1, caption=None, properties={"size": 42, "color": "#FF0000", "caption": "B"})
+
+    assert len(VG.relationships) == 0

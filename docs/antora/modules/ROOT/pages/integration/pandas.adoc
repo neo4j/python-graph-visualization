@@ -1,0 +1,52 @@
+= Pandas DataFrames
+
+The `neo4j-viz` library provides a convenience method for importing data from link:https://pandas.pydata.org/[Pandas DataFrames].
+These DataFrames can be created from many sources, such as CSV files.
+It requires and additional dependency to be installed, which you can do by running:
+
+[source, console]
+----
+pip install neo4j-viz[pandas]
+----
+
+Once you have installed the additional dependency, you can use the link:{api-docs-uri}/from_pandas[`from_pandas`] method
+to import pandas DataFrames.
+
+The `from_dfs` method takes two mandatory positional parameters:
+
+* A Pandas `DataFrame`, or iterable (eg. list) of DataFrames representing the nodes of the graph.
+  The rows of the DataFrame(s) should represent the individual nodes, and the columns should represent the node
+  IDs and attributes.
+  The node ID will be set on the link:{api-docs-uri}/node[Node], Other columns will be a key in each node's properties dictionary, that maps to the node's corresponding value in the column.
+  If the graph has no node properties, the nodes can be derived from the relationships DataFrame alone.
+* A Pandas `DataFrame`, or iterable (eg. list) of DataFrames representing the relationships of the graph.
+  The rows of the DataFrame(s) should represent the individual relationships, and the columns should represent the
+  relationship IDs and attributes.
+  The relationship id, source and target node IDs will be set on the link:{api-docs-uri}/relationship[Relationship].
+  Other columns will be a key in each relationship's _properties_ dictionary, that maps to the relationship's corresponding value in the column.
+
+== Example
+
+In this small example, we import a tiny toy graph representing a social network from two Pandas DataFrames.
+As we can see the column names of the DataFrames map directly to the fields of link:{api-docs-uri}/node[Nodes]
+and link:{api-docs-uri}/relationship[Relationships].
+
+[source, python]
+----
+from pandas import DataFrame
+from neo4j_viz.pandas import from_dfs
+
+nodes = DataFrame({
+    "id": [1, 2, 3],
+    "caption": ["Alice", "Bob", "Charlie"],
+    "size": [20, 10, 10],
+})
+
+relationships = DataFrame({
+    "source": [1, 2],
+    "target": [2, 3],
+    "caption": ["LIKES", "KNOWS"],
+})
+
+VG = from_dfs(nodes, relationships)
+----

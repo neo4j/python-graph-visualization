@@ -49,5 +49,17 @@ button.icon:active {
   filter: drop-shadow(0 4px 8px rgba(26,27,29,0.12));
   font-family: 'Public Sans', sans-serif;
   color: var(--neutral-text-default);
-  font-size: 14px
+  font-size: 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.tooltip-value {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

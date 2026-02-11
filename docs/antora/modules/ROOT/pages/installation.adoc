@@ -1,0 +1,26 @@
+= Installation
+
+You can install the latest version of the library with `pip`:
+
+[source, console]
+----
+pip install neo4j-viz
+----
+
+== Optional dependencies
+
+There are a few optional dependencies that you can install to enable additional features of the library.
+
+=== Integration with external sources
+
+The library can import data directly from xref:integration/index.adoc[external sources].
+Each integration page includes installation instructions for the needed dependencies.
+
+=== Notebook tutorials
+
+You need to install some additional dependencies to run the link:{tutorials-docs-uri}[Jupyter notebook tutorials]:
+
+[source, console]
+----
+pip install neo4j-viz[notebook]
+----

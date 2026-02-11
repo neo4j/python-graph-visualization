@@ -1,0 +1,13 @@
+= Introduction
+
+The Python Graph Visualization library allows you to visualize graph data interactively in Python.
+
+The library wraps the JavaScript-based link:https://neo4j.com/docs/nvl/current/[Neo4j Visualization Library (NVL)] and adds convenience methods to import data from sources such as:
+
+* xref:integration/pandas.adoc[]
+* xref:integration/gds.adoc[]
+* xref:integration/neo4j.adoc[]
+* xref:integration/snowflake.adoc[]
+
+The source code is available on link:https://github.com/neo4j/python-graph-visualization[GitHub].
+If you have a suggestion on how we can improve the library or want to report a problem, you can create a link:https://github.com/neo4j/python-graph-visualization/issues/new[new issue].

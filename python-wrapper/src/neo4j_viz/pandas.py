@@ -27,32 +27,31 @@ def _parse_validation_error(e: ValidationError, entity_type: type[BaseModel]) ->
 
 
 def _from_dfs(
-    node_dfs: Optional[DFS_TYPE],
-    rel_dfs: DFS_TYPE,
-    node_radius_min_max: Optional[tuple[float, float]] = (3, 60),
-    rename_properties: Optional[dict[str, str]] = None,
+    node_dfs: Optional[DFS_TYPE] = None,
+    rel_dfs: Optional[DFS_TYPE] = None,
+    dropna: bool = False,
 ) -> VisualizationGraph:
-    relationships = _parse_relationships(rel_dfs, rename_properties=rename_properties)
+    if node_dfs is None and rel_dfs is None:
+        raise ValueError("At least one of `node_dfs` or `rel_dfs` must be provided")
+
+    if rel_dfs is None:
+        relationships = []
+    else:
+        relationships = _parse_relationships(rel_dfs, dropna=dropna)
 
     if node_dfs is None:
-        has_size = False
         node_ids = set()
         for rel in relationships:
             node_ids.add(rel.source)
             node_ids.add(rel.target)
         nodes = [Node(id=id) for id in node_ids]
     else:
-        nodes, has_size = _parse_nodes(node_dfs, rename_properties=rename_properties)
+        nodes = _parse_nodes(node_dfs, dropna=dropna)
 
-    VG = VisualizationGraph(nodes=nodes, relationships=relationships)
-
-    if node_radius_min_max is not None and has_size:
-        VG.resize_nodes(node_radius_min_max=node_radius_min_max)
-
-    return VG
+    return VisualizationGraph(nodes=nodes, relationships=relationships)
 
 
-def _parse_nodes(node_dfs: DFS_TYPE, rename_properties: Optional[dict[str, str]]) -> tuple[list[Node], bool]:
+def _parse_nodes(node_dfs: DFS_TYPE, dropna: bool = False) -> list[Node]:
     if isinstance(node_dfs, DataFrame):
         node_dfs_iter: Iterable[DataFrame] = [node_dfs]
     elif node_dfs is None:
@@ -60,33 +59,34 @@ def _parse_nodes(node_dfs: DFS_TYPE, rename_properties: Optional[dict[str, str]]
     else:
         node_dfs_iter = node_dfs
 
-    all_node_field_aliases = Node.all_validation_aliases()
+    basic_node_fields_aliases = Node.basic_fields_validation_aliases()
 
-    has_size = True
     nodes = []
     for node_df in node_dfs_iter:
-        has_size &= "size" in node_df.columns
         for _, row in node_df.iterrows():
-            top_level = {}
+            if dropna:
+                row = row.dropna(inplace=False)
+            mandatory_fields = {}
             properties = {}
             for key, value in row.to_dict().items():
-                if key in all_node_field_aliases:
-                    top_level[key] = value
+                if not isinstance(key, str):
+                    key = str(key)
+
+                if key in basic_node_fields_aliases:
+                    mandatory_fields[key] = value
                 else:
-                    if rename_properties and key in rename_properties:
-                        key = rename_properties[key]
                     properties[key] = value
 
             try:
-                nodes.append(Node(**top_level, properties=properties))
+                nodes.append(Node(**mandatory_fields, properties=properties))
             except ValidationError as e:
                 _parse_validation_error(e, Node)
 
-    return nodes, has_size
+    return nodes
 
 
-def _parse_relationships(rel_dfs: DFS_TYPE, rename_properties: Optional[dict[str, str]]) -> list[Relationship]:
-    all_rel_field_aliases = Relationship.all_validation_aliases()
+def _parse_relationships(rel_dfs: DFS_TYPE, dropna: bool = False) -> list[Relationship]:
+    basic_rel_field_aliases = Relationship.basic_fields_validation_aliases()
 
     if isinstance(rel_dfs, DataFrame):
         rel_dfs_iter: Iterable[DataFrame] = [rel_dfs]
@@ -96,18 +96,21 @@ def _parse_relationships(rel_dfs: DFS_TYPE, rename_properties: Optional[dict[str
 
     for rel_df in rel_dfs_iter:
         for _, row in rel_df.iterrows():
-            top_level = {}
+            if dropna:
+                row = row.dropna(inplace=False)
+            mandatory_fields = {}
             properties = {}
             for key, value in row.to_dict().items():
-                if key in all_rel_field_aliases:
-                    top_level[key] = value
+                if not isinstance(key, str):
+                    key = str(key)
+
+                if key in basic_rel_field_aliases:
+                    mandatory_fields[key] = value
                 else:
-                    if rename_properties and key in rename_properties:
-                        key = rename_properties[key]
                     properties[key] = value
 
             try:
-                relationships.append(Relationship(**top_level, properties=properties))
+                relationships.append(Relationship(**mandatory_fields, properties=properties))
             except ValidationError as e:
                 _parse_validation_error(e, Relationship)
 
@@ -115,27 +118,29 @@ def _parse_relationships(rel_dfs: DFS_TYPE, rename_properties: Optional[dict[str
 
 
 def from_dfs(
-    node_dfs: Optional[DFS_TYPE],
-    rel_dfs: DFS_TYPE,
-    node_radius_min_max: Optional[tuple[float, float]] = (3, 60),
+    node_dfs: Optional[DFS_TYPE] = None,
+    rel_dfs: Optional[DFS_TYPE] = None,
 ) -> VisualizationGraph:
     """
     Create a VisualizationGraph from pandas DataFrames representing a graph.
 
     All columns will be included in the visualization graph.
-    If the columns are named as the fields of the `Node` or `Relationship` classes, they will be included as
-    top level fields of the respective objects. Otherwise, they will be included in the `properties` dictionary.
+    The following columns will be treated as fields:
+
+        * `id` for the node_dfs
+        * `id`, `source`, `target` for the rel_dfs
+
+    Other columns will be included in the `properties` dictionary on the respective node or relationship objects.
 
     Parameters
     ----------
-    node_dfs: Optional[Union[DataFrame, Iterable[DataFrame]]]
+    node_dfs: Optional[Union[DataFrame, Iterable[DataFrame]]], optional
         DataFrame or iterable of DataFrames containing node data.
         If None, the nodes will be created from the source and target node ids in the rel_dfs.
-    rel_dfs: Union[DataFrame, Iterable[DataFrame]]
+    rel_dfs: Optional[Union[DataFrame, Iterable[DataFrame]]], optional
         DataFrame or iterable of DataFrames containing relationship data.
-    node_radius_min_max : tuple[float, float], optional
-        Minimum and maximum node radius.
-        To avoid tiny or huge nodes in the visualization, the node sizes are scaled to fit in the given range.
+        If None, no relationships will be created.
+
     """
 
-    return _from_dfs(node_dfs, rel_dfs, node_radius_min_max)
+    return _from_dfs(node_dfs, rel_dfs, dropna=False)

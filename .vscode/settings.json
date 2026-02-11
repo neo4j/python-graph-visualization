@@ -1,5 +1,11 @@
 {
     "python.analysis.extraPaths": [
         "./python-wrapper/src"
-    ]
+    ],
+    "python.testing.pytestArgs": [
+        "python-wrapper/tests/",
+        "--include-neo4j-and-gds"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }

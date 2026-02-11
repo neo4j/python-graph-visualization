@@ -30,6 +30,7 @@ class Relationship(
         validation_alias=create_aliases,
         serialization_alias=lambda field_name: to_camel(field_name),
     ),
+    validate_assignment=True,
 ):
     """
     A relationship in a graph to visualize.
@@ -63,6 +64,8 @@ class Relationship(
     caption_size: Optional[Union[int, float]] = Field(None, gt=0.0, description="The size of the caption text")
     #: The color of the relationship. Allowed input is for example "#FF0000", "red" or (255, 0, 0)
     color: Optional[ColorType] = Field(None, description="The color of the relationship")
+    # The width of the relationship
+    width: Optional[int | float] = Field(None, gt=0.0, description="The width of the relationship")
     #: Additional properties of the relationship that do not directly impact the visualization
     properties: dict[str, Any] = Field(
         default_factory=dict,
@@ -97,14 +100,12 @@ class Relationship(
         return self.model_dump(exclude_none=True, by_alias=True)
 
     @staticmethod
-    def all_validation_aliases(exempted_fields: Optional[list[str]] = None) -> set[str]:
-        if exempted_fields is None:
-            exempted_fields = []
-
+    def basic_fields_validation_aliases() -> set[str]:
+        basic_fields = ["id", "source", "target"]
         by_field = [
             v.validation_alias.choices  # type: ignore
             for k, v in Relationship.model_fields.items()
-            if k not in exempted_fields
+            if k in basic_fields
         ]
 
         return {str(alias) for aliases in by_field for alias in aliases}

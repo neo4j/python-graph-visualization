@@ -25,55 +25,84 @@ def test_from_gql_create_syntax() -> None:
               ()-[:LINK]->({name: 'Florentin'});
             """
     expected_node_dicts: list[dict[str, dict[str, Any]]] = [
+        # node a
         {
-            "top_level": {},
+            "top_level": {"caption": "User", "color": "#ffdf81"},
             "properties": {"name": "Alice", "age": 23, "labels": ["User"], "__labels": ["Happy"], "id": 42},
         },
+        # node b
         {
-            "top_level": {"caption": "Bridget"},
-            "properties": {"name": "Bridget", "age": 34, "labels": ["User", "person"]},
+            "top_level": {"caption": "User:person", "color": "#c990c0"},
+            "properties": {"name": "Bridget", "caption": "Bridget", "age": 34, "labels": ["User", "person"]},
         },
+        # node wizardMan
         {
-            "top_level": {},
+            "top_level": {"caption": "User", "color": "#ffdf81"},
             "properties": {"name": "Charles: The wizard, man", "hello": True, "height": None, "labels": ["User"]},
         },
-        {"top_level": {}, "properties": {"labels": ["User"]}},
+        # node d
+        {"top_level": {"caption": "User", "color": "#ffdf81"}, "properties": {"labels": ["User"]}},
+        # node e
         {
-            "top_level": {},
+            "top_level": {"caption": "User", "color": "#ffdf81"},
             "properties": {
                 "age": 67,
                 "my_map": {"key": "value", "key2": 3.14, "key3": [1, 2, 3], "key4": {"a": 1, "b": None}},
                 "labels": ["User"],
             },
         },
-        {"top_level": {}, "properties": {"age": 42, "pets": ["cat", False, "dog"], "labels": ["User"]}},
-        {"top_level": {}, "properties": {"labels": []}},
-        {"top_level": {}, "properties": {"name": "Fawad", "age": 78, "labels": ["Person", "User"]}},
-        {"top_level": {}, "properties": {"age": 29, "labels": []}},
-        {"top_level": {}, "properties": {"labels": []}},
-        {"top_level": {}, "properties": {"name": "Florentin", "labels": []}},
+        # node without alias
+        {
+            "top_level": {"caption": "User", "color": "#ffdf81"},
+            "properties": {"age": 42, "pets": ["cat", False, "dog"], "labels": ["User"]},
+        },
+        # empty node
+        {"top_level": {"caption": "", "color": "#f79767"}, "properties": {"labels": []}},
+        # node f
+        {
+            "top_level": {"caption": "Person:User", "color": "#56c7e4"},
+            "properties": {"name": "Fawad", "age": 78, "labels": ["Person", "User"]},
+        },
+        # node without alias 2
+        {"top_level": {"caption": "", "color": "#f79767"}, "properties": {"age": 29, "labels": []}},
+        # anonymous node at source of rel to florentin
+        {"top_level": {"caption": "", "color": "#f79767"}, "properties": {"labels": []}},
+        # anonymous node at target rel
+        {"top_level": {"caption": "", "color": "#f79767"}, "properties": {"name": "Florentin", "labels": []}},
     ]
 
-    VG = from_gql_create(query, node_caption=None, relationship_caption=None)
+    VG = from_gql_create(query)
 
     assert len(VG.nodes) == len(expected_node_dicts)
     for i, exp_node in enumerate(expected_node_dicts):
         created_node = VG.nodes[i]
 
-        assert created_node.model_dump(exclude_none=True, exclude={"properties", "id"}) == exp_node["top_level"]
-        assert created_node.properties == exp_node["properties"]
+        assert created_node.model_dump(exclude_none=True, exclude={"properties", "id"}) == exp_node["top_level"], (
+            f"Failed at node {created_node}"
+        )
+        assert created_node.properties == exp_node["properties"], f"Failed at node {created_node}"
 
     expected_relationships_dicts: list[dict[str, Any]] = [
-        {"source_idx": 0, "target_idx": 1, "top_level": {}, "properties": {"weight": 0.5, "type": "LINK"}},
-        {"source_idx": 0, "target_idx": 2, "top_level": {}, "properties": {"weight": 4, "type": "LINK"}},
-        {"source_idx": 4, "target_idx": 3, "top_level": {}, "properties": {"type": "LINK"}},
+        {
+            "source_idx": 0,
+            "target_idx": 1,
+            "top_level": {"caption": "LINK"},
+            "properties": {"weight": 0.5, "type": "LINK"},
+        },
+        {
+            "source_idx": 0,
+            "target_idx": 2,
+            "top_level": {"caption": "LINK"},
+            "properties": {"weight": 4, "type": "LINK"},
+        },
+        {"source_idx": 4, "target_idx": 3, "top_level": {"caption": "LINK"}, "properties": {"type": "LINK"}},
         {
             "source_idx": 4,
             "target_idx": 7,
-            "top_level": {"caption": "Balloon"},
-            "properties": {"weight": -2, "type": "OTHER_LINK", "__type": 1, "source": 1337},
+            "top_level": {"caption": "OTHER_LINK"},
+            "properties": {"weight": -2, "caption": "Balloon", "type": "OTHER_LINK", "__type": 1, "source": 1337},
         },
-        {"source_idx": 9, "target_idx": 10, "top_level": {}, "properties": {"type": "LINK"}},
+        {"source_idx": 9, "target_idx": 10, "top_level": {"caption": "LINK"}, "properties": {"type": "LINK"}},
     ]
 
     assert len(VG.relationships) == len(expected_relationships_dicts)
@@ -84,8 +113,8 @@ def test_from_gql_create_syntax() -> None:
         assert (
             created_rel.model_dump(exclude_none=True, exclude={"properties", "id", "source", "target"})
             == exp_rel["top_level"]
-        )
-        assert created_rel.properties == exp_rel["properties"]
+        ), f"Failed at relationship {created_rel}"
+        assert created_rel.properties == exp_rel["properties"], f"Failed at relationship {created_rel}"
 
 
 def test_from_gql_create_captions() -> None:
@@ -97,12 +126,12 @@ def test_from_gql_create_captions() -> None:
             """
     expected_node_dicts: list[dict[str, dict[str, Any]]] = [
         {
-            "top_level": {"caption": "User"},
+            "top_level": {"caption": "User", "color": "#ffdf81"},
             "properties": {"name": "Alice", "age": 23, "labels": ["User"]},
         },
         {
-            "top_level": {"caption": "User:person"},
-            "properties": {"name": "Bridget", "age": 34, "labels": ["User", "person"]},
+            "top_level": {"caption": "User:person", "color": "#c990c0"},
+            "properties": {"name": "Bridget", "caption": "Bridget", "age": 34, "labels": ["User", "person"]},
         },
     ]
 
@@ -134,33 +163,6 @@ def test_from_gql_create_captions() -> None:
             == exp_rel["top_level"]
         )
         assert created_rel.properties == exp_rel["properties"]
-
-
-def test_from_gql_create_sizes() -> None:
-    query = """
-            CREATE
-              (a:User {name: 'Alice', age: 23}),
-              (b:User:person {name: "Bridget", age: 34, "caption": "Bridget"});
-            """
-    expected_node_dicts: list[dict[str, dict[str, Any]]] = [
-        {
-            "top_level": {"size": 3.0},
-            "properties": {"name": "Alice", "age": 23, "labels": ["User"]},
-        },
-        {
-            "top_level": {"caption": "Bridget", "size": 60.0},
-            "properties": {"name": "Bridget", "age": 34, "labels": ["User", "person"]},
-        },
-    ]
-
-    VG = from_gql_create(query, size_property="age", node_caption=None, relationship_caption=None)
-
-    assert len(VG.nodes) == len(expected_node_dicts)
-    for i, exp_node in enumerate(expected_node_dicts):
-        created_node = VG.nodes[i]
-
-        assert created_node.model_dump(exclude_none=True, exclude={"properties", "id"}) == exp_node["top_level"]
-        assert created_node.properties == exp_node["properties"]
 
 
 def test_unbalanced_parentheses_snippet() -> None:
@@ -216,31 +218,4 @@ def test_unknown_node_alias() -> None:
 def test_no_create_keyword() -> None:
     query = "(a:User {y:4})"
     with pytest.raises(ValueError, match=r"Query must begin with 'CREATE' \(case insensitive\)."):
-        from_gql_create(query)
-
-
-def test_illegal_node_x() -> None:
-    query = "CREATE (a:User {x:'tennis'})"
-    with pytest.raises(
-        ValueError,
-        match="Error for node property 'x' with provided input 'tennis'. Reason: Input should be a valid integer, unable to parse string as an integer",
-    ):
-        from_gql_create(query)
-
-
-def test_illegal_node_size() -> None:
-    query = "CREATE (a:User {hello: 'tennis'})"
-    with pytest.raises(
-        ValueError,
-        match="Error for node property 'hello'. Reason: must be a numerical value",
-    ):
-        from_gql_create(query, size_property="hello")
-
-
-def test_illegal_rel_caption_size() -> None:
-    query = "CREATE ()-[:LINK {caption_size: -42}]->()"
-    with pytest.raises(
-        ValueError,
-        match="Error for relationship property 'caption_size' with provided input '-42'. Reason: Input should be greater than 0",
-    ):
         from_gql_create(query)
