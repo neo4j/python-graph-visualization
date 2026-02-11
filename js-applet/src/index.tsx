@@ -1,4 +1,5 @@
 import "@neo4j-ndl/base/lib/neo4j-ds-styles.css";
+import type { NeoNode, NeoRel, PortableProperty } from "@neo4j-ndl/react-graph";
 import { GraphVisualization } from "@neo4j-ndl/react-graph";
 import type { Layout, NvlOptions } from "@neo4j-nvl/base";
 import { Component, type ErrorInfo, type ReactNode } from "react";
@@ -6,13 +7,8 @@ import { createRoot, type Root } from "react-dom/client";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
-/** A single serialized property value as displayed in the sidepanel. */
-type PortableProperty = {
-  stringified: string;
-  type: string;
-};
-
-type NodeData = {
+/** Node as serialized from the Python side (raw properties, no labels array). */
+type SerializedNode = {
   id: string;
   caption?: string;
   size?: number;
@@ -21,7 +17,8 @@ type NodeData = {
   properties: Record<string, unknown>;
 };
 
-type RelationshipData = {
+/** Relationship as serialized from the Python side (raw properties, no type field). */
+type SerializedRelationship = {
   id: string;
   from: string;
   to: string;
@@ -45,8 +42,8 @@ type GraphOptions = {
  * In the HTML fallback, this is a lightweight shim (get/set/on/save_changes).
  */
 interface AnywidgetModel {
-  get(key: "nodes"): NodeData[] | undefined;
-  get(key: "relationships"): RelationshipData[] | undefined;
+  get(key: "nodes"): SerializedNode[] | undefined;
+  get(key: "relationships"): SerializedRelationship[] | undefined;
   get(key: "options"): GraphOptions | undefined;
   get(key: "height"): string | undefined;
   get(key: "width"): string | undefined;
@@ -112,7 +109,7 @@ class GraphErrorBoundary extends Component<
 
 // ── Transform helpers ──────────────────────────────────────────────────
 
-function transformNodes(nodes: NodeData[]) {
+function transformNodes(nodes: SerializedNode[]): NeoNode[] {
   return nodes.map((node) => {
     const labels = node.properties.labels;
     return {
@@ -142,7 +139,9 @@ function transformNodes(nodes: NodeData[]) {
   });
 }
 
-function transformRelationships(relationships: RelationshipData[]) {
+function transformRelationships(
+  relationships: SerializedRelationship[],
+): NeoRel[] {
   return relationships.map((rel) => ({
     id: rel.id,
     ...(rel.color !== undefined && { color: rel.color }),
@@ -167,8 +166,8 @@ function transformRelationships(relationships: RelationshipData[]) {
 
 function renderGraph(
   el: HTMLElement,
-  nodes: NodeData[],
-  relationships: RelationshipData[],
+  nodes: SerializedNode[],
+  relationships: SerializedRelationship[],
   options: GraphOptions = {},
 ): Root {
   const { layout, nvlOptions, zoom, pan, layoutOptions } = options;
