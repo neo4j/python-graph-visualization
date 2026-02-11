@@ -23,11 +23,6 @@ def _parse_validation_error(e: ValidationError, entity_type: type[BaseModel]) ->
 def from_neo4j(
     data: Union[neo4j.graph.Graph, Result, Driver],
     row_limit: int = 10_000,
-    # Deprecated parameters (kept for backward compatibility)
-    size_property: Optional[str] = None,
-    node_caption: Optional[str] = "labels",
-    relationship_caption: Optional[str] = "type",
-    node_radius_min_max: Optional[tuple[float, float]] = None,
 ) -> VisualizationGraph:
     """
     Create a VisualizationGraph from a Neo4j `Graph`, Neo4j `Result` or Neo4j `Driver`.
@@ -49,18 +44,6 @@ def from_neo4j(
     row_limit : int, optional
         Maximum number of rows to return from the query, by default 10_000.
         This is only used if a `neo4j.Driver` is passed as `data` argument, otherwise the limit is ignored.
-    size_property : str, optional
-        .. deprecated:: 1.2.0
-            Use ``resize_nodes(property=...)`` on the returned VisualizationGraph instead.
-    node_caption : str, optional
-        .. deprecated:: 1.2.0
-            Use ``set_node_captions(...)`` on the returned VisualizationGraph instead.
-    relationship_caption : str, optional
-        .. deprecated:: 1.2.0
-            Use direct assignment on relationship objects instead.
-    node_radius_min_max : tuple[float, float], optional
-        .. deprecated:: 1.2.0
-            Use ``resize_nodes(node_radius_min_max=...)`` on the returned VisualizationGraph instead.
     """
 
     if isinstance(data, Result):
@@ -96,29 +79,10 @@ def from_neo4j(
 
     VG = VisualizationGraph(nodes, relationships)
 
-    # Set captions based on node_caption and relationship_caption params
-    if node_caption is not None:
-        for node in VG.nodes:
-            if node_caption == "labels":
-                node.caption = ":".join(node.properties["labels"])
-            else:
-                node.caption = str(node.properties.get(node_caption))
-    if relationship_caption is not None:
-        for r in VG.relationships:
-            if relationship_caption == "type":
-                r.caption = r.properties["type"]
-            else:
-                r.caption = str(r.properties.get(relationship_caption))
-
-    # Apply deprecated size_property / node_radius_min_max if provided
-    if size_property is not None:
-        for node in VG.nodes:
-            node.size = node.properties.get(size_property)
-    if size_property is not None or node_radius_min_max is not None:
-        effective_min_max = node_radius_min_max if node_radius_min_max is not None else (3, 60)
-        has_size = any(node.size is not None for node in VG.nodes)
-        if has_size:
-            VG.resize_nodes(node_radius_min_max=effective_min_max)
+    for node in VG.nodes:
+        node.caption = ":".join(node.properties["labels"])
+    for r in VG.relationships:
+        r.caption = r.properties["type"]
 
     return VG
 

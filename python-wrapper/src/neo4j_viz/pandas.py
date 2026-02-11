@@ -129,7 +129,6 @@ def _parse_relationships(
 def from_dfs(
     node_dfs: Optional[DFS_TYPE] = None,
     rel_dfs: Optional[DFS_TYPE] = None,
-    node_radius_min_max: Optional[tuple[float, float]] = None,
 ) -> VisualizationGraph:
     """
     Create a VisualizationGraph from pandas DataFrames representing a graph.
@@ -146,16 +145,7 @@ def from_dfs(
     rel_dfs: Optional[Union[DataFrame, Iterable[DataFrame]]], optional
         DataFrame or iterable of DataFrames containing relationship data.
         If None, no relationships will be created.
-    node_radius_min_max : tuple[float, float], optional
-        Minimum and maximum node radius.
-        To avoid tiny or huge nodes in the visualization, the node sizes are scaled to fit in the given range.
 
     """
 
-    VG = _from_dfs(node_dfs, rel_dfs, dropna=False, map_all_fields=True)
-
-    has_size = any(node.size is not None for node in VG.nodes)
-    if node_radius_min_max is not None and has_size:
-        VG.resize_nodes(node_radius_min_max=node_radius_min_max)
-
-    return VG
+    return _from_dfs(node_dfs, rel_dfs, dropna=False, map_all_fields=True)

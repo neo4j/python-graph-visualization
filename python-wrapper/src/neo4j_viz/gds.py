@@ -58,10 +58,6 @@ def from_gds(
     node_properties: Optional[list[str]] = None,
     db_node_properties: Optional[list[str]] = None,
     max_node_count: int = 10_000,
-    # Deprecated parameters (kept for backward compatibility)
-    size_property: Optional[str] = None,
-    additional_node_properties: Optional[list[str]] = None,
-    node_radius_min_max: Optional[tuple[float, float]] = None,
 ) -> VisualizationGraph:
     """
     Create a VisualizationGraph from a GraphDataScience object and a Graph object.
@@ -90,43 +86,7 @@ def from_gds(
     max_node_count : int, optional
         The maximum number of nodes to fetch from the graph. The graph will be sampled using random walk with restarts
         if its node count exceeds this number.
-    size_property : str, optional
-        .. deprecated:: 1.2.0
-            Use ``resize_nodes(property=...)`` on the returned VisualizationGraph instead.
-    additional_node_properties : list[str], optional
-        .. deprecated:: 1.2.0
-            Use ``node_properties`` instead.
-    node_radius_min_max : tuple[float, float], optional
-        .. deprecated:: 1.2.0
-            Use ``resize_nodes(node_radius_min_max=...)`` on the returned VisualizationGraph instead.
     """
-    # Handle deprecated parameter aliases
-    if additional_node_properties is not None:
-        warnings.warn(
-            "The `additional_node_properties` parameter is deprecated. Use `node_properties` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if node_properties is None:
-            node_properties = additional_node_properties
-
-    if size_property is not None:
-        warnings.warn(
-            "The `size_property` parameter is deprecated. Use `resize_nodes(property=...)` on the returned VisualizationGraph instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        # Ensure the size property is included in the fetched properties
-        if node_properties is not None and size_property not in node_properties:
-            node_properties = [*node_properties, size_property]
-
-    if node_radius_min_max is not None:
-        warnings.warn(
-            "The `node_radius_min_max` parameter is deprecated. Use `resize_nodes(node_radius_min_max=...)` on the returned VisualizationGraph instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
     if db_node_properties is None:
         db_node_properties = []
 
@@ -208,16 +168,6 @@ def from_gds(
             node.caption = ":".join([label for label in node.properties["labels"]])
         for rel in VG.relationships:
             rel.caption = rel.properties.get("relationshipType")
-
-        # Apply deprecated size_property / node_radius_min_max if provided
-        if size_property is not None:
-            for node in VG.nodes:
-                node.size = node.properties.get(size_property)
-        if size_property is not None or node_radius_min_max is not None:
-            effective_min_max = node_radius_min_max if node_radius_min_max is not None else (3, 60)
-            has_size = any(node.size is not None for node in VG.nodes)
-            if has_size:
-                VG.resize_nodes(node_radius_min_max=effective_min_max)
 
         return VG
     except ValueError as e:

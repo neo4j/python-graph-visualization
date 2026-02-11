@@ -319,7 +319,7 @@ def from_snowflake(
 
     * The caption of the nodes will be set to the table name.
     * The caption of the relationships will be set to the table name.
-    * The color of the nodes will be set based on the caption, unless there are more than 12 node tables used.
+    * Nodes will be auto-colored by their caption in the JavaScript visualization.
 
     Otherwise, columns will be included as properties on the nodes and relationships.
 
