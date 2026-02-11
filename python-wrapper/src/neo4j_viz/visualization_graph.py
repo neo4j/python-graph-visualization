@@ -20,6 +20,7 @@ from .options import (
     construct_layout_options,
 )
 from .relationship import Relationship
+from .widget import GraphWidget
 
 
 class VisualizationGraph:
@@ -97,9 +98,13 @@ class VisualizationGraph:
         allow_dynamic_min_zoom: bool = True,
         max_allowed_nodes: int = 10_000,
         show_hover_tooltip: bool = True,
-    ) -> HTML:
+        use_widget: bool = True,
+    ) -> "HTML | GraphWidget":
         """
         Render the graph.
+
+        Returns a :class:`GraphWidget` (anywidget) when running in a Jupyter-compatible
+        environment, or falls back to :class:`IPython.display.HTML` otherwise.
 
         Parameters
         ----------
@@ -127,6 +132,9 @@ class VisualizationGraph:
             The maximum allowed number of nodes to render.
         show_hover_tooltip:
             Whether to show an info tooltip when hovering over nodes and relationships.
+        use_widget:
+            Whether to use the anywidget-based renderer. Set to ``False`` to force the
+            HTML fallback (useful for Streamlit or static HTML export).
 
 
         Example
@@ -145,6 +153,16 @@ class VisualizationGraph:
 
         Renderer.check(renderer, num_nodes)
 
+        # ── anywidget path (primary) ──────────────────────────────────
+        if use_widget:
+            return GraphWidget.from_graph_data(
+                self.nodes,
+                self.relationships,
+                width=width,
+                height=height,
+            )
+
+        # ── HTML fallback path ────────────────────────────────────────
         if not layout:
             layout = Layout.FORCE_DIRECTED
         if not layout_options:
@@ -174,6 +192,45 @@ class VisualizationGraph:
             width,
             height,
             show_hover_tooltip,
+        )
+
+    def to_html(
+        self,
+        width: str = "100%",
+        height: str = "600px",
+        layout: Layout | None = None,
+        layout_options: dict[str, Any] | LayoutOptions | None = None,
+        renderer: Renderer = Renderer.CANVAS,
+        pan_position: tuple[float, float] | None = None,
+        initial_zoom: float | None = None,
+        min_zoom: float = 0.075,
+        max_zoom: float = 10,
+        allow_dynamic_min_zoom: bool = True,
+        show_hover_tooltip: bool = True,
+    ) -> HTML:
+        """
+        Render the graph as a self-contained HTML snippet.
+
+        This is the explicit HTML fallback — useful for Streamlit, static HTML export,
+        or any environment without Jupyter widget support.
+
+        Returns
+        -------
+        :class:`IPython.display.HTML`
+        """
+        return self.render(  # type: ignore[return-value]
+            layout=layout,
+            layout_options=layout_options,
+            renderer=renderer,
+            width=width,
+            height=height,
+            pan_position=pan_position,
+            initial_zoom=initial_zoom,
+            min_zoom=min_zoom,
+            max_zoom=max_zoom,
+            allow_dynamic_min_zoom=allow_dynamic_min_zoom,
+            show_hover_tooltip=show_hover_tooltip,
+            use_widget=False,
         )
 
     def toggle_nodes_pinned(self, pinned: dict[NodeIdType, bool]) -> None:

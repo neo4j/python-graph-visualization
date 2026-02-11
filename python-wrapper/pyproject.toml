@@ -33,7 +33,9 @@ dependencies = [
     "ipython >=7, <10",
     "pydantic >=2 , <3",
     "pydantic-extra-types >=2, <3",
-    "enum-tools==0.13.0"
+    "enum-tools==0.13.0",
+    "anywidget >=0.9, <1",
+    "traitlets >=5, <6",
 ]
 requires-python = ">=3.10"
 
@@ -93,6 +95,8 @@ namespaces = false # only scan directories with __init__.py files (true by defau
 
 [tool.setuptools.package-data]
 neo4j_viz = [
+    "resources/nvl_entrypoint/widget.js",
+    "resources/nvl_entrypoint/style.css",
     "resources/nvl_entrypoint/base.js",
     "resources/nvl_entrypoint/styles.css",
     "resources/icons/*.svg",

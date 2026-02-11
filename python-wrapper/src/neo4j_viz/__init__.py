@@ -10,9 +10,11 @@ from .options import (
 )
 from .relationship import Relationship
 from .visualization_graph import VisualizationGraph
+from .widget import GraphWidget
 
 __all__ = [
     "VisualizationGraph",
+    "GraphWidget",
     "Node",
     "Relationship",
     "CaptionAlignment",
