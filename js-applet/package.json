@@ -3,10 +3,7 @@
   "version": "0.3.7",
   "type": "module",
   "scripts": {
-    "build": "BUILD_TARGET=widget vite build && BUILD_TARGET=html vite build",
-    "build:widget": "BUILD_TARGET=widget vite build",
-    "build:html": "BUILD_TARGET=html vite build",
-    "postbuild": "cp dist/widget.js dist/style.css dist/base.js ../python-wrapper/src/neo4j_viz/resources/nvl_entrypoint/"
+    "build": "vite build"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",
@@ -14,8 +11,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.5.2",
     "typescript": "5.9.3",
-    "vite": "^6.3.5",
-    "vite-plugin-css-injected-by-js": "^3.5.2"
+    "vite": "^6.3.5"
   },
   "dependencies": {
     "@neo4j-ndl/base": "^4.7.1",

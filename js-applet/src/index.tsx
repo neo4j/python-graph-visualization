@@ -78,7 +78,8 @@ function renderGraph(
 }
 
 // ── anywidget entry point ──────────────────────────────────────────────
-// Called by anywidget. `model` has traitlet-synced data, `el` is the DOM container.
+// Called by anywidget (Jupyter) and by the standalone HTML model shim.
+// `model` has traitlet-synced data (or a static shim), `el` is the DOM container.
 export function render({ model, el }: { model: any; el: HTMLElement }) {
   el.style.height = model.get("height") ?? "600px";
   el.style.width = model.get("width") ?? "100%";
@@ -88,7 +89,7 @@ export function render({ model, el }: { model: any; el: HTMLElement }) {
 
   const root = renderGraph(el, nodes, relationships);
 
-  // Re-render when Python-side data changes
+  // Re-render when Python-side data changes (no-op for static HTML shim)
   function onDataChange() {
     const updatedNodes: NodeData[] = model.get("nodes") ?? [];
     const updatedRels: RelationshipData[] = model.get("relationships") ?? [];
@@ -114,18 +115,4 @@ export function render({ model, el }: { model: any; el: HTMLElement }) {
   return () => {
     root.unmount();
   };
-}
-
-// ── HTML fallback entry point ──────────────────────────────────────────
-// Called from inline <script> when anywidget is not available (Streamlit, static HTML).
-export function mountReactComponent(
-  elementId: string,
-  {
-    nodes,
-    relationships,
-  }: { nodes: NodeData[]; relationships: RelationshipData[] },
-): Root | null {
-  const container = document.getElementById(elementId);
-  if (!container) return null;
-  return renderGraph(container, nodes, relationships);
 }

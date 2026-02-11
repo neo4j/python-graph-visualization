@@ -16,8 +16,6 @@ from .options import (
     Layout,
     LayoutOptions,
     Renderer,
-    RenderOptions,
-    construct_layout_options,
 )
 from .relationship import Relationship
 from .widget import GraphWidget
@@ -163,35 +161,11 @@ class VisualizationGraph:
             )
 
         # ── HTML fallback path ────────────────────────────────────────
-        if not layout:
-            layout = Layout.FORCE_DIRECTED
-        if not layout_options:
-            layout_options = {}
-
-        if isinstance(layout_options, dict):
-            layout_options_typed = construct_layout_options(layout, layout_options)
-        else:
-            layout_options_typed = layout_options
-
-        render_options = RenderOptions(
-            layout=layout,
-            layout_options=layout_options_typed,
-            renderer=renderer,
-            pan_X=pan_position[0] if pan_position is not None else None,
-            pan_Y=pan_position[1] if pan_position is not None else None,
-            initial_zoom=initial_zoom,
-            min_zoom=min_zoom,
-            max_zoom=max_zoom,
-            allow_dynamic_min_zoom=allow_dynamic_min_zoom,
-        )
-
         return NVL().render(
             self.nodes,
             self.relationships,
-            render_options,
             width,
             height,
-            show_hover_tooltip,
         )
 
     def to_html(
@@ -218,7 +192,7 @@ class VisualizationGraph:
         -------
         :class:`IPython.display.HTML`
         """
-        return self.render(  # type: ignore[return-value]
+        return self.render(
             layout=layout,
             layout_options=layout_options,
             renderer=renderer,

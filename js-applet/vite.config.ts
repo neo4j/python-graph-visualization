@@ -1,40 +1,27 @@
-import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import cssInjectedByJsPlugin from "vite-plugin-css-injected-by-js";
-import { resolve } from "path";
+import { defineConfig } from "vite";
 
-// Two builds: ESM for anywidget, IIFE for HTML fallback.
-// Run via BUILD_TARGET env var (see package.json scripts).
-const target = process.env.BUILD_TARGET ?? "widget";
-
+// Single ESM build for anywidget.
+// The same widget.js is used by both the anywidget Jupyter path
+// and the standalone HTML fallback (via a lightweight model shim).
 export default defineConfig({
-  plugins: [
-    react(),
-    // For the IIFE build, inject CSS into JS so it's fully self-contained.
-    // For the ESM/widget build, CSS is extracted to a file (loaded by anywidget via _css).
-    ...(target === "html" ? [cssInjectedByJsPlugin()] : []),
-  ],
+  plugins: [react()],
+  define: {
+    // React/NDL reference process.env.NODE_ENV at runtime
+    "process.env.NODE_ENV": JSON.stringify("production"),
+  },
   build: {
+    outDir: "../python-wrapper/src/neo4j_viz/resources/nvl_entrypoint",
+    emptyOutDir: false,
     lib: {
-      entry: resolve(__dirname, "src/index.tsx"),
-      ...(target === "widget"
-        ? {
-            formats: ["es"] as const,
-            fileName: () => "widget.js",
-          }
-        : {
-            name: "NVLBase",
-            formats: ["iife"] as const,
-            fileName: () => "base.js",
-          }),
+      entry: ["src/index.tsx"],
+      formats: ["es"],
+      fileName: () => "widget.js",
     },
-    outDir: "dist",
-    emptyOutDir: target === "widget", // only clean on first build
     cssCodeSplit: false,
-    sourcemap: false,
     rollupOptions: {
       output: {
-        // Prevent code splitting — produce a single self-contained file
+        // Single file — anywidget loads _esm as a blob, so relative imports won't resolve
         inlineDynamicImports: true,
         assetFileNames: "style.[ext]",
       },
