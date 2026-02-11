@@ -3,11 +3,21 @@ import { GraphVisualization } from "@neo4j-ndl/react-graph";
 import { createRoot } from "react-dom/client";
 
 type ReactVisProps = {
-  nodes: { id: string; properties: Record<string, any> }[];
+  nodes: {
+    id: string;
+    caption?: string;
+    size?: number;
+    color?: string;
+    pinned?: boolean;
+    properties: Record<string, any>;
+  }[];
   relationships: {
     id: string;
     from: string;
     to: string;
+    caption?: string;
+    color?: string;
+    width?: number;
     properties: Record<string, any>;
   }[];
 };
@@ -26,7 +36,8 @@ export function mountReactComponent(
         <GraphVisualization
           nodes={nodes.map((node) => ({
             id: node.id,
-            labels: node.properties.labels,
+            labels:
+              node.properties.labels ?? (node.caption ? [node.caption] : []),
             properties: Object.entries(node.properties).reduce(
               (acc, [key, value]) => {
                 if (key === "labels") {
@@ -45,7 +56,7 @@ export function mountReactComponent(
           }))}
           rels={relationships.map((rel) => ({
             id: rel.id,
-            type: rel.properties.type,
+            type: rel.properties.type ?? rel.caption ?? "",
             properties: Object.entries(rel.properties).reduce(
               (acc, [key, value]) => {
                 if (key === "type") {
