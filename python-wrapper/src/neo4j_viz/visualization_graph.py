@@ -514,7 +514,7 @@ class VisualizationGraph:
         property: str | None = None,
         colors: ColorsType | None = None,
         color_space: ColorSpace = ColorSpace.DISCRETE,
-        override: bool = False,
+        override: bool = True,
     ) -> None:
         """
         Color the nodes in the graph based on either a node field, or a node property.
@@ -620,7 +620,7 @@ class VisualizationGraph:
         property: str | None = None,
         colors: ColorsType | None = None,
         color_space: ColorSpace = ColorSpace.DISCRETE,
-        override: bool = False,
+        override: bool = True,
     ) -> None:
         """
         Color the relationships in the graph based on either a relationship field, or a relationship property.
