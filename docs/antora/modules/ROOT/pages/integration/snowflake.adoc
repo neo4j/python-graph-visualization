@@ -31,7 +31,7 @@ In this small example, we import a toy graph representing a social network from 
 [source, python]
 ----
 from snowflake.snowpark import Session
-from neo4j_viz.snowflake import from_dfs
+from neo4j_viz.snowflake import from_snowflake
 
 # Configure according to your own setup
 connection_parameters = {

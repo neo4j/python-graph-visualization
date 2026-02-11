@@ -5,8 +5,8 @@ from neo4j_viz.options import (
     ForceDirectedLayoutOptions,
     HierarchicalLayoutOptions,
     Layout,
-    RenderOptions,
     Renderer,
+    RenderOptions,
 )
 
 

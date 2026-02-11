@@ -7,7 +7,6 @@ import neo4j.graph
 from neo4j import Driver, Result, RoutingControl
 from pydantic import BaseModel, ValidationError
 
-from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace
 from neo4j_viz.node import Node
 from neo4j_viz.relationship import Relationship
 from neo4j_viz.visualization_graph import VisualizationGraph
@@ -24,6 +23,11 @@ def _parse_validation_error(e: ValidationError, entity_type: type[BaseModel]) ->
 def from_neo4j(
     data: Union[neo4j.graph.Graph, Result, Driver],
     row_limit: int = 10_000,
+    # Deprecated parameters (kept for backward compatibility)
+    size_property: Optional[str] = None,
+    node_caption: Optional[str] = "labels",
+    relationship_caption: Optional[str] = "type",
+    node_radius_min_max: Optional[tuple[float, float]] = None,
 ) -> VisualizationGraph:
     """
     Create a VisualizationGraph from a Neo4j `Graph`, Neo4j `Result` or Neo4j `Driver`.
@@ -32,7 +36,7 @@ def from_neo4j(
 
     * the caption of a node will be based on its `labels`.
     * the caption of a relationship will be based on its `type`.
-    * the color of nodes will be set based on their label, unless there are more than 12 unique labels.
+    * nodes will be auto-colored by their label in the JavaScript visualization.
 
     All node and relationship properties will be included in the visualization graph under the `properties` field.
     Additionally, a "labels" property will be added for nodes and a "type" property for relationships.
@@ -44,7 +48,19 @@ def from_neo4j(
         which case a simple default query will be executed internally to retrieve the graph data.
     row_limit : int, optional
         Maximum number of rows to return from the query, by default 10_000.
-        This is only used if a `neo4j.Driver` is passed as `result` argument, otherwise the limit is ignored.
+        This is only used if a `neo4j.Driver` is passed as `data` argument, otherwise the limit is ignored.
+    size_property : str, optional
+        .. deprecated:: 1.2.0
+            Use ``resize_nodes(property=...)`` on the returned VisualizationGraph instead.
+    node_caption : str, optional
+        .. deprecated:: 1.2.0
+            Use ``set_node_captions(...)`` on the returned VisualizationGraph instead.
+    relationship_caption : str, optional
+        .. deprecated:: 1.2.0
+            Use direct assignment on relationship objects instead.
+    node_radius_min_max : tuple[float, float], optional
+        .. deprecated:: 1.2.0
+            Use ``resize_nodes(node_radius_min_max=...)`` on the returned VisualizationGraph instead.
     """
 
     if isinstance(data, Result):
@@ -80,14 +96,29 @@ def from_neo4j(
 
     VG = VisualizationGraph(nodes, relationships)
 
-    for node in VG.nodes:
-        node.caption = ":".join(node.properties["labels"])
-    for r in VG.relationships:
-        r.caption = r.properties["type"]
+    # Set captions based on node_caption and relationship_caption params
+    if node_caption is not None:
+        for node in VG.nodes:
+            if node_caption == "labels":
+                node.caption = ":".join(node.properties["labels"])
+            else:
+                node.caption = str(node.properties.get(node_caption))
+    if relationship_caption is not None:
+        for r in VG.relationships:
+            if relationship_caption == "type":
+                r.caption = r.properties["type"]
+            else:
+                r.caption = str(r.properties.get(relationship_caption))
 
-    number_of_colors = len({n.caption for n in VG.nodes})
-    if number_of_colors <= len(NEO4J_COLORS_DISCRETE):
-        VG.color_nodes(field="caption", color_space=ColorSpace.DISCRETE, colors=NEO4J_COLORS_DISCRETE)
+    # Apply deprecated size_property / node_radius_min_max if provided
+    if size_property is not None:
+        for node in VG.nodes:
+            node.size = node.properties.get(size_property)
+    if size_property is not None or node_radius_min_max is not None:
+        effective_min_max = node_radius_min_max if node_radius_min_max is not None else (3, 60)
+        has_size = any(node.size is not None for node in VG.nodes)
+        if has_size:
+            VG.resize_nodes(node_radius_min_max=effective_min_max)
 
     return VG
 

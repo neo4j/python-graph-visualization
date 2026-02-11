@@ -30,6 +30,7 @@ def _from_dfs(
     node_dfs: Optional[DFS_TYPE] = None,
     rel_dfs: Optional[DFS_TYPE] = None,
     dropna: bool = False,
+    map_all_fields: bool = False,
 ) -> VisualizationGraph:
     if node_dfs is None and rel_dfs is None:
         raise ValueError("At least one of `node_dfs` or `rel_dfs` must be provided")
@@ -37,7 +38,7 @@ def _from_dfs(
     if rel_dfs is None:
         relationships = []
     else:
-        relationships = _parse_relationships(rel_dfs, dropna=dropna)
+        relationships = _parse_relationships(rel_dfs, dropna=dropna, map_all_fields=map_all_fields)
 
     if node_dfs is None:
         node_ids = set()
@@ -46,12 +47,12 @@ def _from_dfs(
             node_ids.add(rel.target)
         nodes = [Node(id=id) for id in node_ids]
     else:
-        nodes = _parse_nodes(node_dfs, dropna=dropna)
+        nodes = _parse_nodes(node_dfs, dropna=dropna, map_all_fields=map_all_fields)
 
     return VisualizationGraph(nodes=nodes, relationships=relationships)
 
 
-def _parse_nodes(node_dfs: DFS_TYPE, dropna: bool = False) -> list[Node]:
+def _parse_nodes(node_dfs: DFS_TYPE, dropna: bool = False, map_all_fields: bool = False) -> list[Node]:
     if isinstance(node_dfs, DataFrame):
         node_dfs_iter: Iterable[DataFrame] = [node_dfs]
     elif node_dfs is None:
@@ -59,34 +60,42 @@ def _parse_nodes(node_dfs: DFS_TYPE, dropna: bool = False) -> list[Node]:
     else:
         node_dfs_iter = node_dfs
 
-    basic_node_fields_aliases = Node.basic_fields_validation_aliases()
+    if map_all_fields:
+        field_aliases = Node.all_validation_aliases()
+    else:
+        field_aliases = Node.basic_fields_validation_aliases()
 
     nodes = []
     for node_df in node_dfs_iter:
         for _, row in node_df.iterrows():
             if dropna:
                 row = row.dropna(inplace=False)
-            mandatory_fields = {}
+            top_level = {}
             properties = {}
             for key, value in row.to_dict().items():
                 if not isinstance(key, str):
                     key = str(key)
 
-                if key in basic_node_fields_aliases:
-                    mandatory_fields[key] = value
+                if key in field_aliases:
+                    top_level[key] = value
                 else:
                     properties[key] = value
 
             try:
-                nodes.append(Node(**mandatory_fields, properties=properties))
+                nodes.append(Node(**top_level, properties=properties))
             except ValidationError as e:
                 _parse_validation_error(e, Node)
 
     return nodes
 
 
-def _parse_relationships(rel_dfs: DFS_TYPE, dropna: bool = False) -> list[Relationship]:
-    basic_rel_field_aliases = Relationship.basic_fields_validation_aliases()
+def _parse_relationships(
+    rel_dfs: DFS_TYPE, dropna: bool = False, map_all_fields: bool = False
+) -> list[Relationship]:
+    if map_all_fields:
+        field_aliases = Relationship.all_validation_aliases()
+    else:
+        field_aliases = Relationship.basic_fields_validation_aliases()
 
     if isinstance(rel_dfs, DataFrame):
         rel_dfs_iter: Iterable[DataFrame] = [rel_dfs]
@@ -98,19 +107,19 @@ def _parse_relationships(rel_dfs: DFS_TYPE, dropna: bool = False) -> list[Relati
         for _, row in rel_df.iterrows():
             if dropna:
                 row = row.dropna(inplace=False)
-            mandatory_fields = {}
+            top_level = {}
             properties = {}
             for key, value in row.to_dict().items():
                 if not isinstance(key, str):
                     key = str(key)
 
-                if key in basic_rel_field_aliases:
-                    mandatory_fields[key] = value
+                if key in field_aliases:
+                    top_level[key] = value
                 else:
                     properties[key] = value
 
             try:
-                relationships.append(Relationship(**mandatory_fields, properties=properties))
+                relationships.append(Relationship(**top_level, properties=properties))
             except ValidationError as e:
                 _parse_validation_error(e, Relationship)
 
@@ -120,17 +129,14 @@ def _parse_relationships(rel_dfs: DFS_TYPE, dropna: bool = False) -> list[Relati
 def from_dfs(
     node_dfs: Optional[DFS_TYPE] = None,
     rel_dfs: Optional[DFS_TYPE] = None,
+    node_radius_min_max: Optional[tuple[float, float]] = None,
 ) -> VisualizationGraph:
     """
     Create a VisualizationGraph from pandas DataFrames representing a graph.
 
     All columns will be included in the visualization graph.
-    The following columns will be treated as fields:
-
-        * `id` for the node_dfs
-        * `id`, `source`, `target` for the rel_dfs
-
-    Other columns will be included in the `properties` dictionary on the respective node or relationship objects.
+    If the columns are named as the fields of the `Node` or `Relationship` classes, they will be included as
+    top level fields of the respective objects. Otherwise, they will be included in the `properties` dictionary.
 
     Parameters
     ----------
@@ -140,7 +146,16 @@ def from_dfs(
     rel_dfs: Optional[Union[DataFrame, Iterable[DataFrame]]], optional
         DataFrame or iterable of DataFrames containing relationship data.
         If None, no relationships will be created.
+    node_radius_min_max : tuple[float, float], optional
+        Minimum and maximum node radius.
+        To avoid tiny or huge nodes in the visualization, the node sizes are scaled to fit in the given range.
 
     """
 
-    return _from_dfs(node_dfs, rel_dfs, dropna=False)
+    VG = _from_dfs(node_dfs, rel_dfs, dropna=False, map_all_fields=True)
+
+    has_size = any(node.size is not None for node in VG.nodes)
+    if node_radius_min_max is not None and has_size:
+        VG.resize_nodes(node_radius_min_max=node_radius_min_max)
+
+    return VG

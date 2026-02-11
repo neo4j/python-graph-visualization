@@ -10,7 +10,8 @@
 
 `neo4j-viz` is a Python package for creating interactive graph visualizations.
 
-The output is of type `IPython.display.HTML` and can be viewed directly in a Jupyter Notebook or Streamlit application.
+The `render` method returns an `IPython.display.HTML` object that can be viewed directly in a Jupyter Notebook or Streamlit application.
+For an interactive widget experience, use `render_widget()` which returns an anywidget-based `GraphWidget` with two-way data sync.
 Alternatively, you can export the output to a file and view it in a web browser.
 
 The package wraps the [Neo4j Visualization JavaScript library (NVL)](https://neo4j.com/docs/nvl/current/).
@@ -102,7 +103,8 @@ VG = VisualizationGraph(nodes=nodes, relationships=relationships)
 VG.render()
 ```
 
-This will return a `IPython.display.HTML` object that can be rendered in a Jupyter Notebook or streamlit application.
+This will return an `IPython.display.HTML` object that can be rendered in a Jupyter Notebook or Streamlit application.
+For an interactive Jupyter widget, use `VG.render_widget()` instead.
 
 Please refer to the [documentation](https://neo4j.com/docs/nvl-python/preview/) for more details on the API and usage.
 

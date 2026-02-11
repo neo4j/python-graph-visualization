@@ -92,7 +92,7 @@ def construct_layout_options(layout: Layout, options: dict[str, Any]) -> Optiona
         try:
             return HierarchicalLayoutOptions(**options)
         except ValidationError as e:
-            _parse_validation_error(e, ForceDirectedLayoutOptions)
+            _parse_validation_error(e, HierarchicalLayoutOptions)
 
     raise ValueError(
         f"Layout options only supported for layouts `{Layout.FORCE_DIRECTED}` and `{Layout.HIERARCHICAL}`, but was `{layout}`"

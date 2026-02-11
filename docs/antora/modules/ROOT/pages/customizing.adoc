@@ -228,7 +228,7 @@ In the following example, we pin the node with ID 1337 and unpin the node with I
 [source, python]
 ----
 # VG is a VisualizationGraph object
-VG.toggle_nodes_pinned(1337: True, 42: False)})
+VG.toggle_nodes_pinned({1337: True, 42: False})
 ----
 
 == Direct modification of nodes and relationships

@@ -9,10 +9,12 @@ on:
   pull_request:
     paths:
       - "js-applet/src/**"
+      - "js-applet/index.html"
       - "js-applet/vite.config.ts"
       - "js-applet/vite.config.html.ts"
       - "js-applet/package.json"
       - "js-applet/tsconfig.json"
+      - "js-applet/tsconfig.node.json"
     branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab

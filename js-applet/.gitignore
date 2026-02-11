@@ -16,7 +16,6 @@ lib
 dist
 
 # yarn
-yarn.lock
 .yarn/*
 !.yarn/cache
 !.yarn/patches

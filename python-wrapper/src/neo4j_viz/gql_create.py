@@ -5,7 +5,6 @@ from typing import Any, Optional
 from pydantic import BaseModel, ValidationError
 
 from neo4j_viz import Node, Relationship, VisualizationGraph
-from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace
 
 
 def _parse_value(value_str: str) -> Any:
@@ -164,7 +163,13 @@ def _get_snippet(q: str, idx: int, context: int = 15) -> str:
     return q[start:end].replace("\n", " ")
 
 
-def from_gql_create(query: str) -> VisualizationGraph:
+def from_gql_create(
+    query: str,
+    size_property: Optional[str] = None,
+    node_caption: Optional[str] = "labels",
+    relationship_caption: Optional[str] = "type",
+    node_radius_min_max: Optional[tuple[float, float]] = None,
+) -> VisualizationGraph:
     """
     Parse a GQL CREATE query and return a VisualizationGraph object representing the graph it creates.
 
@@ -176,7 +181,7 @@ def from_gql_create(query: str) -> VisualizationGraph:
 
     * the caption of a node will be based on its `labels`.
     * the caption of a relationship will be based on its `type`.
-    * the color of nodes will be set based on their label, unless there are more than 12 unique labels.
+    * nodes will be auto-colored by their label in the JavaScript visualization.
 
     Please note that this function is not a full GQL parser, it only handles CREATE queries that do not contain
     other clauses like MATCH, WHERE, RETURN, etc, or any Cypher function calls.
@@ -187,6 +192,15 @@ def from_gql_create(query: str) -> VisualizationGraph:
     ----------
     query : str
         The GQL CREATE query to parse
+    size_property : str, optional
+        Property to use for node size, by default None.
+    node_caption : str, optional
+        Property to use as the node caption, by default the node labels will be used.
+    relationship_caption : str, optional
+        Property to use as the relationship caption, by default the relationship type will be used.
+    node_radius_min_max : tuple[float, float], optional
+        Minimum and maximum node radius, by default None.
+        To avoid tiny or huge nodes in the visualization, the node sizes are scaled to fit in the given range.
     """
 
     query = query.strip()
@@ -326,13 +340,32 @@ def from_gql_create(query: str) -> VisualizationGraph:
 
     VG = VisualizationGraph(nodes=nodes, relationships=relationships)
 
-    for node in VG.nodes:
-        node.caption = ":".join([label for label in node.properties["labels"]])
-    for rel in VG.relationships:
-        rel.caption = rel.properties.get("type")
+    # Set captions
+    if node_caption is not None:
+        for node in VG.nodes:
+            if node_caption == "labels":
+                node.caption = ":".join([label for label in node.properties["labels"]])
+            else:
+                node.caption = str(node.properties.get(node_caption))
+    if relationship_caption is not None:
+        for rel in VG.relationships:
+            if relationship_caption == "type":
+                rel.caption = rel.properties["type"]
+            else:
+                rel.caption = str(rel.properties.get(relationship_caption))
 
-    number_of_colors = len({str(n.properties.get("labels")) for n in VG.nodes})
-    if number_of_colors <= len(NEO4J_COLORS_DISCRETE):
-        VG.color_nodes(property="labels", color_space=ColorSpace.DISCRETE)
+    # Apply deprecated size_property / node_radius_min_max if provided
+    if size_property is not None:
+        for node in VG.nodes:
+            node.size = node.properties.get(size_property)
+    if size_property is not None or node_radius_min_max is not None:
+        effective_min_max = node_radius_min_max if node_radius_min_max is not None else (3, 60)
+        has_size = any(node.size is not None for node in VG.nodes)
+        if has_size:
+            try:
+                VG.resize_nodes(node_radius_min_max=effective_min_max)
+            except TypeError:
+                loc = "size" if size_property is None else size_property
+                raise ValueError(f"Error for node property '{loc}'. Reason: must be a numerical value")
 
     return VG

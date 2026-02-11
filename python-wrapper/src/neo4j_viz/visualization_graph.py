@@ -83,6 +83,42 @@ class VisualizationGraph:
         self.nodes = nodes
         self.relationships = relationships
 
+    def _build_js_options(
+        self,
+        layout: Layout | None,
+        layout_options: dict[str, Any] | LayoutOptions | None,
+        renderer: Renderer,
+        pan_position: tuple[float, float] | None,
+        initial_zoom: float | None,
+        min_zoom: float,
+        max_zoom: float,
+        allow_dynamic_min_zoom: bool,
+        max_allowed_nodes: int,
+    ) -> dict[str, Any]:
+        """Shared validation + option building for render / render_widget / to_html."""
+        num_nodes = len(self.nodes)
+        if num_nodes > max_allowed_nodes:
+            raise ValueError(
+                f"Too many nodes ({num_nodes}) to render. Maximum allowed nodes is set "
+                f"to {max_allowed_nodes} for performance reasons. It can be increased by "
+                "overriding `max_allowed_nodes`, but rendering could then take a long time"
+            )
+
+        Renderer.check(renderer, num_nodes)
+
+        render_options = RenderOptions(
+            layout=layout,
+            layout_options=layout_options if not isinstance(layout_options, dict) else None,
+            renderer=renderer,
+            pan_X=pan_position[0] if pan_position else None,
+            pan_Y=pan_position[1] if pan_position else None,
+            initial_zoom=initial_zoom,
+            min_zoom=min_zoom,
+            max_zoom=max_zoom,
+            allow_dynamic_min_zoom=allow_dynamic_min_zoom,
+        )
+        return render_options.to_js_options()
+
     def render(
         self,
         layout: Layout | None = None,
@@ -96,14 +132,12 @@ class VisualizationGraph:
         max_zoom: float = 10,
         allow_dynamic_min_zoom: bool = True,
         max_allowed_nodes: int = 10_000,
-        show_hover_tooltip: bool = True,
-        use_widget: bool = True,
-    ) -> "HTML | GraphWidget":
+    ) -> HTML:
         """
-        Render the graph.
+        Render the graph as an HTML object.
 
-        Returns a :class:`GraphWidget` (anywidget) when running in a Jupyter-compatible
-        environment, or falls back to :class:`IPython.display.HTML` otherwise.
+        Returns an :class:`IPython.display.HTML` object that will be displayed in environments
+        that support HTML rendering, such as Jupyter notebooks or Streamlit applications.
 
         Parameters
         ----------
@@ -129,13 +163,6 @@ class VisualizationGraph:
             Whether to allow dynamic minimum zoom level.
         max_allowed_nodes:
             The maximum allowed number of nodes to render.
-        show_hover_tooltip:
-            .. deprecated::
-                The ``show_hover_tooltip`` parameter is deprecated and will be removed
-                in a future version. It has no effect.
-        use_widget:
-            Whether to use the anywidget-based renderer. Set to ``False`` to force the
-            HTML fallback (useful for Streamlit or static HTML export).
 
 
         Example
@@ -143,53 +170,74 @@ class VisualizationGraph:
         Basic rendering of a VisualizationGraph:
         >>> from neo4j_viz import Node, Relationship, VisualizationGraph
         """
-        if not show_hover_tooltip:
-            warnings.warn(
-                "The `show_hover_tooltip` parameter is deprecated and will be removed "
-                "in a future version. It has no effect.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-
-        num_nodes = len(self.nodes)
-        if num_nodes > max_allowed_nodes:
-            raise ValueError(
-                f"Too many nodes ({num_nodes}) to render. Maximum allowed nodes is set "
-                f"to {max_allowed_nodes} for performance reasons. It can be increased by "
-                "overriding `max_allowed_nodes`, but rendering could then take a long time"
-            )
-
-        Renderer.check(renderer, num_nodes)
-
-        render_options = RenderOptions(
-            layout=layout,
-            layout_options=layout_options if not isinstance(layout_options, dict) else None,
-            renderer=renderer,
-            pan_X=pan_position[0] if pan_position else None,
-            pan_Y=pan_position[1] if pan_position else None,
-            initial_zoom=initial_zoom,
-            min_zoom=min_zoom,
-            max_zoom=max_zoom,
-            allow_dynamic_min_zoom=allow_dynamic_min_zoom,
+        js_options = self._build_js_options(
+            layout, layout_options, renderer, pan_position, initial_zoom,
+            min_zoom, max_zoom, allow_dynamic_min_zoom, max_allowed_nodes,
         )
-        js_options = render_options.to_js_options()
 
-        # ── anywidget path (primary) ──────────────────────────────────
-        if use_widget:
-            return GraphWidget.from_graph_data(
-                self.nodes,
-                self.relationships,
-                width=width,
-                height=height,
-                options=js_options,
-            )
-
-        # ── HTML fallback path ────────────────────────────────────────
         return NVL().render(
             self.nodes,
             self.relationships,
             width,
             height,
+            options=js_options,
+        )
+
+    def render_widget(
+        self,
+        layout: Layout | None = None,
+        layout_options: dict[str, Any] | LayoutOptions | None = None,
+        renderer: Renderer = Renderer.CANVAS,
+        width: str = "100%",
+        height: str = "600px",
+        pan_position: tuple[float, float] | None = None,
+        initial_zoom: float | None = None,
+        min_zoom: float = 0.075,
+        max_zoom: float = 10,
+        allow_dynamic_min_zoom: bool = True,
+        max_allowed_nodes: int = 10_000,
+    ) -> GraphWidget:
+        """
+        Render the graph as an interactive Jupyter widget (anywidget).
+
+        Returns a :class:`GraphWidget` that provides two-way data sync between Python
+        and JavaScript. Works in JupyterLab, Notebook 7, VS Code, and Colab.
+
+        Parameters
+        ----------
+        layout:
+            The `Layout` to use.
+        layout_options:
+            The `LayoutOptions` to use.
+        renderer:
+            The `Renderer` to use.
+        width:
+            The width of the rendered graph.
+        height:
+            The height of the rendered graph.
+        pan_position:
+            The initial pan position.
+        initial_zoom:
+            The initial zoom level.
+        min_zoom:
+            The minimum zoom level.
+        max_zoom:
+            The maximum zoom level.
+        allow_dynamic_min_zoom:
+            Whether to allow dynamic minimum zoom level.
+        max_allowed_nodes:
+            The maximum allowed number of nodes to render.
+        """
+        js_options = self._build_js_options(
+            layout, layout_options, renderer, pan_position, initial_zoom,
+            min_zoom, max_zoom, allow_dynamic_min_zoom, max_allowed_nodes,
+        )
+
+        return GraphWidget.from_graph_data(
+            self.nodes,
+            self.relationships,
+            width=width,
+            height=height,
             options=js_options,
         )
 
@@ -205,20 +253,12 @@ class VisualizationGraph:
         min_zoom: float = 0.075,
         max_zoom: float = 10,
         allow_dynamic_min_zoom: bool = True,
-        show_hover_tooltip: bool = True,
     ) -> HTML:
         """
         Render the graph as a self-contained HTML snippet.
 
-        This is the explicit HTML fallback — useful for Streamlit, static HTML export,
+        This is an alias for :meth:`render` — useful for Streamlit, static HTML export,
         or any environment without Jupyter widget support.
-
-        Parameters
-        ----------
-        show_hover_tooltip:
-            .. deprecated::
-                The ``show_hover_tooltip`` parameter is deprecated and will be removed
-                in a future version. It has no effect.
 
         Returns
         -------
@@ -235,8 +275,6 @@ class VisualizationGraph:
             min_zoom=min_zoom,
             max_zoom=max_zoom,
             allow_dynamic_min_zoom=allow_dynamic_min_zoom,
-            show_hover_tooltip=show_hover_tooltip,
-            use_widget=False,
         )
 
     def toggle_nodes_pinned(self, pinned: dict[NodeIdType, bool]) -> None:
@@ -476,7 +514,7 @@ class VisualizationGraph:
         property: str | None = None,
         colors: ColorsType | None = None,
         color_space: ColorSpace = ColorSpace.DISCRETE,
-        override: bool = True,
+        override: bool = False,
     ) -> None:
         """
         Color the nodes in the graph based on either a node field, or a node property.
@@ -582,7 +620,7 @@ class VisualizationGraph:
         property: str | None = None,
         colors: ColorsType | None = None,
         color_space: ColorSpace = ColorSpace.DISCRETE,
-        override: bool = True,
+        override: bool = False,
     ) -> None:
         """
         Color the relationships in the graph based on either a relationship field, or a relationship property.
