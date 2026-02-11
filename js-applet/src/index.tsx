@@ -1,114 +1,20 @@
 import "@neo4j-ndl/base/lib/neo4j-ds-styles.css";
-import { GraphVisualization } from "@neo4j-ndl/react";
-import type { Node, NvlOptions, Relationship } from "@neo4j-nvl/base";
-import { FreeLayoutType, NVL } from "@neo4j-nvl/base";
-import {
-  DragNodeInteraction,
-  HoverInteraction,
-  PanInteraction,
-  ZoomInteraction,
-} from "@neo4j-nvl/interaction-handlers";
+import { GraphVisualization } from "@neo4j-ndl/react-graph";
 import { createRoot } from "react-dom/client";
 
-interface PyNode extends Node {
-  properties: Record<string, any>;
-}
-
-interface PyRel extends Relationship {
-  properties: Record<string, any>;
-  from: string;
-  to: string;
-}
-
-class PyNVL {
-  nvl: NVL;
-
-  zoomInteraction: ZoomInteraction;
-
-  panInteraction: PanInteraction;
-
-  dragNodeInteraction: DragNodeInteraction;
-
-  hoverInteraction: HoverInteraction;
-
-  constructor(
-    frame: HTMLElement,
-    tooltip: HTMLElement | null = null,
-    nvlNodes: Node[] = [],
-    nvlRels: Relationship[] = [],
-    options: NvlOptions = {},
-    callbacks = {}
-  ) {
-    this.nvl = new NVL(
-      frame,
-      nvlNodes,
-      nvlRels,
-      {
-        ...options,
-        disableTelemetry: true,
-        disableWebWorkers: true,
-        disableAria: true,
-      },
-      callbacks
-    );
-    this.zoomInteraction = new ZoomInteraction(this.nvl);
-    this.panInteraction = new PanInteraction(this.nvl);
-    this.dragNodeInteraction = new DragNodeInteraction(this.nvl);
-
-    if (tooltip !== null) {
-      this.hoverInteraction = new HoverInteraction(this.nvl);
-
-      this.hoverInteraction.updateCallback(
-        "onHover",
-        (element: PyNode | PyRel) => {
-          if (element === undefined) {
-            tooltip.textContent = "";
-            if (tooltip.style.display === "block") {
-              tooltip.style.display = "none";
-            }
-          } else if ("from" in element) {
-            const rel = element as PyRel;
-
-            let hoverInfo: string = `<b>sauce ID:</b> ${rel.from} </br><b>Target ID:</b> ${rel.to}`;
-            for (const [key, value] of Object.entries(element.properties)) {
-              hoverInfo += `</br><b>${key}:</b> ${value}`;
-            }
-            tooltip.setHTMLUnsafe(hoverInfo);
-
-            if (tooltip.style.display === "none") {
-              tooltip.style.display = "block";
-            }
-          } else if ("id" in element) {
-            let hoverInfo: string = `<b>ID:</b> ${element.id}`;
-            for (const [key, value] of Object.entries(element.properties)) {
-              hoverInfo += `</br><b>${key}:</b> ${value}`;
-            }
-            tooltip.setHTMLUnsafe(hoverInfo);
-
-            if (tooltip.style.display === "none") {
-              tooltip.style.display = "block";
-            }
-          }
-        }
-      );
-    }
-
-    if (options.layout === FreeLayoutType) {
-      this.nvl.setNodePositions(nvlNodes, false);
-    }
-  }
-}
-
-export { PyNVL as NVL };
-
 type ReactVisProps = {
-  nodes: PyNode[];
-  relationships: PyRel[];
+  nodes: { id: string; properties: Record<string, any> }[];
+  relationships: {
+    id: string;
+    from: string;
+    to: string;
+    properties: Record<string, any>;
+  }[];
 };
 
 export function mountReactComponent(
   elementId: string,
-  { nodes, relationships }: ReactVisProps
+  { nodes, relationships }: ReactVisProps,
 ) {
   console.log("mountReactComponent", nodes, relationships);
   const container = document.getElementById(elementId);
@@ -134,7 +40,7 @@ export function mountReactComponent(
                 };
                 return acc;
               },
-              {} as Record<string, any>
+              {} as Record<string, any>,
             ),
           }))}
           rels={relationships.map((rel) => ({
@@ -151,13 +57,13 @@ export function mountReactComponent(
                 };
                 return acc;
               },
-              {} as Record<string, any>
+              {} as Record<string, any>,
             ),
             from: rel.from,
             to: rel.to,
           }))}
         />
-      </div>
+      </div>,
     );
     return root;
   }

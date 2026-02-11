@@ -8,8 +8,8 @@
   "devDependencies": {
     "@babel/core": "^7.22.0",
     "@babel/preset-react": "^7.22.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
     "babel-loader": "^10.0.0",
     "css-loader": "^7.1.2",
     "style-loader": "^4.0.0",
@@ -23,8 +23,11 @@
     "@neo4j-ndl/base": "^4.7.1",
     "@neo4j-ndl/react": "^4.7.3",
     "@neo4j-ndl/react-graph": "^1.2.8",
-    "@tanstack/react-table": "8.20.5",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@neo4j-nvl/base": "^1.0.0",
+    "@neo4j-nvl/interaction-handlers": "^1.0.0",
+    "@neo4j-nvl/react": "^1.0.0",
+    "@tanstack/react-table": "^8.20.5",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
   }
 }
