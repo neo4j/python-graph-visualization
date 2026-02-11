@@ -88970,6 +88970,11 @@ var bve = mve();
 function iW(n) {
   return n.map((e) => ({
     id: e.id,
+    // Only include visual properties when explicitly set, so that
+    // GraphVisualization's smart defaults (label-based coloring, etc.) apply.
+    ...e.color !== void 0 && { color: e.color },
+    ...e.size !== void 0 && { size: e.size },
+    ...e.pinned !== void 0 && { pinned: e.pinned },
     labels: e.properties.labels ?? (e.caption ? [e.caption] : []),
     properties: Object.entries(e.properties).reduce(
       (t, [r, i]) => {
@@ -88987,6 +88992,8 @@ function iW(n) {
 function aW(n) {
   return n.map((e) => ({
     id: e.id,
+    ...e.color !== void 0 && { color: e.color },
+    ...e.width !== void 0 && { width: e.width },
     type: e.properties.type ?? e.caption ?? "",
     properties: Object.entries(e.properties).reduce(
       (t, [r, i]) => (r === "type" || (t[r] = {
@@ -88999,39 +89006,49 @@ function aW(n) {
     to: e.to
   }));
 }
-function _ve(n, e, t) {
-  const r = bve.createRoot(n);
-  return r.render(
+function _ve(n, e, t, r = {}) {
+  const { layout: i, nvlOptions: a, zoom: o, pan: u, layoutOptions: s } = r, l = bve.createRoot(n);
+  return l.render(
     /* @__PURE__ */ Ie.jsx("div", { style: { height: "100%", width: "100%" }, children: /* @__PURE__ */ Ie.jsx(
       Rf,
       {
         nodes: iW(e),
-        rels: aW(t)
+        rels: aW(t),
+        layout: i,
+        nvlOptions: a,
+        zoom: o,
+        pan: u,
+        layoutOptions: s
       }
     ) })
-  ), r;
+  ), l;
 }
 function wve({ model: n, el: e }) {
   e.style.height = n.get("height") ?? "600px", e.style.width = n.get("width") ?? "100%";
-  const t = n.get("nodes") ?? [], r = n.get("relationships") ?? [], i = _ve(e, t, r);
-  function a() {
-    const o = n.get("nodes") ?? [], u = n.get("relationships") ?? [];
-    i.render(
+  const t = n.get("nodes") ?? [], r = n.get("relationships") ?? [], i = n.get("options") ?? {}, a = _ve(e, t, r, i);
+  function o() {
+    const u = n.get("nodes") ?? [], s = n.get("relationships") ?? [], l = n.get("options") ?? {}, { layout: c, nvlOptions: f, zoom: d, pan: v, layoutOptions: p } = l;
+    a.render(
       /* @__PURE__ */ Ie.jsx("div", { style: { height: "100%", width: "100%" }, children: /* @__PURE__ */ Ie.jsx(
         Rf,
         {
-          nodes: iW(o),
-          rels: aW(u)
+          nodes: iW(u),
+          rels: aW(s),
+          layout: c,
+          nvlOptions: f,
+          zoom: d,
+          pan: v,
+          layoutOptions: p
         }
       ) })
     );
   }
-  return n.on("change:nodes", a), n.on("change:relationships", a), n.on("change:height", () => {
+  return n.on("change:nodes", o), n.on("change:relationships", o), n.on("change:options", o), n.on("change:height", () => {
     e.style.height = n.get("height") ?? "600px";
   }), n.on("change:width", () => {
     e.style.width = n.get("width") ?? "100%";
   }), () => {
-    i.unmount();
+    a.unmount();
   };
 }
 const Jve = { render: wve };

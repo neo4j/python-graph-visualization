@@ -132,6 +132,14 @@ class Renderer(str, Enum):
             )
 
 
+_LAYOUT_TO_JS: dict[str, str] = {
+    Layout.FORCE_DIRECTED.value: "d3Force",
+    Layout.HIERARCHICAL.value: "hierarchical",
+    Layout.COORDINATE.value: "free",
+    Layout.GRID.value: "grid",
+}
+
+
 class RenderOptions(BaseModel, extra="allow"):
     """
     Options as documented at https://neo4j.com/docs/nvl/current/base-library/#_options
@@ -166,6 +174,44 @@ class RenderOptions(BaseModel, extra="allow"):
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True, by_alias=True)
+
+    def to_js_options(self) -> dict[str, Any]:
+        """Convert render options to the JS-compatible format for the GraphVisualization component.
+
+        Returns a dict with keys that map to React component props and NVL options:
+        - ``layout``: NVL layout name (e.g. ``"d3Force"``, ``"hierarchical"``)
+        - ``nvlOptions``: dict of NVL instance options (``minZoom``, ``maxZoom``, etc.)
+        - ``zoom``: initial zoom level
+        - ``pan``: ``{x, y}`` pan position
+        - ``layoutOptions``: layout-specific options
+        """
+        result: dict[str, Any] = {}
+
+        if self.layout is not None:
+            result["layout"] = _LAYOUT_TO_JS.get(self.layout.value, self.layout.value)
+
+        if self.layout_options is not None:
+            result["layoutOptions"] = self.layout_options.model_dump(exclude_none=True)
+
+        nvl_options: dict[str, Any] = {}
+        if self.renderer is not None:
+            nvl_options["disableWebGL"] = self.renderer != Renderer.WEB_GL
+        if self.min_zoom is not None:
+            nvl_options["minZoom"] = self.min_zoom
+        if self.max_zoom is not None:
+            nvl_options["maxZoom"] = self.max_zoom
+        if self.allow_dynamic_min_zoom is not None:
+            nvl_options["allowDynamicMinZoom"] = self.allow_dynamic_min_zoom
+        if nvl_options:
+            result["nvlOptions"] = nvl_options
+
+        if self.initial_zoom is not None:
+            result["zoom"] = self.initial_zoom
+
+        if self.pan_X is not None or self.pan_Y is not None:
+            result["pan"] = {"x": self.pan_X or 0, "y": self.pan_Y or 0}
+
+        return result
 
 
 def _parse_validation_error(e: ValidationError, entity_type: type[BaseModel]) -> None:

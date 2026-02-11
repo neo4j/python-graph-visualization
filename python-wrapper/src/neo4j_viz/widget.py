@@ -72,6 +72,7 @@ class GraphWidget(anywidget.AnyWidget):  # type: ignore[misc]
     relationships = traitlets.List([]).tag(sync=True)  # type: ignore[assignment]
     width = traitlets.Unicode("100%").tag(sync=True)  # type: ignore[assignment]
     height = traitlets.Unicode("600px").tag(sync=True)  # type: ignore[assignment]
+    options = traitlets.Dict({}).tag(sync=True)
 
     @classmethod
     def from_graph_data(
@@ -80,6 +81,7 @@ class GraphWidget(anywidget.AnyWidget):  # type: ignore[misc]
         relationships: list[Relationship],
         width: str = "100%",
         height: str = "600px",
+        options: dict[str, object] | None = None,
     ) -> GraphWidget:
         """Create a GraphWidget from Node and Relationship lists."""
         return cls(
@@ -87,4 +89,5 @@ class GraphWidget(anywidget.AnyWidget):  # type: ignore[misc]
             relationships=[_serialize_entity(r) for r in relationships],
             width=width,
             height=height,
+            options=options or {},
         )

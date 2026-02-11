@@ -79,12 +79,14 @@ class NVL:
         relationships: list[Relationship],
         width: str,
         height: str,
+        options: dict[str, object] | None = None,
     ) -> HTML:
-        data_dict = {
+        data_dict: dict[str, object] = {
             "nodes": [_serialize_entity(node) for node in nodes],
             "relationships": [_serialize_entity(rel) for rel in relationships],
             "width": width,
             "height": height,
+            "options": options or {},
         }
         data_json = json.dumps(data_dict)
         container_id = f"neo4j-viz-{uuid.uuid4().hex[:12]}"

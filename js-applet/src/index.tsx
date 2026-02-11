@@ -1,5 +1,6 @@
 import "@neo4j-ndl/base/lib/neo4j-ds-styles.css";
 import { GraphVisualization } from "@neo4j-ndl/react-graph";
+import type { Layout, NvlOptions } from "@neo4j-nvl/base";
 import { createRoot, type Root } from "react-dom/client";
 
 type NodeData = {
@@ -21,9 +22,22 @@ type RelationshipData = {
   properties: Record<string, any>;
 };
 
+type GraphOptions = {
+  layout?: Layout;
+  nvlOptions?: Partial<NvlOptions>;
+  zoom?: number;
+  pan?: { x: number; y: number };
+  layoutOptions?: Record<string, any>;
+};
+
 function transformNodes(nodes: NodeData[]) {
   return nodes.map((node) => ({
     id: node.id,
+    // Only include visual properties when explicitly set, so that
+    // GraphVisualization's smart defaults (label-based coloring, etc.) apply.
+    ...(node.color !== undefined && { color: node.color }),
+    ...(node.size !== undefined && { size: node.size }),
+    ...(node.pinned !== undefined && { pinned: node.pinned }),
     labels: node.properties.labels ?? (node.caption ? [node.caption] : []),
     properties: Object.entries(node.properties).reduce(
       (acc, [key, value]) => {
@@ -43,6 +57,8 @@ function transformNodes(nodes: NodeData[]) {
 function transformRelationships(relationships: RelationshipData[]) {
   return relationships.map((rel) => ({
     id: rel.id,
+    ...(rel.color !== undefined && { color: rel.color }),
+    ...(rel.width !== undefined && { width: rel.width }),
     type: rel.properties.type ?? rel.caption ?? "",
     properties: Object.entries(rel.properties).reduce(
       (acc, [key, value]) => {
@@ -64,13 +80,20 @@ function renderGraph(
   el: HTMLElement,
   nodes: NodeData[],
   relationships: RelationshipData[],
+  options: GraphOptions = {},
 ): Root {
+  const { layout, nvlOptions, zoom, pan, layoutOptions } = options;
   const root = createRoot(el);
   root.render(
     <div style={{ height: "100%", width: "100%" }}>
       <GraphVisualization
         nodes={transformNodes(nodes)}
         rels={transformRelationships(relationships)}
+        layout={layout}
+        nvlOptions={nvlOptions}
+        zoom={zoom}
+        pan={pan}
+        layoutOptions={layoutOptions}
       />
     </div>,
   );
@@ -86,18 +109,26 @@ function render({ model, el }: { model: any; el: HTMLElement }) {
 
   const nodes: NodeData[] = model.get("nodes") ?? [];
   const relationships: RelationshipData[] = model.get("relationships") ?? [];
+  const options: GraphOptions = model.get("options") ?? {};
 
-  const root = renderGraph(el, nodes, relationships);
+  const root = renderGraph(el, nodes, relationships, options);
 
   // Re-render when Python-side data changes (no-op for static HTML shim)
   function onDataChange() {
     const updatedNodes: NodeData[] = model.get("nodes") ?? [];
     const updatedRels: RelationshipData[] = model.get("relationships") ?? [];
+    const updatedOptions: GraphOptions = model.get("options") ?? {};
+    const { layout, nvlOptions, zoom, pan, layoutOptions } = updatedOptions;
     root.render(
       <div style={{ height: "100%", width: "100%" }}>
         <GraphVisualization
           nodes={transformNodes(updatedNodes)}
           rels={transformRelationships(updatedRels)}
+          layout={layout}
+          nvlOptions={nvlOptions}
+          zoom={zoom}
+          pan={pan}
+          layoutOptions={layoutOptions}
         />
       </div>,
     );
@@ -105,6 +136,7 @@ function render({ model, el }: { model: any; el: HTMLElement }) {
 
   model.on("change:nodes", onDataChange);
   model.on("change:relationships", onDataChange);
+  model.on("change:options", onDataChange);
   model.on("change:height", () => {
     el.style.height = model.get("height") ?? "600px";
   });

@@ -16,6 +16,7 @@ from .options import (
     Layout,
     LayoutOptions,
     Renderer,
+    RenderOptions,
 )
 from .relationship import Relationship
 from .widget import GraphWidget
@@ -129,7 +130,9 @@ class VisualizationGraph:
         max_allowed_nodes:
             The maximum allowed number of nodes to render.
         show_hover_tooltip:
-            Whether to show an info tooltip when hovering over nodes and relationships.
+            .. deprecated::
+                The ``show_hover_tooltip`` parameter is deprecated and will be removed
+                in a future version. It has no effect.
         use_widget:
             Whether to use the anywidget-based renderer. Set to ``False`` to force the
             HTML fallback (useful for Streamlit or static HTML export).
@@ -140,6 +143,13 @@ class VisualizationGraph:
         Basic rendering of a VisualizationGraph:
         >>> from neo4j_viz import Node, Relationship, VisualizationGraph
         """
+        if not show_hover_tooltip:
+            warnings.warn(
+                "The `show_hover_tooltip` parameter is deprecated and will be removed "
+                "in a future version. It has no effect.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         num_nodes = len(self.nodes)
         if num_nodes > max_allowed_nodes:
@@ -151,6 +161,19 @@ class VisualizationGraph:
 
         Renderer.check(renderer, num_nodes)
 
+        render_options = RenderOptions(
+            layout=layout,
+            layout_options=layout_options if not isinstance(layout_options, dict) else None,
+            renderer=renderer,
+            pan_X=pan_position[0] if pan_position else None,
+            pan_Y=pan_position[1] if pan_position else None,
+            initial_zoom=initial_zoom,
+            min_zoom=min_zoom,
+            max_zoom=max_zoom,
+            allow_dynamic_min_zoom=allow_dynamic_min_zoom,
+        )
+        js_options = render_options.to_js_options()
+
         # ── anywidget path (primary) ──────────────────────────────────
         if use_widget:
             return GraphWidget.from_graph_data(
@@ -158,6 +181,7 @@ class VisualizationGraph:
                 self.relationships,
                 width=width,
                 height=height,
+                options=js_options,
             )
 
         # ── HTML fallback path ────────────────────────────────────────
@@ -166,6 +190,7 @@ class VisualizationGraph:
             self.relationships,
             width,
             height,
+            options=js_options,
         )
 
     def to_html(
@@ -187,6 +212,13 @@ class VisualizationGraph:
 
         This is the explicit HTML fallback — useful for Streamlit, static HTML export,
         or any environment without Jupyter widget support.
+
+        Parameters
+        ----------
+        show_hover_tooltip:
+            .. deprecated::
+                The ``show_hover_tooltip`` parameter is deprecated and will be removed
+                in a future version. It has no effect.
 
         Returns
         -------
