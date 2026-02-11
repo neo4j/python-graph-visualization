@@ -97,8 +97,7 @@ namespaces = false # only scan directories with __init__.py files (true by defau
 neo4j_viz = [
     "resources/nvl_entrypoint/widget.js",
     "resources/nvl_entrypoint/style.css",
-    "resources/nvl_entrypoint/base.js",
-    "resources/nvl_entrypoint/styles.css",
+    "resources/nvl_entrypoint/index.html",
     "resources/icons/*.svg",
     "py.typed"
 ]

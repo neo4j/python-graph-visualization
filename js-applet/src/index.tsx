@@ -80,7 +80,7 @@ function renderGraph(
 // ── anywidget entry point ──────────────────────────────────────────────
 // Called by anywidget (Jupyter) and by the standalone HTML model shim.
 // `model` has traitlet-synced data (or a static shim), `el` is the DOM container.
-export function render({ model, el }: { model: any; el: HTMLElement }) {
+function render({ model, el }: { model: any; el: HTMLElement }) {
   el.style.height = model.get("height") ?? "600px";
   el.style.width = model.get("width") ?? "100%";
 
@@ -116,3 +116,5 @@ export function render({ model, el }: { model: any; el: HTMLElement }) {
     root.unmount();
   };
 }
+
+export default { render };

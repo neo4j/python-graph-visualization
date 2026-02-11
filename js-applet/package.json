@@ -3,15 +3,20 @@
   "version": "0.3.7",
   "type": "module",
   "scripts": {
-    "build": "vite build"
+    "dev": "vite",
+    "build": "vite build && vite build --config vite.config.html.ts",
+    "build:widget": "vite build",
+    "build:html": "vite build --config vite.config.html.ts"
   },
   "devDependencies": {
+    "@anywidget/vite": "^0.2.2",
     "@types/node": "^25.2.3",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.5.2",
     "typescript": "5.9.3",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vite-plugin-singlefile": "^2.3.0"
   },
   "dependencies": {
     "@neo4j-ndl/base": "^4.7.1",
