@@ -71,5 +71,3 @@ html = VG.render(...)
 with open("my_graph.html", "w") as f:
     f.write(html.data)
 ----
-
-The `to_html` method is an alias for `render` with the same parameters.

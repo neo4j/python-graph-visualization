@@ -95,7 +95,7 @@ class VisualizationGraph:
         allow_dynamic_min_zoom: bool,
         max_allowed_nodes: int,
     ) -> dict[str, Any]:
-        """Shared validation + option building for render / render_widget / to_html."""
+        """Shared validation + option building for render / render_widget."""
         num_nodes = len(self.nodes)
         if num_nodes > max_allowed_nodes:
             raise ValueError(
@@ -239,42 +239,6 @@ class VisualizationGraph:
             width=width,
             height=height,
             options=js_options,
-        )
-
-    def to_html(
-        self,
-        width: str = "100%",
-        height: str = "600px",
-        layout: Layout | None = None,
-        layout_options: dict[str, Any] | LayoutOptions | None = None,
-        renderer: Renderer = Renderer.CANVAS,
-        pan_position: tuple[float, float] | None = None,
-        initial_zoom: float | None = None,
-        min_zoom: float = 0.075,
-        max_zoom: float = 10,
-        allow_dynamic_min_zoom: bool = True,
-    ) -> HTML:
-        """
-        Render the graph as a self-contained HTML snippet.
-
-        This is an alias for :meth:`render` — useful for Streamlit, static HTML export,
-        or any environment without Jupyter widget support.
-
-        Returns
-        -------
-        :class:`IPython.display.HTML`
-        """
-        return self.render(
-            layout=layout,
-            layout_options=layout_options,
-            renderer=renderer,
-            width=width,
-            height=height,
-            pan_position=pan_position,
-            initial_zoom=initial_zoom,
-            min_zoom=min_zoom,
-            max_zoom=max_zoom,
-            allow_dynamic_min_zoom=allow_dynamic_min_zoom,
         )
 
     def toggle_nodes_pinned(self, pinned: dict[NodeIdType, bool]) -> None:
