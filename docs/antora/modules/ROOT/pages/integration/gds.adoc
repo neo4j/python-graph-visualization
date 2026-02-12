@@ -45,10 +45,9 @@ gds.wcc.mutate(G, mutateProperty="componentId")
 VG = from_gds(
     gds,
     G,
-    node_properties=["pagerank", "componentId"],
+    size_property="pagerank",
+    additional_node_properties=["componentId"],
 )
-# Resize nodes by the `pagerank` property
-VG.resize_nodes(property="pagerank", node_radius_min_max=(3, 60))
 # Color the nodes by the `componentId` property, so that the nodes are
 # colored by the connected component they belong to
 VG.color_nodes(property="componentId")

@@ -13,7 +13,7 @@ to import query results from Neo4j.
 
 The `from_neo4j` method takes one mandatory positional parameter: A `data` argument representing either a query result in the shape of a `neo4j.graph.Graph` or `neo4j.Result`, or a `neo4j.Driver` in which case a simple default query will be executed internally to retrieve the graph data.
 
-The optional `row_limit` parameter can be used to limit the number of relationships shown in the visualization.
+The optional `max_rows` parameter can be used to limit the number of relationships shown in the visualization.
 By default, it is set to 10.000, meaning that if the database has more than 10.000 rows, a warning will be raised.
 Note, this only applies if the `data` parameter is a `neo4j.Driver`.
 
@@ -24,7 +24,7 @@ In this small example, we import a graph from a Neo4j query result.
 [source, python]
 ----
 from neo4j import GraphDatabase, RoutingControl, Result
-from neo4j_viz.neo4j import from_neo4j
+from neo4j_viz.gds import from_gds
 
 # Modify this to match your Neo4j instance's URI and credentials
 URI = "neo4j://localhost:7687"

@@ -7,6 +7,7 @@ import neo4j.graph
 from neo4j import Driver, Result, RoutingControl
 from pydantic import BaseModel, ValidationError
 
+from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace
 from neo4j_viz.node import Node
 from neo4j_viz.relationship import Relationship
 from neo4j_viz.visualization_graph import VisualizationGraph
@@ -31,7 +32,7 @@ def from_neo4j(
 
     * the caption of a node will be based on its `labels`.
     * the caption of a relationship will be based on its `type`.
-    * nodes will be auto-colored by their label in the JavaScript visualization.
+    * the color of nodes will be set based on their label, unless there are more than 12 unique labels.
 
     All node and relationship properties will be included in the visualization graph under the `properties` field.
     Additionally, a "labels" property will be added for nodes and a "type" property for relationships.
@@ -43,7 +44,7 @@ def from_neo4j(
         which case a simple default query will be executed internally to retrieve the graph data.
     row_limit : int, optional
         Maximum number of rows to return from the query, by default 10_000.
-        This is only used if a `neo4j.Driver` is passed as `data` argument, otherwise the limit is ignored.
+        This is only used if a `neo4j.Driver` is passed as `result` argument, otherwise the limit is ignored.
     """
 
     if isinstance(data, Result):
@@ -83,6 +84,10 @@ def from_neo4j(
         node.caption = ":".join(node.properties["labels"])
     for r in VG.relationships:
         r.caption = r.properties["type"]
+
+    number_of_colors = len({n.caption for n in VG.nodes})
+    if number_of_colors <= len(NEO4J_COLORS_DISCRETE):
+        VG.color_nodes(field="caption", color_space=ColorSpace.DISCRETE, colors=NEO4J_COLORS_DISCRETE)
 
     return VG
 

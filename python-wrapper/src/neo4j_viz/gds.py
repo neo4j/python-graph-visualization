@@ -8,6 +8,8 @@ from uuid import uuid4
 import pandas as pd
 from graphdatascience import Graph, GraphDataScience
 
+from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace
+
 from .pandas import _from_dfs
 from .visualization_graph import VisualizationGraph
 
@@ -66,7 +68,7 @@ def from_gds(
 
     * the caption of a node will be based on its `labels`.
     * the caption of a relationship will be based on its `relationshipType`.
-    * nodes will be auto-colored by their label in the JavaScript visualization.
+    * the color of nodes will be set based on their label, unless there are more than 12 unique labels.
 
     All `node_properties` and `db_node_properties` will be included in the visualization graph under the `properties` field.
     Additionally, a new "labels" node property will be added, containing the node labels of the node.
@@ -168,6 +170,10 @@ def from_gds(
             node.caption = ":".join([label for label in node.properties["labels"]])
         for rel in VG.relationships:
             rel.caption = rel.properties.get("relationshipType")
+
+        number_of_colors = node_df["labels"].drop_duplicates().count()
+        if number_of_colors <= len(NEO4J_COLORS_DISCRETE):
+            VG.color_nodes(property="labels", color_space=ColorSpace.DISCRETE)
 
         return VG
     except ValueError as e:

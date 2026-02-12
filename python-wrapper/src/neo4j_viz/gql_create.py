@@ -5,6 +5,7 @@ from typing import Any, Optional
 from pydantic import BaseModel, ValidationError
 
 from neo4j_viz import Node, Relationship, VisualizationGraph
+from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace
 
 
 def _parse_value(value_str: str) -> Any:
@@ -175,7 +176,7 @@ def from_gql_create(query: str) -> VisualizationGraph:
 
     * the caption of a node will be based on its `labels`.
     * the caption of a relationship will be based on its `type`.
-    * nodes will be auto-colored by their label in the JavaScript visualization.
+    * the color of nodes will be set based on their label, unless there are more than 12 unique labels.
 
     Please note that this function is not a full GQL parser, it only handles CREATE queries that do not contain
     other clauses like MATCH, WHERE, RETURN, etc, or any Cypher function calls.
@@ -329,5 +330,9 @@ def from_gql_create(query: str) -> VisualizationGraph:
         node.caption = ":".join([label for label in node.properties["labels"]])
     for rel in VG.relationships:
         rel.caption = rel.properties.get("type")
+
+    number_of_colors = len({str(n.properties.get("labels")) for n in VG.nodes})
+    if number_of_colors <= len(NEO4J_COLORS_DISCRETE):
+        VG.color_nodes(property="labels", color_space=ColorSpace.DISCRETE)
 
     return VG
