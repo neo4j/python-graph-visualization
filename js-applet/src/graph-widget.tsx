@@ -37,22 +37,28 @@ function GraphWidget() {
   );
 
   return (
+    <div style={{ height: height ?? "600px", width: width ?? "100%" }}>
+      <GraphVisualization
+        nodes={neoNodes}
+        rels={neoRelationships}
+        layout={layout}
+        nvlOptions={nvlOptions}
+        zoom={zoom}
+        pan={pan}
+        layoutOptions={layoutOptions}
+      />
+    </div>
+  );
+}
+
+function GraphWidgetWithErrorBoundary() {
+  return (
     <GraphErrorBoundary>
-      <div style={{ height: height ?? "600px", width: width ?? "100%" }}>
-        <GraphVisualization
-          nodes={neoNodes}
-          rels={neoRelationships}
-          layout={layout}
-          nvlOptions={nvlOptions}
-          zoom={zoom}
-          pan={pan}
-          layoutOptions={layoutOptions}
-        />
-      </div>
+      <GraphWidget />
     </GraphErrorBoundary>
   );
 }
 
-const render = createRender(GraphWidget);
+const render = createRender(GraphWidgetWithErrorBoundary);
 
 export default { render };
