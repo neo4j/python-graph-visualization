@@ -51,9 +51,11 @@
       };
 
       // Model shim — same interface as anywidget's model.
+      // off() is needed because @anywidget/react unsubscribes on unmount.
       const model = {
         get(key) { return data[key]; },
         on() {},
+        off() {},
         set() {},
         save_changes() {},
       };

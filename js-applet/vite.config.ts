@@ -2,10 +2,7 @@ import anywidget from "@anywidget/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-// Single ESM build for anywidget.
-// The same widget.js is used by both the anywidget Jupyter path
-// and the standalone HTML fallback (via a lightweight model shim).
-//
+// ESM lib build for anywidget (produces widget.js + style.css).
 // Dev server: `yarn dev` starts Vite with HMR via @anywidget/vite.
 // Python widget points _esm at http://localhost:5173/src/index.tsx?anywidget
 export default defineConfig({
@@ -22,10 +19,10 @@ export default defineConfig({
       formats: ["es"],
       fileName: () => "widget.js",
     },
-    cssCodeSplit: false,
     rollupOptions: {
       output: {
-        // Single file — anywidget loads _esm as a blob, so relative imports won't resolve
+        // anywidget serves _esm via blob URLs — relative chunk imports
+        // won't resolve, so everything must be inlined into a single file.
         inlineDynamicImports: true,
         assetFileNames: "style.[ext]",
       },
