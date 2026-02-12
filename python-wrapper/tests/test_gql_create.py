@@ -27,24 +27,24 @@ def test_from_gql_create_syntax() -> None:
     expected_node_dicts: list[dict[str, dict[str, Any]]] = [
         # node a
         {
-            "top_level": {"caption": "User"},
+            "top_level": {"caption": "User", "color": "#ffdf81"},
             "properties": {"name": "Alice", "age": 23, "labels": ["User"], "__labels": ["Happy"], "id": 42},
         },
         # node b
         {
-            "top_level": {"caption": "User:person"},
+            "top_level": {"caption": "User:person", "color": "#c990c0"},
             "properties": {"name": "Bridget", "caption": "Bridget", "age": 34, "labels": ["User", "person"]},
         },
         # node wizardMan
         {
-            "top_level": {"caption": "User"},
+            "top_level": {"caption": "User", "color": "#ffdf81"},
             "properties": {"name": "Charles: The wizard, man", "hello": True, "height": None, "labels": ["User"]},
         },
         # node d
-        {"top_level": {"caption": "User"}, "properties": {"labels": ["User"]}},
+        {"top_level": {"caption": "User", "color": "#ffdf81"}, "properties": {"labels": ["User"]}},
         # node e
         {
-            "top_level": {"caption": "User"},
+            "top_level": {"caption": "User", "color": "#ffdf81"},
             "properties": {
                 "age": 67,
                 "my_map": {"key": "value", "key2": 3.14, "key3": [1, 2, 3], "key4": {"a": 1, "b": None}},
@@ -53,22 +53,22 @@ def test_from_gql_create_syntax() -> None:
         },
         # node without alias
         {
-            "top_level": {"caption": "User"},
+            "top_level": {"caption": "User", "color": "#ffdf81"},
             "properties": {"age": 42, "pets": ["cat", False, "dog"], "labels": ["User"]},
         },
         # empty node
-        {"top_level": {"caption": ""}, "properties": {"labels": []}},
+        {"top_level": {"caption": "", "color": "#f79767"}, "properties": {"labels": []}},
         # node f
         {
-            "top_level": {"caption": "Person:User"},
+            "top_level": {"caption": "Person:User", "color": "#56c7e4"},
             "properties": {"name": "Fawad", "age": 78, "labels": ["Person", "User"]},
         },
         # node without alias 2
-        {"top_level": {"caption": ""}, "properties": {"age": 29, "labels": []}},
+        {"top_level": {"caption": "", "color": "#f79767"}, "properties": {"age": 29, "labels": []}},
         # anonymous node at source of rel to florentin
-        {"top_level": {"caption": ""}, "properties": {"labels": []}},
+        {"top_level": {"caption": "", "color": "#f79767"}, "properties": {"labels": []}},
         # anonymous node at target rel
-        {"top_level": {"caption": ""}, "properties": {"name": "Florentin", "labels": []}},
+        {"top_level": {"caption": "", "color": "#f79767"}, "properties": {"name": "Florentin", "labels": []}},
     ]
 
     VG = from_gql_create(query)
@@ -126,11 +126,11 @@ def test_from_gql_create_captions() -> None:
             """
     expected_node_dicts: list[dict[str, dict[str, Any]]] = [
         {
-            "top_level": {"caption": "User"},
+            "top_level": {"caption": "User", "color": "#ffdf81"},
             "properties": {"name": "Alice", "age": 23, "labels": ["User"]},
         },
         {
-            "top_level": {"caption": "User:person"},
+            "top_level": {"caption": "User:person", "color": "#c990c0"},
             "properties": {"name": "Bridget", "caption": "Bridget", "age": 34, "labels": ["User", "person"]},
         },
     ]

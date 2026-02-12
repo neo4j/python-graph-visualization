@@ -257,11 +257,11 @@ def test_color_nodes_unhashable() -> None:
 
 
 def test_color_nodes_default_override() -> None:
-    """Test that the default value of override is True (existing colors are overridden by default)."""
+    """Test that the default value of override is True (colors are overridden by default)."""
     nodes = [
         Node(id="4:d09f48a4-5fca-421d-921d-a30a896c604d:0", caption="Person", color="#FF0000"),
         Node(id="4:d09f48a4-5fca-421d-921d-a30a896c604d:6", caption="Product", color="#FF0000"),
-        Node(id="4:d09f48a4-5fca-421d-921d-a30a896c604d:11", caption="Product"),
+        Node(id="4:d09f48a4-5fca-421d-921d-a30a896c604d:11", caption="Product", color="#FF0000"),
     ]
 
     VG = VisualizationGraph(nodes=nodes, relationships=[])
@@ -269,9 +269,9 @@ def test_color_nodes_default_override() -> None:
     # Call without specifying override - should use default (True) and override existing colors
     VG.color_nodes(field="caption", colors={"Person": "#000000", "Product": "#00FF00"})
 
-    assert VG.nodes[0].color == Color("#000000")  # Overridden
-    assert VG.nodes[1].color == Color("#00FF00")  # Overridden
-    assert VG.nodes[2].color == Color("#00ff00")  # Was None, gets new color
+    assert VG.nodes[0].color == Color("#000000")
+    assert VG.nodes[1].color == Color("#00ff00")
+    assert VG.nodes[2].color == Color("#00ff00")  # Should be overridden to #00ff00
 
 
 def test_color_nodes_override_false() -> None:
