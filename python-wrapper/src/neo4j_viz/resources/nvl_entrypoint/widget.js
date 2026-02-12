@@ -50627,7 +50627,7 @@ var GG = (
         return yn(this, function(i) {
           switch (i.label) {
             case 0:
-              return this.options.useQueryString === !1 ? [2, []] : [4, Promise.resolve().then(() => Dve)];
+              return this.options.useQueryString === !1 ? [2, []] : [4, Promise.resolve().then(() => kve)];
             case 1:
               return r = i.sent().queryString, [2, r(this, t)];
           }
@@ -51314,7 +51314,7 @@ function Fle(n, e, t, r, i, a, o) {
             return typeof N == "object";
           }), f = i == null ? void 0 : i.filter(function(N) {
             return typeof N == "function" && typeof N.pluginName == "string";
-          }), kle(e) ? [4, Promise.resolve().then(() => Lve).then(function(N) {
+          }), kle(e) ? [4, Promise.resolve().then(() => jve).then(function(N) {
             return N.tsubMiddleware(e.middlewareSettings.routingRules);
           })] : [3, 2];
         case 1:
@@ -51322,7 +51322,7 @@ function Fle(n, e, t, r, i, a, o) {
         case 2:
           v = void 0, k.label = 3;
         case 3:
-          return d = v, Dle(e) || a.length > 0 ? [4, Promise.resolve().then(() => Yve).then(function(N) {
+          return d = v, Dle(e) || a.length > 0 ? [4, Promise.resolve().then(() => Xve).then(function(N) {
             return N.ajsDestinations(n, e, t.integrations, r, d, a);
           })] : [3, 5];
         case 4:
@@ -51330,13 +51330,13 @@ function Fle(n, e, t, r, i, a, o) {
         case 5:
           y = [], k.label = 6;
         case 6:
-          return p = y, e.legacyVideoPluginsEnabled ? [4, Promise.resolve().then(() => $ve).then(function(N) {
+          return p = y, e.legacyVideoPluginsEnabled ? [4, Promise.resolve().then(() => Kve).then(function(N) {
             return N.loadLegacyVideoPlugins(t);
           })] : [3, 8];
         case 7:
           k.sent(), k.label = 8;
         case 8:
-          return !((u = r.plan) === null || u === void 0) && u.track ? [4, Promise.resolve().then(() => Qve).then(function(N) {
+          return !((u = r.plan) === null || u === void 0) && u.track ? [4, Promise.resolve().then(() => Jve).then(function(N) {
             var L;
             return N.schemaFilter((L = r.plan) === null || L === void 0 ? void 0 : L.track, e);
           })] : [3, 10];
@@ -51360,7 +51360,7 @@ function Fle(n, e, t, r, i, a, o) {
           return k.sent(), Object.entries((l = e.enabledMiddleware) !== null && l !== void 0 ? l : {}).some(function(N) {
             var L = N[1];
             return L;
-          }) ? [4, Promise.resolve().then(() => epe).then(function(N) {
+          }) ? [4, Promise.resolve().then(() => tpe).then(function(N) {
             var L = N.remoteMiddlewares;
             return gn(I, void 0, void 0, function() {
               var F, U;
@@ -89099,7 +89099,7 @@ function Tve() {
     ],
     [n, e]
   );
-  return /* @__PURE__ */ Ie.jsx(Ove, { children: /* @__PURE__ */ Ie.jsx("div", { style: { height: r ?? "600px", width: i ?? "100%" }, children: /* @__PURE__ */ Ie.jsx(
+  return /* @__PURE__ */ Ie.jsx("div", { style: { height: r ?? "600px", width: i ?? "100%" }, children: /* @__PURE__ */ Ie.jsx(
     id,
     {
       nodes: c,
@@ -89110,28 +89110,31 @@ function Tve() {
       pan: s,
       layoutOptions: l
     }
-  ) }) });
+  ) });
 }
-const Cve = OW(Tve), ape = { render: Cve };
-function Ave(n) {
+function Cve() {
+  return /* @__PURE__ */ Ie.jsx(Ove, { children: /* @__PURE__ */ Ie.jsx(Tve, {}) });
+}
+const Ave = OW(Cve), ope = { render: Ave };
+function Rve(n) {
   var e = n;
   return !!(e.ctrlKey || e.shiftKey || e.metaKey || e.button && e.button == 1);
 }
-function Rve(n, e) {
+function Pve(n, e) {
   return !!(n.target === "_blank" && e);
 }
-function Pve(n, e, t, r) {
+function Mve(n, e, t, r) {
   var i = this, a = [];
   return n ? (n instanceof Element ? a = [n] : "toArray" in n ? a = n.toArray() : a = n, a.forEach(function(o) {
     o.addEventListener("click", function(u) {
       var s, l, c = e instanceof Function ? e(o) : e, f = t instanceof Function ? t(o) : t, d = o.getAttribute("href") || o.getAttributeNS("http://www.w3.org/1999/xlink", "href") || o.getAttribute("xlink:href") || ((s = o.getElementsByTagName("a")[0]) === null || s === void 0 ? void 0 : s.getAttribute("href")), v = X3(i.track(c, f, r ?? {}), (l = i.settings.timeout) !== null && l !== void 0 ? l : 500);
-      !Rve(o, d) && !Ave(u) && d && (u.preventDefault ? u.preventDefault() : u.returnValue = !1, v.catch(console.error).then(function() {
+      !Pve(o, d) && !Rve(u) && d && (u.preventDefault ? u.preventDefault() : u.returnValue = !1, v.catch(console.error).then(function() {
         window.location.href = d;
       }).catch(console.error));
     }, !1);
   }), this) : this;
 }
-function Mve(n, e, t, r) {
+function Ive(n, e, t, r) {
   var i = this;
   if (!n)
     return this;
@@ -89153,8 +89156,8 @@ function Mve(n, e, t, r) {
 }
 const l2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  form: Mve,
-  link: Pve
+  form: Ive,
+  link: Mve
 }, Symbol.toStringTag, { value: "Module" }));
 function IF(n, e) {
   return Object.keys(e).reduce(function(t, r) {
@@ -89165,7 +89168,7 @@ function IF(n, e) {
     return t;
   }, {});
 }
-function Ive(n, e) {
+function Dve(n, e) {
   var t = document.createElement("a");
   t.href = e;
   var r = t.search.slice(1), i = r.split("&").reduce(function(_, S) {
@@ -89189,12 +89192,12 @@ function Ive(n, e) {
   }
   return Promise.all(a);
 }
-const Dve = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const kve = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  queryString: Ive
+  queryString: Dve
 }, Symbol.toStringTag, { value: "Module" }));
 var p5 = { exports: {} }, DF;
-function kve() {
+function Nve() {
   return DF || (DF = 1, (function(n, e) {
     /*! For license information please see tsub.js.LICENSE.txt */
     (function(t, r) {
@@ -89971,7 +89974,7 @@ function kve() {
     }));
   })(p5)), p5.exports;
 }
-var g5 = /* @__PURE__ */ kve(), Nve = function(n) {
+var g5 = /* @__PURE__ */ Nve(), Lve = function(n) {
   return function(e) {
     var t = e.payload, r = e.integration, i = e.next, a = new g5.Store(n), o = a.getRulesByDestinationName(r);
     o.forEach(function(u) {
@@ -89981,9 +89984,9 @@ var g5 = /* @__PURE__ */ kve(), Nve = function(n) {
     }), i(t);
   };
 };
-const Lve = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const jve = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tsubMiddleware: Nve
+  tsubMiddleware: Lve
 }, Symbol.toStringTag, { value: "Module" }));
 function oW(n, e) {
   var t, r;
@@ -89995,10 +89998,10 @@ function uW(n) {
 function sW(n, e) {
   return e === void 0 && (e = !1), e ? btoa(n).replace(/=/g, "") : void 0;
 }
-function jve(n) {
+function Bve(n) {
   return ("Integration" in n ? n.Integration : n).prototype.name;
 }
-function Bve(n, e, t) {
+function Fve(n, e, t) {
   var r, i;
   try {
     var a = ((i = (r = window == null ? void 0 : window.performance) === null || r === void 0 ? void 0 : r.getEntriesByName(n, "resource")) !== null && i !== void 0 ? i : [])[0];
@@ -90008,7 +90011,7 @@ function Bve(n, e, t) {
   } catch {
   }
 }
-function Fve(n, e, t) {
+function Uve(n, e, t) {
   var r;
   if ("Integration" in n) {
     var i = {
@@ -90024,7 +90027,7 @@ function Fve(n, e, t) {
   var a = new r(e);
   return a.analytics = t, a;
 }
-function Uve(n, e, t, r) {
+function zve(n, e, t, r) {
   return gn(this, void 0, void 0, function() {
     var i, a, o, u, s, l;
     return yn(this, function(c) {
@@ -90034,7 +90037,7 @@ function Uve(n, e, t, r) {
         case 1:
           return c.trys.push([1, 3, , 4]), [4, jb(u)];
         case 2:
-          return c.sent(), Bve(u, n, e), [3, 4];
+          return c.sent(), Fve(u, n, e), [3, 4];
         case 3:
           throw s = c.sent(), n.stats.gauge("legacy_destination_time", -1, ["plugin:".concat(e), "failed"]), s;
         case 4:
@@ -90054,7 +90057,7 @@ function Uve(n, e, t, r) {
     });
   });
 }
-function zve(n, e, t) {
+function qve(n, e, t) {
   return gn(this, void 0, void 0, function() {
     var r, i, a, o;
     return yn(this, function(u) {
@@ -90062,18 +90065,18 @@ function zve(n, e, t) {
     });
   });
 }
-function qve(n) {
+function Gve(n) {
   var e, t, r, i;
   return (i = (t = (e = n == null ? void 0 : n.versionSettings) === null || e === void 0 ? void 0 : e.override) !== null && t !== void 0 ? t : (r = n == null ? void 0 : n.versionSettings) === null || r === void 0 ? void 0 : r.version) !== null && i !== void 0 ? i : "latest";
 }
-var Gve = function(n, e) {
+var Hve = function(n, e) {
   var t, r = e.type, i = e.bundlingStatus, a = e.versionSettings, o = i !== "unbundled" && (r === "browser" || ((t = a == null ? void 0 : a.componentTypes) === null || t === void 0 ? void 0 : t.includes("browser")));
   return !n.startsWith("Segment") && n !== "Iterable" && o;
-}, Hve = function(n, e) {
+}, Vve = function(n, e) {
   var t = e.All === !1 && e[n] === void 0;
   return e[n] === !1 || t;
 };
-function Vve(n, e) {
+function Wve(n, e) {
   return gn(this, void 0, void 0, function() {
     var t, r = this;
     return yn(this, function(i) {
@@ -90143,11 +90146,11 @@ var lW = (
                 /*return*/
               ] : (r = this.integrationSource) !== null && r !== void 0 ? (a = r, [3, 3]) : [3, 1];
             case 1:
-              return [4, Uve(e, this.name, this.version, this.options.obfuscate)];
+              return [4, zve(e, this.name, this.version, this.options.obfuscate)];
             case 2:
               a = u.sent(), u.label = 3;
             case 3:
-              i = a, this.integration = Fve(i, this.settings, t), this.onReady = new Promise(function(s) {
+              i = a, this.integration = Uve(i, this.settings, t), this.onReady = new Promise(function(s) {
                 var l = function() {
                   o._ready = !0, s(!0);
                 };
@@ -90177,7 +90180,7 @@ var lW = (
         });
       });
     }, n.prototype.unload = function(e, t) {
-      return zve(this.name, this.version, this.options.obfuscate);
+      return qve(this.name, this.version, this.options.obfuscate);
     }, n.prototype.addMiddleware = function() {
       for (var e, t = [], r = 0; r < arguments.length; r++)
         t[r] = arguments[r];
@@ -90278,7 +90281,7 @@ var lW = (
                 return _y() || this._ready !== !0 || this._initialized !== !0 ? (this.scheduleFlush(), [
                   2
                   /*return*/
-                ]) : (this.flushing = !0, t = this, [4, Vve(this, this.buffer)]);
+                ]) : (this.flushing = !0, t = this, [4, Wve(this, this.buffer)]);
               case 1:
                 return t.buffer = r.sent(), this.flushing = !1, this.buffer.todo > 0 && this.scheduleFlush(), [
                   2
@@ -90291,34 +90294,34 @@ var lW = (
     }, n;
   })()
 );
-function Wve(n, e, t, r, i, a) {
+function Yve(n, e, t, r, i, a) {
   var o, u;
   if (t === void 0 && (t = {}), r === void 0 && (r = {}), bG())
     return [];
   e.plan && (r = r ?? {}, r.plan = e.plan);
   var s = (u = (o = e.middlewareSettings) === null || o === void 0 ? void 0 : o.routingRules) !== null && u !== void 0 ? u : [], l = e.integrations, c = r.integrations, f = VG(e, r ?? {}), d = a == null ? void 0 : a.reduce(function(p, y) {
     var m;
-    return Lt(Lt({}, p), (m = {}, m[jve(y)] = y, m));
+    return Lt(Lt({}, p), (m = {}, m[Bve(y)] = y, m));
   }, {}), v = new Set(xu(xu([], Object.keys(l).filter(function(p) {
-    return Gve(p, l[p]);
+    return Hve(p, l[p]);
   }), !0), Object.keys(d || {}).filter(function(p) {
     return td(l[p]) || td(c == null ? void 0 : c[p]);
   }), !0));
   return Array.from(v).filter(function(p) {
-    return !Hve(p, t);
+    return !Vve(p, t);
   }).map(function(p) {
-    var y = l[p], m = qve(y), b = new lW(p, m, n, f[p], r, d == null ? void 0 : d[p]), x = s.filter(function(_) {
+    var y = l[p], m = Gve(y), b = new lW(p, m, n, f[p], r, d == null ? void 0 : d[p]), x = s.filter(function(_) {
       return _.destinationName === p;
     });
     return x.length > 0 && i && b.addMiddleware(i), b;
   });
 }
-const Yve = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const Xve = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   LegacyDestination: lW,
-  ajsDestinations: Wve
+  ajsDestinations: Yve
 }, Symbol.toStringTag, { value: "Module" }));
-function Xve(n) {
+function $ve(n) {
   return gn(this, void 0, void 0, function() {
     var e;
     return yn(this, function(t) {
@@ -90326,7 +90329,7 @@ function Xve(n) {
         case 0:
           return [
             4,
-            Promise.resolve().then(() => rpe)
+            Promise.resolve().then(() => ipe)
             // This is super gross, but we need to support the `window.analytics.plugins` namespace
             // that is linked in the segment docs in order to be backwards compatible with ajs-classic
             // @ts-expect-error
@@ -90340,11 +90343,11 @@ function Xve(n) {
     });
   });
 }
-const $ve = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const Kve = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  loadLegacyVideoPlugins: Xve
+  loadLegacyVideoPlugins: $ve
 }, Symbol.toStringTag, { value: "Module" }));
-function Kve(n, e) {
+function Zve(n, e) {
   var t, r;
   if (!n || !Object.keys(n))
     return {};
@@ -90364,13 +90367,13 @@ function Kve(n, e) {
     ), o;
   }, {});
 }
-function Zve(n, e) {
+function Qve(n, e) {
   function t(r) {
     var i = n, a = r.event.event;
     if (i && a) {
       var o = i[a];
       if (oW(i, o)) {
-        var u = Kve(o, e);
+        var u = Zve(o, e);
         r.updateEvent("integrations", Lt(Lt(Lt({}, r.event.integrations), o == null ? void 0 : o.integrations), u));
       } else
         return r.updateEvent("integrations", Lt(Lt({}, r.event.integrations), { All: !1, "Segment.io": !0 })), r;
@@ -90394,11 +90397,11 @@ function Zve(n, e) {
     group: t
   };
 }
-const Qve = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const Jve = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  schemaFilter: Zve
+  schemaFilter: Qve
 }, Symbol.toStringTag, { value: "Module" }));
-function Jve(n, e, t) {
+function epe(n, e, t) {
   var r;
   return gn(this, void 0, void 0, function() {
     var i, a, o, u, s, l = this;
@@ -90444,12 +90447,12 @@ function Jve(n, e, t) {
     });
   });
 }
-const epe = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const tpe = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  remoteMiddlewares: Jve
+  remoteMiddlewares: epe
 }, Symbol.toStringTag, { value: "Module" }));
 var y5 = { exports: {} }, kF;
-function tpe() {
+function npe() {
   return kF || (kF = 1, (function(n, e) {
     (function(t, r) {
       n.exports = r();
@@ -90724,11 +90727,11 @@ function tpe() {
     }));
   })(y5)), y5.exports;
 }
-var cW = tpe();
-const npe = /* @__PURE__ */ Wp(cW), rpe = /* @__PURE__ */ NF({
+var cW = npe();
+const rpe = /* @__PURE__ */ Wp(cW), ipe = /* @__PURE__ */ NF({
   __proto__: null,
-  default: npe
+  default: rpe
 }, [cW]);
 export {
-  ape as default
+  ope as default
 };
