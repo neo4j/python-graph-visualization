@@ -13,14 +13,14 @@ If you have not yet created a `VisualizationGraph` object, refer to one of the f
 == The `render` method
 
 Once you have a `VisualizationGraph` object, you can render it using the `render` method.
-This will return an `IPython.display.HTML` object that will be displayed in an environment that supports HTML rendering, such as
-Jupyter notebooks or Streamlit applications.
+This will return a HTML object that will be displayed in an environment that supports HTML rendering, such as
+Jupyter notebooks or streamlit application.
 
-All parameters of the `render` method are optional, and the full list of parameters is listed in the API
+All parameter of the `render` method are optional, and the full list of parameters of them is listed in the API
 reference: link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.render[neo4j_viz.VisualizationGraph.render()].
 
 The most important parameters to be aware of are the `width` and `height` parameters, which control the size of
-the rendered graph.
+HTML object that will be rendered.
 You can provide these either as a percentage of the available space (eg. `"80%"`), or as an absolute pixel value
 (eg. `"800px"`).
 
@@ -38,28 +38,18 @@ It defaults to 10.000, because rendering a large number of nodes can be slow and
 However, you can increase this value if you are confident that your environment can handle the scale.
 In this case you might also want to pass `Renderer.WEB_GL` as the `renderer` to improve performance.
 
-A tooltip showing IDs and properties will be shown when mouse hovering over a node or relationship.
+By default a tooltip showing IDs and properties will be shown when mouse hovering over a node or relationship.
+But you can disable this by passing `show_hover_tooltip=False`.
 
 === Examples
 
 Refer to the xref:getting-started.adoc[] and the link:{tutorials-docs-uri}[tutorials] for
 examples of `render` method usage.
 
-== The `render_widget` method
-
-The `render_widget` method returns a `GraphWidget` (anywidget) that provides two-way data sync between Python and JavaScript.
-This works in JupyterLab, Notebook 7, VS Code, and Colab.
-It accepts the same parameters as `render`.
-
-[source, python]
-----
-widget = VG.render_widget(initial_zoom=2)
-----
-
 == Exporting to HTML
 
-The object returned by the `render` method is an `IPython.display.HTML` object.
-In addition to being displayed in a Jupyter notebook or Streamlit application, it can also be saved as an HTML file.
+The object returned by the `render` method is a `IPython.display.HTML` object.
+In addition to being displayed in a Jupyter notebook or streamlit application, it can also be saved as an HTML file.
 This could be useful if you want to share the visualization with others or embed it in a web page.
 
 To save the HTML data to a file, you can use the `data` attribute of the HTML object:
