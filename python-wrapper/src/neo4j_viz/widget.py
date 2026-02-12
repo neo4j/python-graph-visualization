@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import pathlib
-from typing import Union
+from typing import Any, Union
 
 import anywidget
 import traitlets
@@ -11,7 +11,7 @@ from .node import Node
 from .relationship import Relationship
 
 
-def _serialize_entity(entity: Union[Node, Relationship]) -> dict[str, object]:
+def _serialize_entity(entity: Union[Node, Relationship]) -> dict[str, Any]:
     """Convert a Node or Relationship to a JSON-serializable dict.
 
     Returns a dict (not a JSON string) because traitlets.List expects Python objects,
@@ -50,8 +50,8 @@ class GraphWidget(anywidget.AnyWidget):
     _esm = _STATIC / "widget.js"
     _css = _STATIC / "style.css"
 
-    nodes: list[dict[str, object]] = traitlets.List([]).tag(sync=True)  # type: ignore[assignment]
-    relationships: list[dict[str, object]] = traitlets.List([]).tag(sync=True)  # type: ignore[assignment]
+    nodes: list[dict[str, Any]] = traitlets.List([]).tag(sync=True)  # type: ignore[assignment]
+    relationships: list[dict[str, Any]] = traitlets.List([]).tag(sync=True)  # type: ignore[assignment]
     width = traitlets.Unicode("100%").tag(sync=True)
     height = traitlets.Unicode("600px").tag(sync=True)
     options = traitlets.Dict({}).tag(sync=True)
