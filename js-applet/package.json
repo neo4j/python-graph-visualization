@@ -1,37 +1,20 @@
 {
   "name": "nvl-python-wrapper",
-  "version": "0.3.7",
-  "type": "module",
+  "version": "0.3.6-800b1623",
   "scripts": {
-    "dev": "concurrently -n widget,html,jupyter -c cyan,magenta,green \"npm:dev:widget\" \"npm:dev:html\" \"npm:dev:jupyter\"",
-    "dev:widget": "vite build --watch",
-    "dev:html": "vite build --watch --config vite.config.html.ts",
-    "dev:jupyter": "cd ../python-wrapper && ANYWIDGET_HMR=1 uv run jupyter lab ../examples/",
-    "build": "tsc && vite build && vite build --config vite.config.html.ts",
-    "build:widget": "vite build",
-    "build:html": "vite build --config vite.config.html.ts"
+    "build": "webpack",
+    "postbuild": "cp dist/base.js ../python-wrapper/src/neo4j_viz/resources/nvl_entrypoint"
   },
   "devDependencies": {
-    "@anywidget/vite": "^0.2.2",
-    "@types/node": "^25.2.3",
-    "@types/react": "^19.2.13",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^4.5.2",
-    "concurrently": "^9.2.1",
+    "babel-loader": "^10.0.0",
+    "ts-loader": "^9.4.4",
+    "ts-node": "^10.9.2",
     "typescript": "5.9.3",
-    "vite": "^6.3.5",
-    "vite-plugin-singlefile": "^2.3.0"
+    "webpack": "^5.75.0",
+    "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "@anywidget/react": "^0.2.0",
-    "@neo4j-ndl/base": "^4.7.1",
-    "@neo4j-ndl/react": "^4.7.3",
-    "@neo4j-ndl/react-graph": "^1.2.8",
-    "@neo4j-nvl/base": "^1.0.0",
-    "@neo4j-nvl/interaction-handlers": "^1.0.0",
-    "@neo4j-nvl/react": "^1.0.0",
-    "@tanstack/react-table": "^8.20.5",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "@neo4j-nvl/base": "1.0.0",
+    "@neo4j-nvl/interaction-handlers": "1.0.0"
   }
 }
