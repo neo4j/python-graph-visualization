@@ -27,4 +27,4 @@ out/*
 .idea
 
 .dmypy.json
-python-wrapper/uv.lock
+.virtual_documents
