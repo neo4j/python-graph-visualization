@@ -9,7 +9,6 @@ If you're not already a member, sign up!
 
 We love our community and wouldn't be where we are without you.
 
-
 ## Need to raise an issue?
 
 Where you raise an issue depends largely on the nature of the problem.
@@ -34,7 +33,6 @@ Include as much information as you can in any request you make:
 - What errors are you seeing?
 - What solutions have you tried already?
 
-
 ## Want to contribute?
 
 If you want to contribute a pull request, we have a little bit of process you'll need to follow:
@@ -50,45 +48,34 @@ We can't guarantee that we'll accept pull requests and may ask you to make some 
 Occasionally, we might also have logistical, commercial, or legal reasons why we can't accept your work but we'll try to find an alternative way for you to contribute in that case.
 Remember that many community members have become regular contributors and some are now even Neo employees!
 
+## Quick start
+
+Using [uv](https://docs.astral.sh/uv/):
+
+```sh
+cd js-applet
+yarn && yarn dev
+```
+
+This starts Vite watch builds and Jupyter Lab with hot module reloading. Changes to `js-applet/src/` will auto-reload in active widget cells.
 
 ## Building the project locally
 
 To build the Python packages, run inside the `python-wrapper` folder:
 
 ```sh
-pip install . # run with --editable for development mode
-```
-
-Alternatively, you can use [uv](https://docs.astral.sh/uv/) which also installs dev tools (ruff, mypy, pytest, etc.):
-
-```sh
 cd python-wrapper
-uv sync --group dev
+uv sync --group dev    # Recommended: installs dev tools (ruff, mypy, pytest, etc.)
+# or: pip install -e .
 ```
 
-To rebuild the JavaScript applet, run inside the `js-applet` folder:
+To rebuild the JavaScript applet:
 
 ```sh
+cd js-applet
 yarn          # Install JavaScript dependencies
 yarn build    # Build JavaScript resources to be used by Python code
 ```
-
-This will build the app and copy the relevant files to the python wrapper
-
-### Dev server (hot reloading)
-
-For live-reloading the JS component in a Jupyter notebook while developing:
-
-```sh
-# Terminal 1 — start Vite dev server
-cd js-applet
-yarn dev               # serves on http://localhost:5173
-
-# Terminal 2 — launch Jupyter with dev mode enabled
-NEO4J_VIZ_DEV=1 jupyter lab
-```
-
-When `NEO4J_VIZ_DEV=1` is set, the widget loads JS from the Vite dev server instead of the bundled files. Any change to `js-applet/src/` will hot-reload in active widget cells without re-executing them.
 
 ## Specifically for this project
 
@@ -114,14 +101,15 @@ pytest python-wrapper/tests
 Additionally, there are integration tests that require an external data source.
 These require additional setup and configuration, such as environment variables specifying connection details.
 
-
 For a local Neo4j instance with GDS installed, execute:
+
 ```sh
 cd test-envs/neo4j-gds
 docker compose up -d
 ```
 
 To run tests requiring a Neo4j DB instance with GDS installed, execute:
+
 ```sh
 export NEO4J_URI=localhost:7687 # or credentials for Aura API
 cd python-wrapper/
@@ -134,7 +122,6 @@ To run tests requiring a Snowflake connection, execute:
 cd python-wrapper/
 pytest tests/ --include-snowflake
 ```
-
 
 ### Project structure
 
@@ -164,14 +151,12 @@ For convenience there are a couple of scripts:
 
 ```
 
-
 ## Got an idea for a new project?
 
 If you have an idea for a new tool or library, start by talking to other people in the community.
 Chances are that someone has a similar idea or may have already started working on it.
 The best software comes from getting like minds together to solve a problem.
 And we'll do our best to help you promote and co-ordinate your Neo4j ecosystem projects.
-
 
 ## Further reading
 
