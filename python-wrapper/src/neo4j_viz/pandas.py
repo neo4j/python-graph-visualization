@@ -134,8 +134,12 @@ def from_dfs(
     Create a VisualizationGraph from pandas DataFrames representing a graph.
 
     All columns will be included in the visualization graph.
-    If the columns are named as the fields of the `Node` or `Relationship` classes, they will be included as
-    top level fields of the respective objects. Otherwise, they will be included in the `properties` dictionary.
+    The following columns will be treated as fields:
+
+        * `id` for the node_dfs
+        * `id`, `source`, `target` for the rel_dfs
+
+    Other columns will be included in the `properties` dictionary on the respective node or relationship objects.
 
     Parameters
     ----------
@@ -148,4 +152,4 @@ def from_dfs(
 
     """
 
-    return _from_dfs(node_dfs, rel_dfs, dropna=False, map_all_fields=True)
+    return _from_dfs(node_dfs, rel_dfs, dropna=False)
