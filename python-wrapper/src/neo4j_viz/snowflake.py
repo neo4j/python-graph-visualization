@@ -37,6 +37,7 @@ from snowflake.snowpark.types import (
 )
 
 from neo4j_viz import VisualizationGraph
+from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace
 from neo4j_viz.pandas import from_dfs
 
 
@@ -319,7 +320,7 @@ def from_snowflake(
 
     * The caption of the nodes will be set to the table name.
     * The caption of the relationships will be set to the table name.
-    * Nodes will be auto-colored by their caption in the JavaScript visualization.
+    * The color of the nodes will be set based on the caption, unless there are more than 12 node tables used.
 
     Otherwise, columns will be included as properties on the nodes and relationships.
 
@@ -343,5 +344,9 @@ def from_snowflake(
         node.caption = node.properties.pop("table")
     for rel in VG.relationships:
         rel.caption = rel.properties.pop("table")
+
+    number_of_colors = node_df["table"].drop_duplicates().count()
+    if number_of_colors <= len(NEO4J_COLORS_DISCRETE):
+        VG.color_nodes(field="caption", color_space=ColorSpace.DISCRETE)
 
     return VG
