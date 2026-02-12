@@ -12,6 +12,12 @@ from .relationship import Relationship
 
 
 def _serialize_entity(entity: Union[Node, Relationship]) -> dict[str, object]:
+    """Convert a Node or Relationship to a JSON-serializable dict.
+
+    Returns a dict (not a JSON string) because traitlets.List expects Python objects,
+    not pre-serialized strings. Traitlets handles JSON serialization for transport to JS.
+    See: https://traitlets.readthedocs.io/en/stable/config.html#serializing-values
+    """
     try:
         entity_dict = entity.to_dict()
         # Verify it's JSON-serializable

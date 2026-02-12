@@ -28,13 +28,6 @@ def _load_template() -> str:
 
 
 class NVL:
-    """HTML fallback renderer for standalone HTML / Streamlit.
-
-    Uses the same Vite-built HTML template as the dev harness (index.html).
-    Python injects graph data via window.__NEO4J_VIZ_DATA__ — no blob URLs,
-    no manual JS/CSS inlining.
-    """
-
     def __init__(self) -> None:
         self._template = _load_template()
 
@@ -42,16 +35,16 @@ class NVL:
         self,
         nodes: list[Node],
         relationships: list[Relationship],
+        render_options: dict[str, object] | None,
         width: str,
         height: str,
-        options: dict[str, object] | None = None,
     ) -> HTML:
         data_dict: dict[str, object] = {
             "nodes": [_serialize_entity(node) for node in nodes],
             "relationships": [_serialize_entity(rel) for rel in relationships],
             "width": width,
             "height": height,
-            "options": options or {},
+            "options": render_options or {},
         }
         data_json = json.dumps(data_dict)
         container_id = f"neo4j-viz-{uuid.uuid4().hex[:12]}"
