@@ -11,6 +11,9 @@ const data: Record<string, any> =
     | Record<string, unknown>
     | undefined) ?? {};
 
+// TODO if data is missing, show an error message with instructions on injecting data
+// TODO cleanup this file and types
+
 // Model shim — mimics anywidget's model interface for the static HTML path.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const model: any = {

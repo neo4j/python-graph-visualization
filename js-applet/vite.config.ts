@@ -15,7 +15,7 @@ export default defineConfig({
     outDir: "../python-wrapper/src/neo4j_viz/resources/nvl_entrypoint",
     emptyOutDir: false,
     lib: {
-      entry: ["src/index.tsx"],
+      entry: ["src/graph-widget.tsx"],
       formats: ["es"],
       fileName: () => "widget.js",
     },
