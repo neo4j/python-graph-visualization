@@ -8,8 +8,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react(), anywidget()],
   define: {
-    // TODO ensure this is correct
-    // React/NDL reference process.env.NODE_ENV at runtime
+    // React reference process.env.NODE_ENV at runtime
     "process.env.NODE_ENV": JSON.stringify("production"),
   },
   build: {
@@ -21,10 +20,8 @@ export default defineConfig({
       fileName: () => "widget.js",
     },
     rollupOptions: {
-      // TODO ensure this is correct
       output: {
-        // anywidget serves _esm via blob URLs — relative chunk imports
-        // won't resolve, so everything must be inlined into a single file.
+        // Required to help bundle the widget.js and style.css into a single file
         inlineDynamicImports: true,
         assetFileNames: "style.[ext]",
       },
