@@ -84,7 +84,7 @@ class VisualizationGraph:
         self.nodes = nodes
         self.relationships = relationships
 
-    def _build_js_options(
+    def _build_render_options(
         self,
         layout: Layout | None,
         layout_options: dict[str, Any] | LayoutOptions | None,
@@ -95,7 +95,7 @@ class VisualizationGraph:
         max_zoom: float,
         allow_dynamic_min_zoom: bool,
         max_allowed_nodes: int,
-    ) -> dict[str, Any]:
+    ) -> RenderOptions:
         """Shared validation + option building for render / render_widget."""
         num_nodes = len(self.nodes)
         if num_nodes > max_allowed_nodes:
@@ -117,7 +117,7 @@ class VisualizationGraph:
         else:
             layout_options_typed = layout_options
 
-        render_options = RenderOptions(
+        return RenderOptions(
             layout=layout,
             layout_options=layout_options_typed,
             renderer=renderer,
@@ -128,7 +128,6 @@ class VisualizationGraph:
             max_zoom=max_zoom,
             allow_dynamic_min_zoom=allow_dynamic_min_zoom,
         )
-        return render_options.to_js_options()
 
     def render(
         self,
@@ -181,15 +180,22 @@ class VisualizationGraph:
         Basic rendering of a VisualizationGraph:
         >>> from neo4j_viz import Node, Relationship, VisualizationGraph
         """
-        js_options = self._build_js_options(
-            layout, layout_options, renderer, pan_position, initial_zoom,
-            min_zoom, max_zoom, allow_dynamic_min_zoom, max_allowed_nodes,
+        render_options = self._build_render_options(
+            layout,
+            layout_options,
+            renderer,
+            pan_position,
+            initial_zoom,
+            min_zoom,
+            max_zoom,
+            allow_dynamic_min_zoom,
+            max_allowed_nodes,
         )
 
         return NVL().render(
             self.nodes,
             self.relationships,
-            js_options,
+            render_options,
             width,
             height,
         )
@@ -239,9 +245,16 @@ class VisualizationGraph:
         max_allowed_nodes:
             The maximum allowed number of nodes to render.
         """
-        js_options = self._build_js_options(
-            layout, layout_options, renderer, pan_position, initial_zoom,
-            min_zoom, max_zoom, allow_dynamic_min_zoom, max_allowed_nodes,
+        render_options = self._build_render_options(
+            layout,
+            layout_options,
+            renderer,
+            pan_position,
+            initial_zoom,
+            min_zoom,
+            max_zoom,
+            allow_dynamic_min_zoom,
+            max_allowed_nodes,
         )
 
         return GraphWidget.from_graph_data(
@@ -249,7 +262,7 @@ class VisualizationGraph:
             self.relationships,
             width=width,
             height=height,
-            options=js_options,
+            options=render_options.to_js_options(),
         )
 
     def toggle_nodes_pinned(self, pinned: dict[NodeIdType, bool]) -> None:

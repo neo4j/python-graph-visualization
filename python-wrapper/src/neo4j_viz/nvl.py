@@ -7,6 +7,7 @@ from importlib.resources import files
 from IPython.display import HTML
 
 from .node import Node
+from .options import RenderOptions
 from .relationship import Relationship
 from .widget import _serialize_entity
 
@@ -35,7 +36,7 @@ class NVL:
         self,
         nodes: list[Node],
         relationships: list[Relationship],
-        render_options: dict[str, object] | None,
+        render_options: RenderOptions,
         width: str,
         height: str,
     ) -> HTML:
@@ -44,13 +45,13 @@ class NVL:
             "relationships": [_serialize_entity(rel) for rel in relationships],
             "width": width,
             "height": height,
-            "options": render_options or {},
+            "options": render_options.to_js_options(),
         }
         data_json = json.dumps(data_dict)
         container_id = f"neo4j-viz-{uuid.uuid4().hex[:12]}"
 
         # Inject data and unique container ID into the built template.
-        data_script = f'<script>window.__NEO4J_VIZ_DATA__ = {data_json};</script>'
+        data_script = f"<script>window.__NEO4J_VIZ_DATA__ = {data_json};</script>"
         html = self._template
         html = html.replace("</head>", f"{data_script}\n</head>", 1)
         html = html.replace(_CONTAINER_ID, container_id)
