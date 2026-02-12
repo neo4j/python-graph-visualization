@@ -4,7 +4,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite build --watch",
-    "dev:server": "vite",
     "build": "vite build && vite build --config vite.config.html.ts",
     "build:widget": "vite build",
     "build:html": "vite build --config vite.config.html.ts"

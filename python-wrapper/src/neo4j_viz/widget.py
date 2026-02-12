@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import json
-import os
-from importlib.resources import files
-from pathlib import Path
+import pathlib
 from typing import Union
 
 import anywidget
@@ -11,9 +9,6 @@ import traitlets
 
 from .node import Node
 from .relationship import Relationship
-
-_DEV = os.environ.get("NEO4J_VIZ_DEV", "").strip() not in ("", "0", "false")
-_DEV_SERVER = os.environ.get("NEO4J_VIZ_DEV_SERVER", "http://localhost:5173")
 
 
 def _serialize_entity(entity: Union[Node, Relationship]) -> dict[str, object]:
@@ -33,26 +28,7 @@ def _serialize_entity(entity: Union[Node, Relationship]) -> dict[str, object]:
         return entity_dict  # type: ignore[return-value]
 
 
-def _resource_path(filename: str) -> Path:
-    base_folder = files("neo4j_viz")
-    resource_folder = base_folder / "resources"
-    nvl_entry_point = resource_folder / "nvl_entrypoint"
-    path = nvl_entry_point / filename
-    return Path(str(path))
-
-
-def _get_esm() -> Union[str, Path]:
-    """Return the ESM source — Vite dev server URL or bundled file path."""
-    if _DEV:
-        return f"{_DEV_SERVER}/src/index.tsx?anywidget"
-    return _resource_path("widget.js")
-
-
-def _get_css() -> Union[str, Path]:
-    """Return the CSS source — empty string in dev (Vite serves it) or bundled file."""
-    if _DEV:
-        return ""
-    return _resource_path("style.css")
+_STATIC = pathlib.Path(__file__).parent / "resources" / "nvl_entrypoint"
 
 
 class GraphWidget(anywidget.AnyWidget):  # type: ignore[misc]
@@ -61,12 +37,12 @@ class GraphWidget(anywidget.AnyWidget):  # type: ignore[misc]
     Uses anywidget to render a React-based graph component with
     two-way data sync between Python and JavaScript.
 
-    Dev mode: set NEO4J_VIZ_DEV=1 and run `yarn dev` in js-applet/
+    Dev mode: set ANYWIDGET_HMR=1 and run ``yarn dev`` in js-applet/
     for hot module replacement during development.
     """
 
-    _esm = _get_esm()
-    _css = _get_css()
+    _esm = _STATIC / "widget.js"
+    _css = _STATIC / "style.css"
 
     nodes = traitlets.List([]).tag(sync=True)  # type: ignore[assignment]
     relationships = traitlets.List([]).tag(sync=True)  # type: ignore[assignment]
