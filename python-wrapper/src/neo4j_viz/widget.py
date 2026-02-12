@@ -22,7 +22,7 @@ def _serialize_entity(entity: Union[Node, Relationship]) -> dict[str, object]:
         entity_dict = entity.to_dict()
         # Verify it's JSON-serializable
         json.dumps(entity_dict)
-        return entity_dict  # type: ignore[return-value]
+        return entity_dict
     except TypeError:
         props_as_strings: dict[str, str] = {}
         for k, v in entity_dict["properties"].items():
@@ -31,13 +31,13 @@ def _serialize_entity(entity: Union[Node, Relationship]) -> dict[str, object]:
             except TypeError:
                 props_as_strings[k] = str(v)
         entity_dict["properties"].update(props_as_strings)
-        return entity_dict  # type: ignore[return-value]
+        return entity_dict
 
 
 _STATIC = pathlib.Path(__file__).parent / "resources" / "nvl_entrypoint"
 
 
-class GraphWidget(anywidget.AnyWidget):  # type: ignore[misc]
+class GraphWidget(anywidget.AnyWidget):
     """Jupyter widget for interactive graph visualization.
 
     Uses anywidget to render a React-based graph component with
@@ -50,10 +50,10 @@ class GraphWidget(anywidget.AnyWidget):  # type: ignore[misc]
     _esm = _STATIC / "widget.js"
     _css = _STATIC / "style.css"
 
-    nodes = traitlets.List([]).tag(sync=True)  # type: ignore[assignment]
-    relationships = traitlets.List([]).tag(sync=True)  # type: ignore[assignment]
-    width = traitlets.Unicode("100%").tag(sync=True)  # type: ignore[assignment]
-    height = traitlets.Unicode("600px").tag(sync=True)  # type: ignore[assignment]
+    nodes: list[dict[str, object]] = traitlets.List([]).tag(sync=True)  # type: ignore[assignment]
+    relationships: list[dict[str, object]] = traitlets.List([]).tag(sync=True)  # type: ignore[assignment]
+    width = traitlets.Unicode("100%").tag(sync=True)
+    height = traitlets.Unicode("600px").tag(sync=True)
     options = traitlets.Dict({}).tag(sync=True)
 
     @classmethod
