@@ -2,7 +2,7 @@ import { createRender, useModelState } from "@anywidget/react";
 import "@neo4j-ndl/base/lib/neo4j-ds-styles.css";
 import { GraphVisualization } from "@neo4j-ndl/react-graph";
 import type { Layout, NvlOptions } from "@neo4j-nvl/base";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   SerializedNode,
   SerializedRelationship,
@@ -11,7 +11,9 @@ import {
 } from "./data-transforms";
 import { GraphErrorBoundary } from "./graph-error-boundary";
 
-type GraphOptions = {
+export type Theme = "dark" | "light" | "auto";
+
+export type GraphOptions = {
   layout?: Layout;
   nvlOptions?: Partial<NvlOptions>;
   zoom?: number;
@@ -19,13 +21,47 @@ type GraphOptions = {
   layoutOptions?: Record<string, unknown>;
 };
 
+export type WidgetData = {
+  nodes: SerializedNode[];
+  relationships: SerializedRelationship[];
+  options: GraphOptions;
+  height: string;
+  width: string;
+  theme: Theme;
+};
+
+function detectTheme(): "light" | "dark" {
+  const backgroundColorString = window
+    .getComputedStyle(document.body, null)
+    .getPropertyValue("background-color");
+  const colorsArray = backgroundColorString.match(/\d+/g);
+  if (!colorsArray || colorsArray.length < 3) {
+    return "light";
+  }
+  const brightness =
+    Number(colorsArray[0]) * 0.2126 +
+    Number(colorsArray[1]) * 0.7152 +
+    Number(colorsArray[2]) * 0.0722;
+  return brightness < 128 ? "dark" : "light";
+}
+
+function useTheme(theme: Theme) {
+  useEffect(() => {
+    const resolved = theme === "auto" ? detectTheme() : theme;
+    document.documentElement.className = resolved;
+  }, [theme]);
+}
+
 function GraphWidget() {
-  const [nodes] = useModelState<SerializedNode[]>("nodes");
+  const [nodes] = useModelState<WidgetData["nodes"]>("nodes");
   const [relationships] =
-    useModelState<SerializedRelationship[]>("relationships");
-  const [options] = useModelState<GraphOptions>("options");
-  const [height] = useModelState<string>("height");
-  const [width] = useModelState<string>("width");
+    useModelState<WidgetData["relationships"]>("relationships");
+  const [options] = useModelState<WidgetData["options"]>("options");
+  const [height] = useModelState<WidgetData["height"]>("height");
+  const [width] = useModelState<WidgetData["width"]>("width");
+  const [theme] = useModelState<WidgetData["theme"]>("theme");
+
+  useTheme(theme ?? "auto");
 
   const { layout, nvlOptions, zoom, pan, layoutOptions } = options ?? {};
   const [neoNodes, neoRelationships] = useMemo(
