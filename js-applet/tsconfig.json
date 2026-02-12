@@ -9,10 +9,9 @@
     "allowSyntheticDefaultImports": true,
     "useDefineForClassFields": true,
     "noUncheckedIndexedAccess": true,
-    "declaration": true,
     "lib": ["ESNext", "DOM"],
-    "outDir": "./dist",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noEmit": true
   },
   "include": ["src"]
 }
