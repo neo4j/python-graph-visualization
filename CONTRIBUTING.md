@@ -87,7 +87,7 @@ In this section, we will provide some more specific information about how to wor
 - [Install pip](https://pip.pypa.io/en/stable/installation/)
 - Install the project's Python dependencies:
   ```bash
-  pip install -e .
+  uv sync --group dev --group notebook --group docs --extra pandas --extra neo4j --extra gds --extra snowflake
   ```
 
 ### Testing
