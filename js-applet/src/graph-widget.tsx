@@ -72,13 +72,18 @@ function GraphWidget() {
     [nodes, relationships],
   );
 
+  const nvlOptionsWithoutWorkers = useMemo(
+    () => ({ ...nvlOptions, disableWebWorkers: true }),
+    [nvlOptions],
+  );
+
   return (
     <div style={{ height: height ?? "600px", width: width ?? "100%" }}>
       <GraphVisualization
         nodes={neoNodes}
         rels={neoRelationships}
         layout={layout}
-        nvlOptions={nvlOptions}
+        nvlOptions={nvlOptionsWithoutWorkers}
         zoom={zoom}
         pan={pan}
         layoutOptions={layoutOptions}

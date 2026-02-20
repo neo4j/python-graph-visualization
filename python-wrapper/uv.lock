@@ -2204,6 +2204,7 @@ notebook = [
     { name = "neo4j" },
     { name = "palettable" },
     { name = "pykernel" },
+    { name = "requests" },
     { name = "snowflake-snowpark-python" },
 ]
 
@@ -2252,6 +2253,7 @@ notebook = [
     { name = "neo4j", specifier = ">=5.26.0" },
     { name = "palettable", specifier = ">=3.3.3" },
     { name = "pykernel", specifier = ">=0.1.6" },
+    { name = "requests" },
     { name = "snowflake-snowpark-python", specifier = "==1.42.0" },
 ]
 

@@ -89113,6 +89113,9 @@ function Rve() {
       Ove(e ?? [])
     ],
     [n, e]
+  ), v = Se.useMemo(
+    () => ({ ...u, disableWebWorkers: !0 }),
+    [u]
   );
   return /* @__PURE__ */ Ie.jsx("div", { style: { height: r ?? "600px", width: i ?? "100%" }, children: /* @__PURE__ */ Ie.jsx(
     id,
@@ -89120,7 +89123,7 @@ function Rve() {
       nodes: f,
       rels: d,
       layout: o,
-      nvlOptions: u,
+      nvlOptions: v,
       zoom: s,
       pan: l,
       layoutOptions: c
