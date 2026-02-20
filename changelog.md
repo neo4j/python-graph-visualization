@@ -3,6 +3,8 @@
 ## Breaking changes
 
 - Removed the `show_hover_tooltip` parameter from `render()`. The visualization now shows a detail side panel for selected nodes and relationships, replacing the previous hover tooltip.
+- Nodes are colored by default by their caption. Use `VG.color_nodes(field="caption", colors=[neo4j_viz.colors.NEO4J_COLORS_DISCRETE[0]])` to apply the previous coloring.
+
 
 ## New features
 

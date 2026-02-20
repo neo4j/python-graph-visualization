@@ -10,6 +10,12 @@ export type SerializedNode = {
   properties: Record<string, unknown>;
 };
 
+function isListOfStrings(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((item) => typeof item === "string")
+  );
+}
+
 export type SerializedRelationship = {
   id: string;
   from: string;
@@ -22,7 +28,9 @@ export type SerializedRelationship = {
 
 export function transformNodes(nodes: SerializedNode[]): NeoNode[] {
   return nodes.map((node) => {
-    const labels = node.properties.labels;
+    const labelProperty = isListOfStrings(node.properties.labels)
+      ? node.properties.labels
+      : [];
     return {
       id: node.id,
       // Only include visual properties when explicitly set, so that
@@ -30,11 +38,9 @@ export function transformNodes(nodes: SerializedNode[]): NeoNode[] {
       ...(node.color !== undefined && { color: node.color }),
       ...(node.size !== undefined && { size: node.size }),
       ...(node.pinned !== undefined && { pinned: node.pinned }),
-      labels: Array.isArray(labels)
-        ? (labels as string[])
-        : node.caption
+      labels: node.caption
           ? [node.caption]
-          : [],
+          : labelProperty,
       properties: Object.entries(node.properties).reduce<
         Record<string, PortableProperty>
       >((acc, [key, value]) => {
@@ -57,7 +63,7 @@ export function transformRelationships(
     id: rel.id,
     ...(rel.color !== undefined && { color: rel.color }),
     ...(rel.width !== undefined && { width: rel.width }),
-    type: (rel.properties.type as string | undefined) ?? rel.caption ?? "",
+    type: rel.caption ?? (rel.properties.type as string | undefined) ?? "",
     properties: Object.entries(rel.properties).reduce<
       Record<string, PortableProperty>
     >((acc, [key, value]) => {
