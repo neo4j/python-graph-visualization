@@ -1,14 +1,8 @@
 import "@neo4j-ndl/base/lib/neo4j-ds-styles.css";
 import type { NeoNode, NeoRel, PortableProperty } from "@neo4j-ndl/react-graph";
+import type { Node, Relationship } from "@neo4j-nvl/base";
 
-export type SerializedNode = {
-  id: string;
-  caption?: string;
-  size?: number;
-  color?: string;
-  pinned?: boolean;
-  properties: Record<string, unknown>;
-};
+export type SerializedNode = { properties: Record<string, unknown> } & Node;
 
 function isListOfStrings(value: unknown): value is string[] {
   return (
@@ -16,31 +10,16 @@ function isListOfStrings(value: unknown): value is string[] {
   );
 }
 
-export type SerializedRelationship = {
-  id: string;
-  from: string;
-  to: string;
-  caption?: string;
-  color?: string;
-  width?: number;
-  properties: Record<string, unknown>;
-};
-
 export function transformNodes(nodes: SerializedNode[]): NeoNode[] {
   return nodes.map((node) => {
     const labelProperty = isListOfStrings(node.properties.labels)
       ? node.properties.labels
       : [];
     return {
+      ...node,
       id: node.id,
-      // Only include visual properties when explicitly set, so that
-      // GraphVisualization's smart defaults (label-based coloring, etc.) apply.
-      ...(node.color !== undefined && { color: node.color }),
-      ...(node.size !== undefined && { size: node.size }),
-      ...(node.pinned !== undefined && { pinned: node.pinned }),
-      labels: node.caption
-          ? [node.caption]
-          : labelProperty,
+      // This is done so that the overview panel breaks down by caption, rather than labels
+      labels: node.caption ? [node.caption] : labelProperty,
       properties: Object.entries(node.properties).reduce<
         Record<string, PortableProperty>
       >((acc, [key, value]) => {
@@ -56,13 +35,14 @@ export function transformNodes(nodes: SerializedNode[]): NeoNode[] {
   });
 }
 
+export type SerializedRelationship = { properties: Record<string, unknown> } & Relationship;
+
 export function transformRelationships(
   relationships: SerializedRelationship[],
 ): NeoRel[] {
   return relationships.map((rel) => ({
+    ...rel,
     id: rel.id,
-    ...(rel.color !== undefined && { color: rel.color }),
-    ...(rel.width !== undefined && { width: rel.width }),
     type: rel.caption ?? (rel.properties.type as string | undefined) ?? "",
     properties: Object.entries(rel.properties).reduce<
       Record<string, PortableProperty>

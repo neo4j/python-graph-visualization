@@ -137,11 +137,23 @@ describe("data-transforms", () => {
   });
 
   it("should stringify numbers", () => {
-    const nodes: SerializedNode[] = [
-      { id: "35", properties: { age: 25 } },
-    ];
+    const nodes: SerializedNode[] = [{ id: "35", properties: { age: 25 } }];
     const result = transformNodes(nodes);
     expect(result).toHaveLength(1);
-    expect(result[0]?.properties.age).toEqual({ stringified: "25", type: "number" });
+    expect(result[0]?.properties.age).toEqual({
+      stringified: "25",
+      type: "number",
+    });
+  });
+
+  it("handle if node has neither caption nor labels", () => {
+    const nodes: SerializedNode[] = [{ id: "35", properties: {} }];
+    const result = transformNodes(nodes);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      id: "35",
+      labels: [],
+      properties: {},
+    });
   });
 });

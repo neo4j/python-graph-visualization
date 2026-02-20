@@ -2,7 +2,7 @@ import { createRender, useModelState } from "@anywidget/react";
 import "@neo4j-ndl/base/lib/neo4j-ds-styles.css";
 import { GraphVisualization } from "@neo4j-ndl/react-graph";
 import type { Layout, NvlOptions } from "@neo4j-nvl/base";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   SerializedNode,
   SerializedRelationship,
@@ -76,6 +76,8 @@ function GraphWidget() {
     () => ({ ...nvlOptions, disableWebWorkers: true }),
     [nvlOptions],
   );
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [sidePanelWidth, setSidePanelWidth] = useState(300);
 
   return (
     <div style={{ height: height ?? "600px", width: width ?? "100%" }}>
@@ -87,6 +89,13 @@ function GraphWidget() {
         zoom={zoom}
         pan={pan}
         layoutOptions={layoutOptions}
+        sidepanel={{
+          isSidePanelOpen,
+          setIsSidePanelOpen,
+          onSidePanelResize: setSidePanelWidth,
+          sidePanelWidth,
+          children: <GraphVisualization.SingleSelectionSidePanelContents />,
+        }}
       />
     </div>
   );
