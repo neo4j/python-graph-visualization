@@ -89017,12 +89017,9 @@ function Sve(n) {
   return n.map((e) => {
     const t = Eve(e.properties.labels) ? e.properties.labels : [];
     return {
+      ...e,
       id: e.id,
-      // Only include visual properties when explicitly set, so that
-      // GraphVisualization's smart defaults (label-based coloring, etc.) apply.
-      ...e.color !== void 0 && { color: e.color },
-      ...e.size !== void 0 && { size: e.size },
-      ...e.pinned !== void 0 && { pinned: e.pinned },
+      // This is done so that the overview panel breaks down by caption, rather than labels
       labels: e.caption ? [e.caption] : t,
       properties: Object.entries(e.properties).reduce((r, [i, a]) => {
         if (i === "labels") return r;
@@ -89037,9 +89034,8 @@ function Sve(n) {
 }
 function Ove(n) {
   return n.map((e) => ({
+    ...e,
     id: e.id,
-    ...e.color !== void 0 && { color: e.color },
-    ...e.width !== void 0 && { width: e.width },
     type: e.caption ?? e.properties.type ?? "",
     properties: Object.entries(e.properties).reduce((t, [r, i]) => (r === "type" || (t[r] = {
       stringified: String(i),

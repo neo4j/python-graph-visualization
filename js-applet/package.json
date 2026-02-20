@@ -9,7 +9,9 @@
     "dev:jupyter": "cd ../python-wrapper && ANYWIDGET_HMR=1 uv run jupyter lab ../examples/",
     "build": "tsc && vite build && vite build --config vite.config.html.ts",
     "build:widget": "vite build",
-    "build:html": "vite build --config vite.config.html.ts"
+    "build:html": "vite build --config vite.config.html.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@anywidget/vite": "^0.2.2",
@@ -20,7 +22,8 @@
     "concurrently": "^9.2.1",
     "typescript": "5.9.3",
     "vite": "^6.3.5",
-    "vite-plugin-singlefile": "^2.3.0"
+    "vite-plugin-singlefile": "^2.3.0",
+    "vitest": "^4.0.0"
   },
   "dependencies": {
     "@anywidget/react": "^0.2.0",
