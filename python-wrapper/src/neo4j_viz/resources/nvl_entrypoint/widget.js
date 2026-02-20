@@ -89097,7 +89097,7 @@ function Cve() {
 function Ave(n) {
   Se.useEffect(() => {
     const e = n === "auto" ? Cve() : n;
-    document.documentElement.className = e;
+    document.documentElement.className = `ndl-theme-${e}`;
   }, [n]);
 }
 function Rve() {
@@ -89110,7 +89110,12 @@ function Rve() {
     ],
     [n, e]
   ), v = Se.useMemo(
-    () => ({ ...u, disableWebWorkers: !0 }),
+    () => ({
+      ...u,
+      minZoom: 0,
+      maxZoom: 1e3,
+      disableWebWorkers: !0
+    }),
     [u]
   ), [p, y] = Se.useState(!1), [m, b] = Se.useState(300);
   return /* @__PURE__ */ Ie.jsx("div", { style: { height: r ?? "600px", width: i ?? "100%" }, children: /* @__PURE__ */ Ie.jsx(

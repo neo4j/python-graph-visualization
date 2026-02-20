@@ -48,7 +48,7 @@ function detectTheme(): "light" | "dark" {
 function useTheme(theme: Theme) {
   useEffect(() => {
     const resolved = theme === "auto" ? detectTheme() : theme;
-    document.documentElement.className = resolved;
+    document.documentElement.className = `ndl-theme-${resolved}`;
   }, [theme]);
 }
 
@@ -73,7 +73,12 @@ function GraphWidget() {
   );
 
   const nvlOptionsWithoutWorkers = useMemo(
-    () => ({ ...nvlOptions, disableWebWorkers: true }),
+    () => ({
+      ...nvlOptions,
+      minZoom: 0,
+      maxZoom: 1000,
+      disableWebWorkers: true,
+    }),
     [nvlOptions],
   );
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
