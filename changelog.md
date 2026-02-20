@@ -9,6 +9,7 @@
 ## New features
 
 - Nodes are now automatically colored by their caption (label) in the JavaScript visualization. This works out of the box without needing to call `color_nodes()`, and applies regardless of how the graph was created. Explicit colors set via `color_nodes()` or directly on nodes take precedence. There is no longer a limit on the number of unique labels for auto-coloring.
+- New `Zoom to fit` button in the visualization.
 - New `render_widget()` method on `VisualizationGraph` returns a `GraphWidget` (anywidget) for interactive two-way data sync in Jupyter environments (JupyterLab, Notebook 7, VS Code, Colab).
 
 ## Bug fixes

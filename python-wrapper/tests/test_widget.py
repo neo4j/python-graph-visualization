@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 
 from neo4j_viz import GraphWidget, Node, Relationship, VisualizationGraph
-from neo4j_viz.options import Layout
+from neo4j_viz.options import Layout, RenderOptions
 from neo4j_viz.widget import _serialize_entity
 
 
@@ -78,7 +78,7 @@ class TestGraphWidget:
             rels,
             width="800px",
             height="400px",
-            options={"layout": "d3Force"},
+            options=RenderOptions(layout=Layout.FORCE_DIRECTED),
         )
 
         assert widget.width == "800px"

@@ -8,6 +8,7 @@ import anywidget
 import traitlets
 
 from .node import Node
+from .options import RenderOptions
 from .relationship import Relationship
 
 
@@ -50,11 +51,11 @@ class GraphWidget(anywidget.AnyWidget):
     _esm = _STATIC / "widget.js"
     _css = _STATIC / "style.css"
 
-    nodes: list[dict[str, Any]] = traitlets.List([]).tag(sync=True)  # type: ignore[assignment]
-    relationships: list[dict[str, Any]] = traitlets.List([]).tag(sync=True)  # type: ignore[assignment]
-    width = traitlets.Unicode("100%").tag(sync=True)
-    height = traitlets.Unicode("600px").tag(sync=True)
-    options = traitlets.Dict({}).tag(sync=True)
+    nodes: traitlets.List[dict[str, Any]] = traitlets.List([]).tag(sync=True)
+    relationships: traitlets.List[dict[str, Any]] = traitlets.List([]).tag(sync=True)
+    width: traitlets.Unicode[str, str | bytes] = traitlets.Unicode("100%").tag(sync=True)
+    height: traitlets.Unicode[str, str | bytes] = traitlets.Unicode("600px").tag(sync=True)
+    options: traitlets.Dict[str, Any] = traitlets.Dict({}).tag(sync=True)
 
     @classmethod
     def from_graph_data(
@@ -63,7 +64,7 @@ class GraphWidget(anywidget.AnyWidget):
         relationships: list[Relationship],
         width: str = "100%",
         height: str = "600px",
-        options: dict[str, object] | None = None,
+        options: RenderOptions | None = None,
     ) -> GraphWidget:
         """Create a GraphWidget from Node and Relationship lists."""
         return cls(
@@ -71,5 +72,5 @@ class GraphWidget(anywidget.AnyWidget):
             relationships=[_serialize_entity(r) for r in relationships],
             width=width,
             height=height,
-            options=options or {},
+            options=options.to_js_options() if options else {},
         )

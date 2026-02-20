@@ -188,7 +188,15 @@ class RenderOptions(BaseModel, extra="allow"):
         result: dict[str, Any] = {}
 
         if self.layout is not None:
-            result["layout"] = _LAYOUT_TO_JS.get(self.layout.value, self.layout.value)
+            match self.layout:
+                case Layout.FORCE_DIRECTED:
+                    result["layout"] = "d3Force"
+                case Layout.HIERARCHICAL:
+                    result["layout"] = "hierarchical"
+                case Layout.COORDINATE:
+                    result["layout"] = "free"
+                case Layout.GRID:
+                    result["layout"] = "grid"
 
         if self.layout_options is not None:
             result["layoutOptions"] = self.layout_options.model_dump(exclude_none=True)

@@ -11,26 +11,25 @@ from .options import RenderOptions
 from .relationship import Relationship
 from .widget import _serialize_entity
 
+
 # ── Template loading ─────────────────────────────────────────────────────
 # The HTML template is built by Vite (vite build --config vite.config.html.ts)
 # and ships as index.html in the package resources. It contains the full
 # graph component with JS/CSS inlined, and reads graph data from
 # window.__NEO4J_VIZ_DATA__.  Python just injects a <script> setting that
 # variable before the module script runs.
-
-_CONTAINER_ID = "neo4j-viz-container"
-
-
-def _load_template() -> str:
-    nvl_entry_point = files("neo4j_viz") / "resources" / "nvl_entrypoint"
-    path = nvl_entry_point / "index.html"
-    with path.open("r", encoding="utf-8") as f:
-        return f.read()
-
-
 class NVL:
+    _CONTAINER_ID = "neo4j-viz-container"
+
     def __init__(self) -> None:
-        self._template = _load_template()
+        self._template = NVL._load_template()
+
+    @classmethod
+    def _load_template(cls) -> str:
+        nvl_entry_point = files("neo4j_viz") / "resources" / "nvl_entrypoint"
+        path = nvl_entry_point / "index.html"
+        with path.open("r", encoding="utf-8") as f:
+            return f.read()
 
     def render(
         self,
@@ -54,6 +53,6 @@ class NVL:
         data_script = f"<script>window.__NEO4J_VIZ_DATA__ = {data_json};</script>"
         html = self._template
         html = html.replace("</head>", f"{data_script}\n</head>", 1)
-        html = html.replace(_CONTAINER_ID, container_id)
+        html = html.replace(NVL._CONTAINER_ID, container_id)
 
         return HTML(html)  # type: ignore[no-untyped-call]

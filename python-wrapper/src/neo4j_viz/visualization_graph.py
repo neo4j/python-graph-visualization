@@ -262,7 +262,7 @@ class VisualizationGraph:
             self.relationships,
             width=width,
             height=height,
-            options=render_options.to_js_options(),
+            options=render_options,
         )
 
     def toggle_nodes_pinned(self, pinned: dict[NodeIdType, bool]) -> None:
