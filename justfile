@@ -39,6 +39,9 @@ js-dev:
 js-rebuild:
     ./scripts/clean_js_applet.sh && ./scripts/build_js_applet.sh
 
+js-build:
+    ./scripts/build_js_applet.sh
+
 streamlit:
     ./scripts/run_streamlit_example.sh
 

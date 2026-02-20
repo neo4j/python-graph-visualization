@@ -82162,7 +82162,10 @@ class zle extends me.Component {
 }
 function qle() {
   const e = window.getComputedStyle(document.body, null).getPropertyValue("background-color").match(/\d+/g);
-  return !e || e.length < 3 ? "light" : Number(e[0]) * 0.2126 + Number(e[1]) * 0.7152 + Number(e[2]) * 0.0722 < 128 ? "dark" : "light";
+  if (!e || e.length < 3)
+    return "light";
+  const t = Number(e[0]) * 0.2126 + Number(e[1]) * 0.7152 + Number(e[2]) * 0.0722;
+  return t === 0 && e.length > 3 && e[3] === "0" ? "light" : t < 128 ? "dark" : "light";
 }
 function Gle(r) {
   me.useEffect(() => {
@@ -82209,7 +82212,13 @@ function Vle() {
   ) });
 }
 function Hle() {
-  return /* @__PURE__ */ Te.jsx(zle, { children: /* @__PURE__ */ Te.jsx(Vle, {}) });
+  return /* @__PURE__ */ Te.jsxs(zle, { children: [
+    /* @__PURE__ */ Te.jsxs("h1", { children: [
+      "BackgroundColor: ",
+      window.getComputedStyle(document.body, null).getPropertyValue("background-color")
+    ] }),
+    /* @__PURE__ */ Te.jsx(Vle, {})
+  ] });
 }
 const Wle = uV(Hle), Xle = { render: Wle };
 export {

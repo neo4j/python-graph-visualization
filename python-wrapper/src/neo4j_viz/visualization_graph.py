@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Hashable, Iterable
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 from IPython.display import HTML
 from pydantic.alias_generators import to_snake
@@ -142,6 +142,7 @@ class VisualizationGraph:
         max_zoom: float = 10,
         allow_dynamic_min_zoom: bool = True,
         max_allowed_nodes: int = 10_000,
+        theme: Literal["auto"] | Literal["light"] | Literal["dark"] = "auto",
     ) -> HTML:
         """
         Render the graph as an HTML object.
@@ -173,7 +174,8 @@ class VisualizationGraph:
             Whether to allow dynamic minimum zoom level.
         max_allowed_nodes:
             The maximum allowed number of nodes to render.
-
+        theme:
+            The theme of the rendered graph. Can be 'auto', 'light', or 'dark'
 
         Example
         -------
@@ -198,6 +200,7 @@ class VisualizationGraph:
             render_options,
             width,
             height,
+            theme,
         )
 
     def render_widget(
@@ -213,6 +216,7 @@ class VisualizationGraph:
         max_zoom: float = 10,
         allow_dynamic_min_zoom: bool = True,
         max_allowed_nodes: int = 10_000,
+        theme: Literal["auto"] | Literal["light"] | Literal["dark"] = "auto",
     ) -> GraphWidget:
         """
         Render the graph as an interactive Jupyter widget (anywidget).
@@ -244,6 +248,8 @@ class VisualizationGraph:
             Whether to allow dynamic minimum zoom level.
         max_allowed_nodes:
             The maximum allowed number of nodes to render.
+        theme:
+            The theme to use for the rendered graph.
         """
         render_options = self._build_render_options(
             layout,
@@ -263,6 +269,7 @@ class VisualizationGraph:
             width=width,
             height=height,
             options=render_options,
+            theme=theme,
         )
 
     def toggle_nodes_pinned(self, pinned: dict[NodeIdType, bool]) -> None:
