@@ -21,6 +21,17 @@ py-test-gds:
     cd python-wrapper && uv run --group dev --extra gds pytest tests --include-neo4j-and-gds
     cd ..
 
+local-neo4j-setup:
+    #!/usr/bin/env bash
+    set -e
+    ENV_DIR="test-envs/neo4j-gds"
+    cd $ENV_DIR && docker compose up -d
+
+local-neo4j-teardown:
+    #!/usr/bin/env bash
+    set -e
+    ENV_DIR="test-envs/neo4j-gds"
+    cd $ENV_DIR && docker compose down
 
 js-dev:
     cd js-applet && yarn && yarn dev
