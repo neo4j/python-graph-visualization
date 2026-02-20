@@ -82212,13 +82212,7 @@ function Vle() {
   ) });
 }
 function Hle() {
-  return /* @__PURE__ */ Te.jsxs(zle, { children: [
-    /* @__PURE__ */ Te.jsxs("h1", { children: [
-      "BackgroundColor: ",
-      window.getComputedStyle(document.body, null).getPropertyValue("background-color")
-    ] }),
-    /* @__PURE__ */ Te.jsx(Vle, {})
-  ] });
+  return /* @__PURE__ */ Te.jsx(zle, { children: /* @__PURE__ */ Te.jsx(Vle, {}) });
 }
 const Wle = uV(Hle), Xle = { render: Wle };
 export {
