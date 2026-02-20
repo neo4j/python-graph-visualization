@@ -50,32 +50,20 @@ Remember that many community members have become regular contributors and some a
 
 ## Quick start
 
-Using [uv](https://docs.astral.sh/uv/):
-
 ```sh
-cd js-applet
-yarn && yarn dev
+just js-dev
 ```
 
 This starts Vite watch builds and Jupyter Lab with hot module reloading. Changes to `js-applet/src/` will auto-reload in active widget cells.
 
-## Building the project locally
-
-To build the Python packages, run inside the `python-wrapper` folder:
+If you want to modify the python code, run:
 
 ```sh
-cd python-wrapper
-uv sync --group dev    # Recommended: installs dev tools (ruff, mypy, pytest, etc.)
-# or: pip install -e .
+just py-sync
 ```
 
-To rebuild the JavaScript applet:
+This will install all required dev dependencies and install the package in editable mode.
 
-```sh
-cd js-applet
-yarn          # Install JavaScript dependencies
-yarn build    # Build JavaScript resources to be used by Python code
-```
 
 ## Specifically for this project
 
@@ -84,40 +72,37 @@ In this section, we will provide some more specific information about how to wor
 ### Python development environment
 
 - Install Python 3.10+
-- [Install pip](https://pip.pypa.io/en/stable/installation/)
-- Install the project's Python dependencies:
+- We recommend installing [just](https://github.com/casey/just) for running commands
+
+Install the project's Python dependencies:
   ```bash
-  uv sync --group dev --group notebook --group docs --extra pandas --extra neo4j --extra gds --extra snowflake
+  just py-sync
   ```
+
+Apply and check python styling:
+```sh
+just py-style
+```
+
 
 ### Testing
 
 To run unit tests, execute:
 
 ```sh
-pytest python-wrapper/tests
+just py-test
 ```
 
 Additionally, there are integration tests that require an external data source.
 These require additional setup and configuration, such as environment variables specifying connection details.
 
-For a local Neo4j instance with GDS installed, execute:
-
+To test the Neo4j and GDS related tests, execute:
 ```sh
-cd test-envs/neo4j-gds
-docker compose up -d
+just py-test-gds
 ```
-
-To run tests requiring a Neo4j DB instance with GDS installed, execute:
-
-```sh
-export NEO4J_URI=localhost:7687 # or credentials for Aura API
-cd python-wrapper/
-pytest tests --include-neo4j-and-gds
-```
+This will spinup a Neo4j container with the GDS plugin installed.
 
 To run tests requiring a Snowflake connection, execute:
-
 ```sh
 cd python-wrapper/
 pytest tests/ --include-snowflake
@@ -143,13 +128,8 @@ The project contains of three parts:
 Everything is configured inside `pyproject.toml`
 
 To keep a consistent code-style, we use `ruff` and `mypy`.
-For convenience there are a couple of scripts:
+For convenience there are a couple of just targets under `justfile`:
 
-```sh
-./scripts/makestyle.sh # try to fix linting violations and format code
-./scripts/checkstyle.sh # check for linting, format or typing issues
-
-```
 
 ## Got an idea for a new project?
 

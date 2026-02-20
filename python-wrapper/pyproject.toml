@@ -60,6 +60,7 @@ dev = [
     "streamlit==1.53.0",
     "matplotlib>=3.9.4",
     "jupyterlab>=4.5.4",
+    "anywidget[dev]"
 ]
 docs = [
     "sphinx==8.1.3",
