@@ -1,23 +1,17 @@
 {
   "compilerOptions": {
-    "noImplicitAny": false,
-    "module": "ESNext",
     "target": "ESNext",
-    "allowJs": true,
-    "declaration": true,
-    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "strictNullChecks": true,
+    "useDefineForClassFields": true,
     "noUncheckedIndexedAccess": true,
-    "lib": [
-      "ESNext",
-      "DOM"
-    ],
-    "moduleResolution": "Bundler",
-    "outDir": "./dist"
+    "lib": ["ESNext", "DOM"],
+    "skipLibCheck": true,
+    "noEmit": true
   },
-  "files": [
-    "src/index.ts"
-  ]
+  "include": ["src"]
 }

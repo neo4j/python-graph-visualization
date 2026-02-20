@@ -43,4 +43,4 @@ jobs:
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
           SNOWFLAKE_ROLE: ACCOUNTADMIN
           SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-        run: pytest tests/ --include-snowflake
+        run: uv run pytest tests/ --include-snowflake

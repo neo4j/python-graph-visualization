@@ -77,6 +77,9 @@ def run_notebooks(filter_func: Callable[[str], bool]) -> None:
         f for f in examples_path.iterdir() if f.is_file() and f.suffix == ".ipynb" and filter_func(f.name)
     ]
 
+    if not notebook_files:
+        raise RuntimeError(f"No matching notebooks found in {examples_path}")
+
     ep = TeardownExecutePreprocessor(kernel_name="python3")
     td_collector = TearDownCollector(kernel_name="python3")
     exceptions: list[RuntimeError] = []
@@ -112,7 +115,7 @@ def run_notebooks(filter_func: Callable[[str], bool]) -> None:
 
 @pytest.mark.requires_neo4j_and_gds
 def test_neo4j(gds: Any) -> None:
-    neo4j_notebooks = ["neo4j-nvl-example.ipynb", "gds-nvl-example.ipynb"]
+    neo4j_notebooks = ["neo4j-example.ipynb", "gds-example.ipynb"]
 
     def filter_func(notebook: str) -> bool:
         return notebook in neo4j_notebooks
@@ -122,7 +125,7 @@ def test_neo4j(gds: Any) -> None:
 
 @pytest.mark.requires_snowflake
 def test_snowflake() -> None:
-    snowflake_notebooks = ["snowpark-nvl-example.ipynb"]
+    snowflake_notebooks = ["snowflake-example.ipynb"]
 
     def filter_func(notebook: str) -> bool:
         return notebook in snowflake_notebooks
@@ -131,7 +134,7 @@ def test_snowflake() -> None:
 
 
 def test_simple() -> None:
-    simple_notebooks = ["simple-nvl-example.ipynb"]
+    simple_notebooks = ["getting-started.ipynb"]
 
     def filter_func(notebook: str) -> bool:
         return notebook in simple_notebooks

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neo4j-viz"
-version = "1.1.0"
+version = "1.2.0"
 description = "A simple graph visualization tool"
 readme = "README.md"
 authors = [{ name = "Neo4j", email = "team-gds@neo4j.org" }]
@@ -33,7 +33,9 @@ dependencies = [
     "ipython >=7, <10",
     "pydantic >=2 , <3",
     "pydantic-extra-types >=2, <3",
-    "enum-tools==0.13.0"
+    "enum-tools==0.13.0",
+    "anywidget >=0.9, <1",
+    "traitlets >=5, <6",
 ]
 requires-python = ">=3.10"
 
@@ -57,6 +59,8 @@ dev = [
     "nbconvert==7.16.6",
     "streamlit==1.53.0",
     "matplotlib>=3.9.4",
+    "jupyterlab>=4.5.4",
+    "anywidget[dev]"
 ]
 docs = [
     "sphinx==8.1.3",
@@ -72,7 +76,8 @@ notebook = [
     "palettable>=3.3.3",
     "matplotlib>=3.9.4",
     "snowflake-snowpark-python==1.42.0",
-    "dotenv"
+    "dotenv",
+    "requests",
 ]
 
 [project.urls]
@@ -93,9 +98,9 @@ namespaces = false # only scan directories with __init__.py files (true by defau
 
 [tool.setuptools.package-data]
 neo4j_viz = [
-    "resources/nvl_entrypoint/base.js",
-    "resources/nvl_entrypoint/styles.css",
-    "resources/icons/*.svg",
+    "resources/nvl_entrypoint/widget.js",
+    "resources/nvl_entrypoint/style.css",
+    "resources/nvl_entrypoint/index.html",
     "py.typed"
 ]
 

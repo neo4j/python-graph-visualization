@@ -1,0 +1,30 @@
+import anywidget from "@anywidget/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+
+// ESM lib build for anywidget (produces widget.js + style.css).
+// Dev server: `yarn dev` starts Vite with HMR via @anywidget/vite.
+// Python widget points _esm at http://localhost:5173/src/index.tsx?anywidget
+export default defineConfig({
+  plugins: [react(), anywidget()],
+  define: {
+    // React reference process.env.NODE_ENV at runtime
+    "process.env.NODE_ENV": JSON.stringify("production"),
+  },
+  build: {
+    outDir: "../python-wrapper/src/neo4j_viz/resources/nvl_entrypoint",
+    emptyOutDir: false,
+    lib: {
+      entry: ["src/graph-widget.tsx"],
+      formats: ["es"],
+      fileName: () => "widget.js",
+    },
+    rollupOptions: {
+      output: {
+        // Required to help bundle the widget.js and style.css into a single file
+        inlineDynamicImports: true,
+        assetFileNames: "style.[ext]",
+      },
+    },
+  },
+});
