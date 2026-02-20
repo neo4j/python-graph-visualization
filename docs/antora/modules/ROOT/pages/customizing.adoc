@@ -55,6 +55,8 @@ Nodes and relationships can be colored directly by providing them with a color f
 This can be done by passing a color as a string to the `color` parameter of the
 link:{api-docs-uri}/node[Node] or link:{api-docs-uri}/relationship[Relationship] object.
 
+By default, the nodes will be colored based on their caption. The colors are the same as in other Neo4j tools, such as Neo4j Console and Neo4j Browser.
+
 Alternatively, you can color nodes or relationships based on a field or property after a `VisualizationGraph` object has been
 created.
 

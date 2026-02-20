@@ -33,7 +33,7 @@ jobs:
           python-version: "3.11"
           enable-cache: true
       - run: uv venv
-      - run: uv sync --group dev --extra pandas --extra gds --extra snowflake
+      - run: uv sync --group dev --extra pandas --extra neo4j --extra gds --extra snowflake
 
       - name: Check code style
         run: source .venv/bin/activate && cd ${GITHUB_WORKSPACE} && ./scripts/checkstyle.sh

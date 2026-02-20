@@ -16,7 +16,7 @@ Alternatively, you can export the output to a file and view it in a web browser.
 The package wraps the [Neo4j Visualization JavaScript library (NVL)](https://neo4j.com/docs/nvl/current/).
 
 
-![Example Graph](https://github.com/neo4j/python-graph-visualization/blob/main/examples/example_cora_graph.png)
+![Example Graph](https://github.com/neo4j/python-graph-visualization/blob/main/examples/example_graph.png)
 
 
 ## Some notable features

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en" class="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>neo4j-viz</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+      }
+    </style>
+    <!--
+      Data injection point.
+      Python (nvl.py) injects a <script> here setting window.__NEO4J_VIZ_DATA__
+      before this page is served.
+    -->
+  </head>
+  <body>
+    <div id="neo4j-viz-container" style="width: 100%; height: 100vh"></div>
+    <script type="module" src="/src/standalone-entrypoint.ts"></script>
+  </body>
+</html>

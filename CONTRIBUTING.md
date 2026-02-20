@@ -9,7 +9,6 @@ If you're not already a member, sign up!
 
 We love our community and wouldn't be where we are without you.
 
-
 ## Need to raise an issue?
 
 Where you raise an issue depends largely on the nature of the problem.
@@ -34,7 +33,6 @@ Include as much information as you can in any request you make:
 - What errors are you seeing?
 - What solutions have you tried already?
 
-
 ## Want to contribute?
 
 If you want to contribute a pull request, we have a little bit of process you'll need to follow:
@@ -50,102 +48,87 @@ We can't guarantee that we'll accept pull requests and may ask you to make some 
 Occasionally, we might also have logistical, commercial, or legal reasons why we can't accept your work but we'll try to find an alternative way for you to contribute in that case.
 Remember that many community members have become regular contributors and some are now even Neo employees!
 
-
-## Building the project locally
-
-To build the Python packages, run inside the `python-wrapper` folder:
+## Quick start
 
 ```sh
-pip install . # run with --editable for development mode
+just js-dev
 ```
 
-To rebuild the JavaScript applet, run inside the `js-applet` folder:
+This starts Vite watch builds and Jupyter Lab with hot module reloading. Changes to `js-applet/src/` will auto-reload in active widget cells.
+
+If you want to modify the python code, run:
 
 ```sh
-yarn          # Install JavaScript dependencies
-yarn build    # Build JavaScript resources to be used by Python code
+just py-sync
 ```
 
-This will build the app and copy the relevant files to the python wrapper
+This will install all required dev dependencies and install the package in editable mode.
 
 
 ## Specifically for this project
 
 In this section, we will provide some more specific information about how to work with this particular project.
 
-
 ### Python development environment
 
- * Install Python 3.9+
- * [Install pip](https://pip.pypa.io/en/stable/installation/)
- * Install the project's Python dependencies:
-   ```bash
-   pip install -e .
-   pip install ".[dev]"
-   ```
+- Install Python 3.10+
+- We recommend installing [just](https://github.com/casey/just) for running commands
+
+Install the project's Python dependencies:
+  ```bash
+  just py-sync
+  ```
+
+Apply and check python styling:
+```sh
+just py-style
+```
+
 
 ### Testing
 
 To run unit tests, execute:
 
 ```sh
-pytest python-wrapper/tests
+just py-test
 ```
 
 Additionally, there are integration tests that require an external data source.
 These require additional setup and configuration, such as environment variables specifying connection details.
 
-
-For a local Neo4j instance with GDS installed, execute:
+To test the Neo4j and GDS related tests, execute:
 ```sh
-cd test-envs/neo4j-gds
-docker compose up -d
+just py-test-gds
 ```
-
-To run tests requiring a Neo4j DB instance with GDS installed, execute:
-```sh
-export NEO4J_URI=localhost:7687 # or credentials for Aura API
-cd python-wrapper/
-pytest tests --include-neo4j-and-gds
-```
+This will spinup a Neo4j container with the GDS plugin installed.
 
 To run tests requiring a Snowflake connection, execute:
-
 ```sh
 cd python-wrapper/
 pytest tests/ --include-snowflake
 ```
 
-
 ### Project structure
 
 The project contains of three parts:
 
-- a JavaScript applet whith a basic NVL implementation under the `js-applect` folder
+- a JavaScript applet under the `js-applet` folder
 - a Python package which loads the applet and offers convenience functions to pass data to the applet
-- Jupyter notebooks to test the NVL Python wrapper
+- Jupyter notebooks to test the Python wrapper
 
+### JavaScript configs
 
-### JavaScipts configs
-
-* `babel.config.js` - Config for the JavaScript compiler
-* `tsconfig.json` - Configuration for TypeScript code
-* `package.json` - For yarn, define dependencies and `build` target
-* `webpack.config.js` - Config for bundling JS parts
-
+- `vite.config.ts` - Vite config for the lib build (widget.js + style.css for anywidget)
+- `vite.config.html.ts` - Vite config for the HTML singlefile build (self-contained index.html)
+- `tsconfig.json` - Configuration for TypeScript code
+- `package.json` - For yarn, define dependencies and `build` target
 
 ### Python
 
 Everything is configured inside `pyproject.toml`
 
 To keep a consistent code-style, we use `ruff` and `mypy`.
-For convenience there are a couple of scripts:
-
-```sh
-./scripts/makestyle.sh # try to fix linting violations and format code
-./scripts/checkstyle.sh # check for linting, format or typing issues
-
-```
+For convenience there are a couple of just targets under `justfile`:
 
 
 ## Got an idea for a new project?
@@ -154,7 +137,6 @@ If you have an idea for a new tool or library, start by talking to other people 
 Chances are that someone has a similar idea or may have already started working on it.
 The best software comes from getting like minds together to solve a problem.
 And we'll do our best to help you promote and co-ordinate your Neo4j ecosystem projects.
-
 
 ## Further reading
 
