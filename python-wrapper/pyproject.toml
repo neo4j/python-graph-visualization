@@ -57,7 +57,7 @@ dev = [
     "palettable==3.3.3",
     "pytest-mock==3.15.1",
     "nbconvert==7.17.0",
-    "streamlit==1.53.0",
+    "streamlit==1.54.0",
     "matplotlib>=3.9.4",
     "jupyterlab>=4.5.4",
     "anywidget[dev]"
