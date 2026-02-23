@@ -809,10 +809,10 @@
     "@types/chroma-js" "2.1.4"
     chroma-js "2.4.2"
 
-"@neo4j-ndl/base@^4.7.1":
-  version "4.9.0"
-  resolved "https://registry.yarnpkg.com/@neo4j-ndl/base/-/base-4.9.0.tgz#f76dfa4bce5a3a7b5612842b1b2ca7ffe3705e60"
-  integrity sha512-e6LK0H7uQj56F7lbTLTdQDlKgvCs8XE3I7zMx8Itt+qzMq5QNcHQ7OU7RU9x7w7EzNwWjeMBry3AT0PtMaCHHA==
+"@neo4j-ndl/base@^4.9.1":
+  version "4.9.1"
+  resolved "https://registry.yarnpkg.com/@neo4j-ndl/base/-/base-4.9.1.tgz#0961254bfee615b8ed8d7adcdb24e36a52305889"
+  integrity sha512-DvA+IuLpOlEfo9W8cgxlIVhhxHn2dQxrqFT26Rp2xKYJjRmqtTxBqGsLMvudvKCH7kF8Y3R+B4bR0ZbENcCa5A==
 
 "@neo4j-ndl/react-graph@^1.2.8":
   version "1.2.20"
