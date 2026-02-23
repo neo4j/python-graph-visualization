@@ -31,6 +31,13 @@ export type WidgetData = {
 };
 
 function detectTheme(): "light" | "dark" {
+    if (document.body.classList.contains("vscode-light")) {
+        return "light";
+    }
+    if (document.body.classList.contains("vscode-dark")) {
+        return "dark";
+    }
+
     const backgroundColorString = window
         .getComputedStyle(document.body, null)
         .getPropertyValue("background-color");
@@ -115,7 +122,7 @@ function GraphWidget() {
 function GraphWidgetWithErrorBoundary() {
     return (
         <GraphErrorBoundary>
-             <GraphWidget/>
+            <GraphWidget/>
         </GraphErrorBoundary>
     );
 }
