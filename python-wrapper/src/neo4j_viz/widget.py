@@ -56,6 +56,9 @@ class GraphWidget(anywidget.AnyWidget):
     width: traitlets.Unicode[str, str | bytes] = traitlets.Unicode("100%").tag(sync=True)
     height: traitlets.Unicode[str, str | bytes] = traitlets.Unicode("600px").tag(sync=True)
     options: traitlets.Dict[str, Any] = traitlets.Dict({}).tag(sync=True)
+    theme: traitlets.Unicode[str, str | bytes] = traitlets.Unicode(
+        default_value="auto", help="Theme of the graph widget. Can be 'auto', 'light', or 'dark'."
+    ).tag(sync=True)
 
     @classmethod
     def from_graph_data(
@@ -65,6 +68,7 @@ class GraphWidget(anywidget.AnyWidget):
         width: str = "100%",
         height: str = "600px",
         options: RenderOptions | None = None,
+        theme: str = "auto",
     ) -> GraphWidget:
         """Create a GraphWidget from Node and Relationship lists."""
         return cls(
@@ -73,4 +77,5 @@ class GraphWidget(anywidget.AnyWidget):
             width=width,
             height=height,
             options=options.to_js_options() if options else {},
+            theme=theme,
         )
