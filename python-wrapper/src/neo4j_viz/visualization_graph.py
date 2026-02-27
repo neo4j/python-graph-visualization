@@ -86,7 +86,7 @@ class VisualizationGraph:
 
     def _build_render_options(
         self,
-        layout: Layout | None,
+        layout: Layout | str | None,
         layout_options: dict[str, Any] | LayoutOptions | None,
         renderer: Renderer | str,
         pan_position: tuple[float, float] | None,
@@ -95,6 +95,7 @@ class VisualizationGraph:
         max_zoom: float,
         allow_dynamic_min_zoom: bool,
         max_allowed_nodes: int,
+        show_layout_button: bool,
     ) -> RenderOptions:
         """Shared validation + option building for render / render_widget."""
         num_nodes = len(self.nodes)
@@ -112,6 +113,8 @@ class VisualizationGraph:
 
         if not layout:
             layout = Layout.FORCE_DIRECTED
+        if isinstance(layout, str):
+            layout = Layout(layout.lower())
         if not layout_options:
             layout_options = {}
 
@@ -130,11 +133,12 @@ class VisualizationGraph:
             min_zoom=min_zoom,
             max_zoom=max_zoom,
             allow_dynamic_min_zoom=allow_dynamic_min_zoom,
+            show_layout_button=show_layout_button,
         )
 
     def render(
         self,
-        layout: Layout | None = None,
+        layout: Layout | str | None = None,
         layout_options: dict[str, Any] | LayoutOptions | None = None,
         renderer: Renderer | str = Renderer.CANVAS,
         width: str = "100%",
@@ -195,6 +199,7 @@ class VisualizationGraph:
             max_zoom,
             allow_dynamic_min_zoom,
             max_allowed_nodes,
+            show_layout_button=False,  # The button only works with the widget
         )
 
         return NVL().render(
@@ -208,7 +213,7 @@ class VisualizationGraph:
 
     def render_widget(
         self,
-        layout: Layout | None = None,
+        layout: Layout | str | None = None,
         layout_options: dict[str, Any] | LayoutOptions | None = None,
         renderer: Renderer | str = Renderer.CANVAS,
         width: str = "100%",
@@ -264,6 +269,7 @@ class VisualizationGraph:
             max_zoom,
             allow_dynamic_min_zoom,
             max_allowed_nodes,
+            show_layout_button=True,
         )
 
         return GraphWidget.from_graph_data(

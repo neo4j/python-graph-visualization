@@ -30,9 +30,9 @@
     "@neo4j-ndl/base": "^4.7.1",
     "@neo4j-ndl/react": "^4.7.3",
     "@neo4j-ndl/react-graph": "^1.2.8",
-    "@neo4j-nvl/base": "^1.0.0",
-    "@neo4j-nvl/interaction-handlers": "^1.0.0",
-    "@neo4j-nvl/react": "^1.0.0",
+    "@neo4j-nvl/base": "^1.1.0",
+    "@neo4j-nvl/interaction-handlers": "^1.1.0",
+    "@neo4j-nvl/react": "^1.1.0",
     "@tanstack/react-table": "^8.20.5",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"

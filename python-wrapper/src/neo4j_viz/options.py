@@ -34,6 +34,10 @@ class Layout(str, Enum):
     The coordinate layout sets the position of each node based on the `x` and `y` properties of the node.
     """
     GRID = "grid"
+    """
+    A basic circular layout.
+    """
+    CIRCULAR = "circular"
 
 
 @enum_tools.documentation.document_enum
@@ -161,6 +165,8 @@ class RenderOptions(BaseModel, extra="allow"):
     min_zoom: Optional[float] = Field(None, serialization_alias="minZoom", description="The minimum zoom level allowed")
     allow_dynamic_min_zoom: Optional[bool] = Field(None, serialization_alias="allowDynamicMinZoom")
 
+    show_layout_button: bool = False
+
     @model_validator(mode="after")
     def check_layout_options_match(self) -> RenderOptions:
         if self.layout_options is None:
@@ -197,6 +203,8 @@ class RenderOptions(BaseModel, extra="allow"):
                     result["layout"] = "free"
                 case Layout.GRID:
                     result["layout"] = "grid"
+                case Layout.CIRCULAR:
+                    result["layout"] = "circular"
 
         if self.layout_options is not None:
             result["layoutOptions"] = self.layout_options.model_dump(exclude_none=True)
@@ -218,6 +226,8 @@ class RenderOptions(BaseModel, extra="allow"):
 
         if self.pan_X is not None or self.pan_Y is not None:
             result["pan"] = {"x": self.pan_X or 0, "y": self.pan_Y or 0}
+
+        result["showLayoutButton"] = self.show_layout_button
 
         return result
 
