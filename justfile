@@ -2,6 +2,7 @@ py-sync:
     cd python-wrapper && uv sync --group dev --group docs --group notebook --extra pandas --extra neo4j --extra gds --extra snowflake
 
 py-style:
+    just py-sync
     ./scripts/makestyle.sh && ./scripts/checkstyle.sh
 
 py-test:

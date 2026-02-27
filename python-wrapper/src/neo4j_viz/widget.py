@@ -80,7 +80,9 @@ class GraphWidget(anywidget.AnyWidget):
             theme=theme,
         )
 
-    def add_data(self, nodes: Node | list[Node] | None = None, relationships: Relationship | list[Relationship] | None = None) -> None:
+    def add_data(
+        self, nodes: Node | list[Node] | None = None, relationships: Relationship | list[Relationship] | None = None
+    ) -> None:
         """
         Add nodes or relationships to the graph widget.
 
@@ -120,6 +122,8 @@ class GraphWidget(anywidget.AnyWidget):
             node_ids_to_remove = {nodes.id}
         elif isinstance(nodes, NodeIdType):
             node_ids_to_remove = {nodes}
+        elif nodes is None:
+            node_ids_to_remove = set()
         else:
             node_ids_to_remove = {n.id if isinstance(n, Node) else n for n in nodes}
 
@@ -127,10 +131,13 @@ class GraphWidget(anywidget.AnyWidget):
             rel_ids_to_remove = {relationships.id}
         elif isinstance(relationships, RelationshipIdType):
             rel_ids_to_remove = {relationships}
+        elif relationships is None:
+            rel_ids_to_remove = set()
         else:
             rel_ids_to_remove = {r.id if isinstance(r, Relationship) else r for r in relationships}
 
-        self.nodes = [n for n in self.nodes if n["id"] not in node_ids_to_remove]
+        if node_ids_to_remove:
+            self.nodes = [n for n in self.nodes if n["id"] not in node_ids_to_remove]
 
         def keep_rel(r: dict[str, Any]) -> bool:
             return (
@@ -139,4 +146,5 @@ class GraphWidget(anywidget.AnyWidget):
                 and r["to"] not in node_ids_to_remove
             )
 
-        self.relationships = [r for r in self.relationships if keep_rel(r)]
+        if rel_ids_to_remove:
+            self.relationships = [r for r in self.relationships if keep_rel(r)]
