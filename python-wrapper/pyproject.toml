@@ -78,6 +78,7 @@ notebook = [
     "snowflake-snowpark-python==1.42.0",
     "dotenv",
     "requests",
+    "marimo",
 ]
 
 [project.urls]
@@ -173,3 +174,6 @@ exclude = [
     ]
 plugins = ['pydantic.mypy']
 untyped_calls_exclude=["nbconvert"]
+
+[tool.marimo.runtime]
+output_max_bytes = 20_000_000
