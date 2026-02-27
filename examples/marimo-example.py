@@ -70,6 +70,7 @@ def _(VisualizationGraph, nodes, relationships):
     # Create and render the visualization
     VG = VisualizationGraph(nodes=nodes, relationships=relationships)
     widget = VG.render_widget(theme="light", renderer="canvas")
+    # TODO figure out why the rendering in Marimo is off
     widget
     return VG, widget
 
@@ -106,7 +107,10 @@ def _(mo):
 
 @app.cell
 def _(VG):
-    VG.render()
+    # Save the visualization to a file
+    with open("out/marimo_output.html", "w") as f:
+        print(f"{f}")
+        f.write(VG.render(renderer="canvas").data)
     return
 
 
