@@ -178,9 +178,6 @@ class RenderOptions(BaseModel, extra="allow"):
             raise ValueError("layout_options must be of type ForceDirectedLayoutOptions for force-directed layout")
         return self
 
-    def to_dict(self) -> dict[str, Any]:
-        return self.model_dump(exclude_none=True, by_alias=True)
-
     def to_js_options(self) -> dict[str, Any]:
         """Convert render options to the JS-compatible format for the GraphVisualization component.
 

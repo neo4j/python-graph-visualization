@@ -83,7 +83,7 @@ class TestGraphWidget:
 
         assert widget.width == "800px"
         assert widget.height == "400px"
-        assert widget.options == {"layout": "d3Force"}
+        assert widget.options == {"layout": "d3Force", 'showLayoutButton': False}
 
     def test_widget_trait_defaults(self) -> None:
         widget = GraphWidget()
