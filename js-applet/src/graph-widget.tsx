@@ -123,16 +123,22 @@ function GraphWidget() {
                     sidePanelWidth,
                     children: <GraphVisualization.SingleSelectionSidePanelContents/>,
                 }}
-                bottomRightIsland={
+                topRightIsland={
                     <IconButtonArray size="medium">
+                        <GraphVisualization.DownloadButton/>
+                        <GraphVisualization.ToggleSidePanelButton/>
+                    </IconButtonArray>
+                }
+                bottomRightIsland={
+                    <IconButtonArray size="medium" orientation="vertical">
                         <GraphVisualization.GestureSelectButton menuPlacement="top-end-bottom-end"/>
-                        <Divider orientation="horizontal"/>
+                        <Divider orientation="vertical"/>
                         <GraphVisualization.ZoomInButton/>
                         <GraphVisualization.ZoomOutButton/>
                         <GraphVisualization.ZoomToFitButton/>
                         {showLayoutButton && (
                             <>
-                                <Divider orientation="horizontal"/>
+                                <Divider orientation="vertical"/>
                                 <GraphVisualization.LayoutSelectButton menuPlacement="top-end-bottom-end"/>
                             </>
                         )}
