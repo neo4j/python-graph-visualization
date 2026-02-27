@@ -1,5 +1,3 @@
-import pytest
-
 from neo4j_viz.options import (
     Direction,
     ForceDirectedLayoutOptions,
@@ -9,9 +7,10 @@ from neo4j_viz.options import (
     RenderOptions,
 )
 
+
 def test_js_options_empty() -> None:
     options = RenderOptions()
-    assert options.to_js_options() == {'showLayoutButton': False}
+    assert options.to_js_options() == {"showLayoutButton": False}
 
 
 def test_js_options_layout_force_directed() -> None:
