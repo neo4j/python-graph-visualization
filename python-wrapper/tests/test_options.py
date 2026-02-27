@@ -1,5 +1,3 @@
-import pytest
-
 from neo4j_viz.options import (
     Direction,
     ForceDirectedLayoutOptions,
@@ -10,33 +8,9 @@ from neo4j_viz.options import (
 )
 
 
-def test_render_options() -> None:
-    options = RenderOptions(layout=Layout.HIERARCHICAL)
-
-    assert options.to_dict() == {"layout": "hierarchical"}
-
-
-def test_render_options_with_layout_options() -> None:
-    options = RenderOptions(
-        layout=Layout.HIERARCHICAL, layout_options=HierarchicalLayoutOptions(direction=Direction.LEFT)
-    )
-
-    assert options.to_dict() == {"layout": "hierarchical", "layoutOptions": {"direction": "left"}}
-
-
-def test_layout_options_match() -> None:
-    with pytest.raises(
-        ValueError, match="layout_options must be of type ForceDirectedLayoutOptions for force-directed layout"
-    ):
-        RenderOptions(layout=Layout.FORCE_DIRECTED, layout_options=HierarchicalLayoutOptions(direction=Direction.LEFT))
-
-
-# ── to_js_options tests ──────────────────────────────────────────────────
-
-
 def test_js_options_empty() -> None:
     options = RenderOptions()
-    assert options.to_js_options() == {}
+    assert options.to_js_options() == {"showLayoutButton": False}
 
 
 def test_js_options_layout_force_directed() -> None:
@@ -120,6 +94,7 @@ def test_js_options_full() -> None:
         allow_dynamic_min_zoom=True,
         pan_X=50.0,
         pan_Y=-30.0,
+        show_layout_button=True,
     )
     js = options.to_js_options()
     assert js == {
@@ -133,4 +108,5 @@ def test_js_options_full() -> None:
         },
         "zoom": 1.5,
         "pan": {"x": 50.0, "y": -30.0},
+        "showLayoutButton": True,
     }

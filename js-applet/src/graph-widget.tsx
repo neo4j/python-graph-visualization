@@ -1,6 +1,6 @@
 import {createRender, useModelState} from "@anywidget/react";
 import "@neo4j-ndl/base/lib/neo4j-ds-styles.css";
-import {GraphVisualization} from "@neo4j-ndl/react-graph";
+import {Gesture, GraphVisualization} from "@neo4j-ndl/react-graph";
 import type {Layout, NvlOptions} from "@neo4j-nvl/base";
 import {useEffect, useMemo, useState} from "react";
 import {
@@ -10,15 +10,17 @@ import {
     transformRelationships,
 } from "./data-transforms";
 import {GraphErrorBoundary} from "./graph-error-boundary";
+import {Divider, IconButtonArray} from "@neo4j-ndl/react";
 
 export type Theme = "dark" | "light" | "auto";
 
 export type GraphOptions = {
-    layout?: Layout;
+    layout: Layout;
     nvlOptions?: Partial<NvlOptions>;
     zoom?: number;
     pan?: { x: number; y: number };
     layoutOptions?: Record<string, unknown>;
+    showLayoutButton: boolean;
 };
 
 export type WidgetData = {
@@ -69,14 +71,18 @@ function GraphWidget() {
     const [nodes] = useModelState<WidgetData["nodes"]>("nodes");
     const [relationships] =
         useModelState<WidgetData["relationships"]>("relationships");
-    const [options] = useModelState<WidgetData["options"]>("options");
+    const [options, setOptions] = useModelState<WidgetData["options"]>("options");
     const [height] = useModelState<WidgetData["height"]>("height");
     const [width] = useModelState<WidgetData["width"]>("width");
     const [theme] = useModelState<WidgetData["theme"]>("theme");
+    const [gesture, setGesture] = useState<Gesture>('box');
+    const {layout, nvlOptions, zoom, pan, layoutOptions, showLayoutButton} = options ?? {};
+    const setLayout = (layout: Layout) => {
+        setOptions({...options, layout});
+    }
 
     useTheme(theme ?? "auto");
 
-    const {layout, nvlOptions, zoom, pan, layoutOptions} = options ?? {};
     const [neoNodes, neoRelationships] = useMemo(
         () => [
             transformNodes(nodes ?? []),
@@ -102,7 +108,10 @@ function GraphWidget() {
             <GraphVisualization
                 nodes={neoNodes}
                 rels={neoRelationships}
+                gesture={gesture}
+                setGesture={setGesture}
                 layout={layout}
+                setLayout={setLayout}
                 nvlOptions={nvlOptionsWithoutWorkers}
                 zoom={zoom}
                 pan={pan}
@@ -114,6 +123,21 @@ function GraphWidget() {
                     sidePanelWidth,
                     children: <GraphVisualization.SingleSelectionSidePanelContents/>,
                 }}
+                bottomRightIsland={
+                    <IconButtonArray size="medium">
+                        <GraphVisualization.GestureSelectButton menuPlacement="top-end-bottom-end"/>
+                        <Divider orientation="horizontal"/>
+                        <GraphVisualization.ZoomInButton/>
+                        <GraphVisualization.ZoomOutButton/>
+                        <GraphVisualization.ZoomToFitButton/>
+                        {showLayoutButton && (
+                            <>
+                                <Divider orientation="horizontal"/>
+                                <GraphVisualization.LayoutSelectButton menuPlacement="top-end-bottom-end"/>
+                            </>
+                        )}
+                    </IconButtonArray>
+                }
             />
         </div>
     );
