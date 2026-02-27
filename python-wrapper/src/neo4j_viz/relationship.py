@@ -9,6 +9,8 @@ from pydantic_extra_types.color import Color, ColorType
 
 from .options import CaptionAlignment
 
+RelationshipIdType = str | int
+
 
 def create_aliases(field_name: str) -> AliasChoices:
     valid_names = [field_name]
@@ -43,7 +45,7 @@ class Relationship(
     """
 
     #: Unique identifier for the relationship
-    id: Union[str, int] = Field(
+    id: RelationshipIdType = Field(
         default_factory=lambda: uuid4().hex, description="Unique identifier for the relationship"
     )
     #: Node ID where the relationship points from

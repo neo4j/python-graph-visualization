@@ -4,6 +4,8 @@
 
 ## New features
 
+- Add convenience method `add_data` and `remove_data` to `GraphWidget`.
+
 ## Bug fixes
 
 - Fixed a bug with the theme detection inn VSCode.

@@ -88,7 +88,7 @@ class VisualizationGraph:
         self,
         layout: Layout | None,
         layout_options: dict[str, Any] | LayoutOptions | None,
-        renderer: Renderer,
+        renderer: Renderer | str,
         pan_position: tuple[float, float] | None,
         initial_zoom: float | None,
         min_zoom: float,
@@ -104,6 +104,9 @@ class VisualizationGraph:
                 f"to {max_allowed_nodes} for performance reasons. It can be increased by "
                 "overriding `max_allowed_nodes`, but rendering could then take a long time"
             )
+
+        if isinstance(renderer, str):
+            renderer = Renderer(renderer)
 
         Renderer.check(renderer, num_nodes)
 
@@ -133,7 +136,7 @@ class VisualizationGraph:
         self,
         layout: Layout | None = None,
         layout_options: dict[str, Any] | LayoutOptions | None = None,
-        renderer: Renderer = Renderer.CANVAS,
+        renderer: Renderer | str = Renderer.CANVAS,
         width: str = "100%",
         height: str = "600px",
         pan_position: tuple[float, float] | None = None,
@@ -207,7 +210,7 @@ class VisualizationGraph:
         self,
         layout: Layout | None = None,
         layout_options: dict[str, Any] | LayoutOptions | None = None,
-        renderer: Renderer = Renderer.CANVAS,
+        renderer: Renderer | str = Renderer.CANVAS,
         width: str = "100%",
         height: str = "600px",
         pan_position: tuple[float, float] | None = None,
