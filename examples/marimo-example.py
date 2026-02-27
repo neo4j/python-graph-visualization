@@ -106,8 +106,6 @@ def _(mo):
 
 @app.cell
 def _(VG):
-    import os
-
     VG.render()
     return
 
