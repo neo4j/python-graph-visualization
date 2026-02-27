@@ -182,6 +182,33 @@ class TestWidgetDataBinding:
         assert len(widget.relationships) == 2
         assert widget.nodes[0]["id"] == "x1"
 
+    def test_add_data(self) -> None:
+        """Test adding new data to existing graph."""
+        nodes = [Node(id="n1"), Node(id="n2")]
+        rels = [Relationship(source="n1", target="n2")]
+        widget = GraphWidget.from_graph_data(nodes, rels)
+
+        widget.add_data(Node(id="x1"), Relationship(source="x1", target="x2"))
+
+        assert len(widget.nodes) == 3
+        assert len(widget.relationships) == 2
+
+    def test_remove_data(self) -> None:
+        """Test removing data from the graph."""
+        node_1 = Node(id="n1")
+        nodes = [node_1, Node(id="n2"), Node(id="n3")]
+        rels = [
+            Relationship(source="n1", target="n2"),
+            Relationship(id=42, source="n2", target="n1"),
+            Relationship(source="n2", target="n1"),  # detach delete
+            Relationship(id=43, source="n3", target="n3"),
+        ]
+        widget = GraphWidget.from_graph_data(nodes, rels)
+
+        widget.remove_data(nodes=[node_1, "n2"], relationships=[rels[0], "42"])
+        assert {n["id"] for n in widget.nodes} == {"n3"}
+        assert {r["id"] for r in widget.relationships} == {"43"}
+
 
 render_widget_cases = {
     "default": {},
