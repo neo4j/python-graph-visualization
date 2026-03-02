@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "@anywidget/vite": "^0.2.2",
-    "@types/node": "^25.2.3",
+    "@types/node": "^25.3.3",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.5.2",
