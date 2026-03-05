@@ -38,6 +38,10 @@ def _serialize_entity(entity: Union[Node, Relationship]) -> dict[str, Any]:
 _STATIC = pathlib.Path(__file__).parent / "resources" / "nvl_entrypoint"
 
 
+def entity_to_json(entity_list: list[Node | Relationship], widget: anywidget.AnyWidget) -> list[dict[str, Any]]:
+    return [_serialize_entity(entity) for entity in entity_list]
+
+
 class GraphWidget(anywidget.AnyWidget):
     """Jupyter widget for interactive graph visualization.
 
@@ -51,8 +55,8 @@ class GraphWidget(anywidget.AnyWidget):
     _esm = _STATIC / "widget.js"
     _css = _STATIC / "style.css"
 
-    nodes: traitlets.List[dict[str, Any]] = traitlets.List([]).tag(sync=True)
-    relationships: traitlets.List[dict[str, Any]] = traitlets.List([]).tag(sync=True)
+    nodes: traitlets.List[Node] = traitlets.List([]).tag(sync=True, to_json=entity_to_json)
+    relationships: traitlets.List[Relationship] = traitlets.List([]).tag(sync=True, to_json=entity_to_json)
     width: traitlets.Unicode[str, str | bytes] = traitlets.Unicode("100%").tag(sync=True)
     height: traitlets.Unicode[str, str | bytes] = traitlets.Unicode("600px").tag(sync=True)
     options: traitlets.Dict[str, Any] = traitlets.Dict({}).tag(sync=True)
@@ -72,8 +76,8 @@ class GraphWidget(anywidget.AnyWidget):
     ) -> GraphWidget:
         """Create a GraphWidget from Node and Relationship lists."""
         return cls(
-            nodes=[_serialize_entity(n) for n in nodes],
-            relationships=[_serialize_entity(r) for r in relationships],
+            nodes=nodes,
+            relationships=relationships,
             width=width,
             height=height,
             options=options.to_js_options() if options else {},
@@ -99,9 +103,9 @@ class GraphWidget(anywidget.AnyWidget):
             relationships = [relationships]
 
         if nodes:
-            self.nodes = self.nodes + [_serialize_entity(n) for n in nodes]
+            self.nodes = self.nodes + nodes
         if relationships:
-            self.relationships = self.relationships + [_serialize_entity(r) for r in relationships]
+            self.relationships = self.relationships + relationships
 
     def remove_data(
         self,
@@ -137,13 +141,13 @@ class GraphWidget(anywidget.AnyWidget):
             rel_ids_to_remove = {r.id if isinstance(r, Relationship) else r for r in relationships}
 
         if node_ids_to_remove:
-            self.nodes = [n for n in self.nodes if n["id"] not in node_ids_to_remove]
+            self.nodes = [n for n in self.nodes if n.id not in node_ids_to_remove]
 
-        def keep_rel(r: dict[str, Any]) -> bool:
+        def keep_rel(r: Relationship) -> bool:
             return (
-                r["id"] not in rel_ids_to_remove
-                and r["from"] not in node_ids_to_remove
-                and r["to"] not in node_ids_to_remove
+                r.id not in rel_ids_to_remove
+                and r.source not in node_ids_to_remove
+                and r.target not in node_ids_to_remove
             )
 
         if rel_ids_to_remove:
