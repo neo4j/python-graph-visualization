@@ -16,6 +16,7 @@
 ## Improvements
 
 - Allow setting the theme manually in `VG.render(theme="light")` and `VG.render_widget(theme="dark")`.
+- Use typed nodes and relationship traitlets in GraphWidget, i.e., list of Node and Relationship instead of dictionaries.
 - `render` now allows to pass `layout` as a string as well. Previously expected to be a typed `neo4j_viz.Layout`. 
 
 ## Other changes

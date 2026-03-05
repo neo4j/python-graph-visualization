@@ -99,23 +99,25 @@ class TestWidgetDataBinding:
     """Test traitlet data binding - modifications that would sync to JS."""
 
     def test_update_nodes(self) -> None:
-        widget = GraphWidget(nodes=[{"id": "n1", "caption": "A"}])
+        widget = GraphWidget(nodes=[Node(id="n1", caption="A")])
         assert len(widget.nodes) == 1
 
         # Simulate adding a node (as JS or Python might do)
-        widget.nodes = [*widget.nodes, {"id": "n2", "caption": "B"}]
+        widget.nodes = [*widget.nodes, Node(id="n2", caption="B")]
         assert len(widget.nodes) == 2
-        assert widget.nodes[1]["id"] == "n2"
+        assert widget.nodes[1].id == "n2"
 
     def test_update_relationships(self) -> None:
         widget = GraphWidget(
-            nodes=[{"id": "n1"}, {"id": "n2"}],
+            nodes=[Node(id="n1"), Node(id="n2")],
             relationships=[],
         )
         assert len(widget.relationships) == 0
 
-        widget.relationships = [{"from": "n1", "to": "n2", "caption": "LINKS"}]
+        widget.relationships = [Relationship(source="n1", target="n2", caption="LINKS")]
         assert len(widget.relationships) == 1
+        assert widget.relationships[0].source == "n1"
+        assert widget.relationships[0].target == "n2"
 
     def test_update_options(self) -> None:
         widget = GraphWidget(options={"layout": "d3Force"})
@@ -143,11 +145,12 @@ class TestWidgetDataBinding:
 
         widget.observe(on_change, names=["nodes"])
 
-        widget.nodes = [{"id": "n1"}]
+        widget.nodes = [Node(id="n1")]
 
         assert len(changes) == 1
         assert changes[0]["name"] == "nodes"
-        assert changes[0]["new"] == [{"id": "n1"}]
+        assert len(changes[0]["new"]) == 1
+        assert changes[0]["new"][0].id == "n1"
 
     def test_observe_multiple_traits(self) -> None:
         """Test observing multiple trait changes."""
@@ -159,8 +162,8 @@ class TestWidgetDataBinding:
 
         widget.observe(log_change, names=["nodes", "relationships", "options"])
 
-        widget.nodes = [{"id": "n1"}]
-        widget.relationships = [{"from": "n1", "to": "n1"}]
+        widget.nodes = [Node(id="n1")]
+        widget.relationships = [Relationship(source="n1", target="n1")]
         widget.options = {"zoom": 1.5}
 
         assert change_log == ["nodes", "relationships", "options"]
@@ -175,12 +178,12 @@ class TestWidgetDataBinding:
         new_nodes = [Node(id="x1"), Node(id="x2"), Node(id="x3")]
         new_rels = [Relationship(source="x1", target="x2"), Relationship(source="x2", target="x3")]
 
-        widget.nodes = [_serialize_entity(n) for n in new_nodes]
-        widget.relationships = [_serialize_entity(r) for r in new_rels]
+        widget.nodes = new_nodes
+        widget.relationships = new_rels
 
         assert len(widget.nodes) == 3
         assert len(widget.relationships) == 2
-        assert widget.nodes[0]["id"] == "x1"
+        assert widget.nodes[0].id == "x1"
 
     def test_add_data(self) -> None:
         """Test adding new data to existing graph."""
@@ -206,8 +209,8 @@ class TestWidgetDataBinding:
         widget = GraphWidget.from_graph_data(nodes, rels)
 
         widget.remove_data(nodes=[node_1, "n2"], relationships=[rels[0], "42"])
-        assert {n["id"] for n in widget.nodes} == {"n3"}
-        assert {r["id"] for r in widget.relationships} == {"43"}
+        assert {n.id for n in widget.nodes} == {"n3"}
+        assert {r.id for r in widget.relationships} == {43}
 
 
 render_widget_cases = {
@@ -264,7 +267,7 @@ class TestRenderWidget:
 
         # Should not raise
         widget = VG.render_widget()
-        assert widget.nodes[0]["properties"]["timestamp"] == str(now)
+        assert _serialize_entity(widget.nodes[0])["properties"]["timestamp"] == str(now)
 
     def test_render_widget_options_passed_through(self) -> None:
         nodes = [Node(id="n1")]
