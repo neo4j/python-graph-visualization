@@ -2,7 +2,7 @@
 
 import marimo
 
-__generated_with = "0.20.2"
+__generated_with = "0.20.4"
 app = marimo.App(width="full", app_title="Neo4jVizExample")
 
 
@@ -88,7 +88,7 @@ def _(Node, Relationship, widget):
     import random
 
     new_id = len(widget.nodes)
-    target_id = random.choice([n["id"] for n in widget.nodes])
+    target_id = random.choice([n.id for n in widget.nodes])
 
     new_node = Node(id=new_id, size=10, caption="Person")
     new_rel = Relationship(source=new_id, target=target_id, caption="KNOWS")
