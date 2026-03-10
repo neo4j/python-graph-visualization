@@ -816,10 +816,10 @@
     "@types/chroma-js" "2.1.4"
     chroma-js "2.4.2"
 
-"@neo4j-ndl/base@4.9.7":
-  version "4.9.7"
-  resolved "https://registry.yarnpkg.com/@neo4j-ndl/base/-/base-4.9.7.tgz#ae9bff44d6d7b42240ea79b57bf2246697695fd3"
-  integrity sha512-guhFaUwVRpHRvbXCo/xYpBc2kZvMlK4CbvSDAwFOExryQxGqkpQKLsmN4NvKYHKn0yuN/fmTKTitVg13MuKUSg==
+"@neo4j-ndl/base@4.9.9":
+  version "4.9.9"
+  resolved "https://registry.yarnpkg.com/@neo4j-ndl/base/-/base-4.9.9.tgz#cb5428dc12685b2739ce623ac0b9ee89fa2d951d"
+  integrity sha512-e1HrmAWSUvcasxgW7AkhQwFSv0dv5pzzONdMqMAmqO/NusoNkdO1v2Qro/joID+am0Ow8emg2NMmqRhOjD8mZg==
 
 "@neo4j-ndl/react-graph@1.2.35":
   version "1.2.35"
