@@ -69,8 +69,8 @@ def _(mo):
 def _(VisualizationGraph, mo, nodes, relationships):
     # Create and render the visualization
     VG = VisualizationGraph(nodes=nodes, relationships=relationships)
+    # Note, we need to pass the theme explicitly in Marimo.
     widget = VG.render_widget(theme=mo.app_meta().theme, renderer="canvas")
-    # TODO figure out why the rendering in Marimo is off
     widget
     return VG, widget
 
