@@ -1,3 +1,6 @@
+root_dir := justfile_directory()
+py_dir := root_dir / 'python-wrapper'
+
 py-sync:
     cd python-wrapper && uv sync --group dev --group docs --group notebook --extra pandas --extra neo4j --extra gds --extra snowflake
 
@@ -45,6 +48,16 @@ js-build:
 
 streamlit:
     ./scripts/run_streamlit_example.sh
+
+marimo:
+    #!/usr/bin/env bash
+    set -e
+    cd {{py_dir}} && uv run --group notebook marimo run {{root_dir}}/examples/marimo-example.py
+
+marimo-edit:
+    #!/usr/bin/env bash
+    set -e
+    cd {{py_dir}} && uv run --group notebook marimo edit {{root_dir}}/examples/marimo-example.py
 
 ref-docs:
     ./scripts/render_antora_docs.sh

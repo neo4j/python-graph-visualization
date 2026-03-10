@@ -1,3 +1,4 @@
 .ipynb_checkpoints
 
 out/*
+/__marimo__/session/*
