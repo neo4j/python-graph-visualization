@@ -36,7 +36,6 @@ dependencies = [
     "enum-tools==0.13.0",
     "anywidget >=0.9, <1",
     "traitlets >=5, <6",
-    "marimo>=0.20.4",
 ]
 requires-python = ">=3.10"
 
