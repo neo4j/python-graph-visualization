@@ -84,6 +84,9 @@ class VisualizationGraph:
         self.nodes = nodes
         self.relationships = relationships
 
+    def __str__(self) -> str:
+        return f"VisualizationGraph(nodes={len(self.nodes)}, relationships={len(self.relationships)})"
+
     def _build_render_options(
         self,
         layout: Layout | str | None,
