@@ -82204,9 +82204,9 @@ class Hdr extends kr.Component {
   }
 }
 function Vdr() {
-  if (document.body.classList.contains("vscode-light"))
+  if (document.body.classList.contains("vscode-light") || document.body.classList.contains("light-theme"))
     return "light";
-  if (document.body.classList.contains("vscode-dark"))
+  if (document.body.classList.contains("vscode-dark") || document.body.classList.contains("dark-theme"))
     return "dark";
   const r = window.getComputedStyle(document.body, null).getPropertyValue("background-color").match(/\d+/g);
   if (!r || r.length < 3)

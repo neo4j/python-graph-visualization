@@ -7,5 +7,4 @@ set -o pipefail
 (
     cd "${GIT_ROOT}/js-applet"
     rm -rf node_modules
-    rm -f yarn.lock
 )

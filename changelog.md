@@ -18,7 +18,7 @@
 - Allow setting the theme manually in `VG.render(theme="light")` and `VG.render_widget(theme="dark")`.
 - Use typed nodes and relationship traitlets in GraphWidget, i.e., list of Node and Relationship instead of dictionaries.
 - `render` now allows to pass `layout` as a string as well. Previously expected to be a typed `neo4j_viz.Layout`. 
-- Fixed rendering in Marimo notebooks. Note, you still have to manually pass the marimo theme `VG.render_widget(theme=marimo.app_meta().theme)`
+- Fixed rendering in Marimo notebooks
 
 
 ## Other changes

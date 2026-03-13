@@ -66,11 +66,11 @@ def _(mo):
 
 
 @app.cell
-def _(VisualizationGraph, mo, nodes, relationships):
+def _(VisualizationGraph, nodes, relationships):
     # Create and render the visualization
     VG = VisualizationGraph(nodes=nodes, relationships=relationships)
     # Note, we need to pass the theme explicitly in Marimo.
-    widget = VG.render_widget(theme=mo.app_meta().theme, renderer="canvas")
+    widget = VG.render_widget(renderer="canvas")
     widget
     return VG, widget
 
