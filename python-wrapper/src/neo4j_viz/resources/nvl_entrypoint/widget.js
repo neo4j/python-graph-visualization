@@ -82239,7 +82239,7 @@ function Ydr(o) {
   }
 }
 function Xdr() {
-  const [o] = Y0("nodes"), [r] = Y0("relationships"), [e, t] = Y0("options"), [n] = Y0("height"), [a] = Y0("width"), [i] = Y0("theme"), [c, l] = kr.useState("box"), { layout: d, nvlOptions: s, zoom: u, pan: g, layoutOptions: b, showLayoutButton: f } = e ?? {}, v = (I) => {
+  const [o] = Y0("nodes"), [r] = Y0("relationships"), [e, t] = Y0("options"), [n] = Y0("height"), [a] = Y0("width"), [i] = Y0("theme"), [c, l] = kr.useState("single"), { layout: d, nvlOptions: s, zoom: u, pan: g, layoutOptions: b, showLayoutButton: f } = e ?? {}, v = (I) => {
     t({ ...e, layout: I });
   }, p = kr.useRef(null), m = Wdr(i ?? "auto"), [y, k] = kr.useState(null);
   kr.useEffect(() => {

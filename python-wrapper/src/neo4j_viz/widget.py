@@ -84,6 +84,9 @@ class GraphWidget(anywidget.AnyWidget):
             theme=theme,
         )
 
+    def __str__(self) -> str:
+        return f"GraphWidget(nodes={len(self.nodes)}, relationships={len(self.relationships)}, options={self.options}, theme={self.theme}, width={self.width}, height={self.height})"
+
     def add_data(
         self, nodes: Node | list[Node] | None = None, relationships: Relationship | list[Relationship] | None = None
     ) -> None:
