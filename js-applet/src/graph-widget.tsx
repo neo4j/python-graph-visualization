@@ -37,10 +37,10 @@ export type WidgetData = {
 };
 
 function detectTheme(): "light" | "dark" {
-  if (document.body.classList.contains("vscode-light")) {
+  if (document.body.classList.contains("vscode-light") || document.body.classList.contains("light-theme")) {
     return "light";
   }
-  if (document.body.classList.contains("vscode-dark")) {
+  if (document.body.classList.contains("vscode-dark") || document.body.classList.contains("dark-theme")) {
     return "dark";
   }
 
