@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Hashable, Iterable
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 from IPython.display import HTML
 from pydantic.alias_generators import to_snake
@@ -84,17 +84,21 @@ class VisualizationGraph:
         self.nodes = nodes
         self.relationships = relationships
 
+    def __str__(self) -> str:
+        return f"VisualizationGraph(nodes={len(self.nodes)}, relationships={len(self.relationships)})"
+
     def _build_render_options(
         self,
-        layout: Layout | None,
+        layout: Layout | str | None,
         layout_options: dict[str, Any] | LayoutOptions | None,
-        renderer: Renderer,
+        renderer: Renderer | str,
         pan_position: tuple[float, float] | None,
         initial_zoom: float | None,
         min_zoom: float,
         max_zoom: float,
         allow_dynamic_min_zoom: bool,
         max_allowed_nodes: int,
+        show_layout_button: bool,
     ) -> RenderOptions:
         """Shared validation + option building for render / render_widget."""
         num_nodes = len(self.nodes)
@@ -105,10 +109,15 @@ class VisualizationGraph:
                 "overriding `max_allowed_nodes`, but rendering could then take a long time"
             )
 
+        if isinstance(renderer, str):
+            renderer = Renderer(renderer)
+
         Renderer.check(renderer, num_nodes)
 
         if not layout:
             layout = Layout.FORCE_DIRECTED
+        if isinstance(layout, str):
+            layout = Layout(layout.lower())
         if not layout_options:
             layout_options = {}
 
@@ -127,13 +136,14 @@ class VisualizationGraph:
             min_zoom=min_zoom,
             max_zoom=max_zoom,
             allow_dynamic_min_zoom=allow_dynamic_min_zoom,
+            show_layout_button=show_layout_button,
         )
 
     def render(
         self,
-        layout: Layout | None = None,
+        layout: Layout | str | None = None,
         layout_options: dict[str, Any] | LayoutOptions | None = None,
-        renderer: Renderer = Renderer.CANVAS,
+        renderer: Renderer | str = Renderer.CANVAS,
         width: str = "100%",
         height: str = "600px",
         pan_position: tuple[float, float] | None = None,
@@ -142,6 +152,7 @@ class VisualizationGraph:
         max_zoom: float = 10,
         allow_dynamic_min_zoom: bool = True,
         max_allowed_nodes: int = 10_000,
+        theme: Literal["auto"] | Literal["light"] | Literal["dark"] = "auto",
     ) -> HTML:
         """
         Render the graph as an HTML object.
@@ -173,7 +184,8 @@ class VisualizationGraph:
             Whether to allow dynamic minimum zoom level.
         max_allowed_nodes:
             The maximum allowed number of nodes to render.
-
+        theme:
+            The theme of the rendered graph. Can be 'auto', 'light', or 'dark'
 
         Example
         -------
@@ -190,6 +202,7 @@ class VisualizationGraph:
             max_zoom,
             allow_dynamic_min_zoom,
             max_allowed_nodes,
+            show_layout_button=False,  # The button only works with the widget
         )
 
         return NVL().render(
@@ -198,13 +211,14 @@ class VisualizationGraph:
             render_options,
             width,
             height,
+            theme,
         )
 
     def render_widget(
         self,
-        layout: Layout | None = None,
+        layout: Layout | str | None = None,
         layout_options: dict[str, Any] | LayoutOptions | None = None,
-        renderer: Renderer = Renderer.CANVAS,
+        renderer: Renderer | str = Renderer.CANVAS,
         width: str = "100%",
         height: str = "600px",
         pan_position: tuple[float, float] | None = None,
@@ -213,6 +227,7 @@ class VisualizationGraph:
         max_zoom: float = 10,
         allow_dynamic_min_zoom: bool = True,
         max_allowed_nodes: int = 10_000,
+        theme: Literal["auto"] | Literal["light"] | Literal["dark"] = "auto",
     ) -> GraphWidget:
         """
         Render the graph as an interactive Jupyter widget (anywidget).
@@ -244,6 +259,8 @@ class VisualizationGraph:
             Whether to allow dynamic minimum zoom level.
         max_allowed_nodes:
             The maximum allowed number of nodes to render.
+        theme:
+            The theme to use for the rendered graph.
         """
         render_options = self._build_render_options(
             layout,
@@ -255,6 +272,7 @@ class VisualizationGraph:
             max_zoom,
             allow_dynamic_min_zoom,
             max_allowed_nodes,
+            show_layout_button=True,
         )
 
         return GraphWidget.from_graph_data(
@@ -263,6 +281,7 @@ class VisualizationGraph:
             width=width,
             height=height,
             options=render_options,
+            theme=theme,
         )
 
     def toggle_nodes_pinned(self, pinned: dict[NodeIdType, bool]) -> None:

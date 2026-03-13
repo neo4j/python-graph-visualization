@@ -38,12 +38,14 @@ class NVL:
         render_options: RenderOptions,
         width: str,
         height: str,
+        theme: str,
     ) -> HTML:
         data_dict: dict[str, object] = {
             "nodes": [_serialize_entity(node) for node in nodes],
             "relationships": [_serialize_entity(rel) for rel in relationships],
             "width": width,
             "height": height,
+            "theme": theme,
             "options": render_options.to_js_options(),
         }
         data_json = json.dumps(data_dict)

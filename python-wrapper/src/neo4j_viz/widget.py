@@ -7,9 +7,9 @@ from typing import Any, Union
 import anywidget
 import traitlets
 
-from .node import Node
+from .node import Node, NodeIdType
 from .options import RenderOptions
-from .relationship import Relationship
+from .relationship import Relationship, RelationshipIdType
 
 
 def _serialize_entity(entity: Union[Node, Relationship]) -> dict[str, Any]:
@@ -38,6 +38,10 @@ def _serialize_entity(entity: Union[Node, Relationship]) -> dict[str, Any]:
 _STATIC = pathlib.Path(__file__).parent / "resources" / "nvl_entrypoint"
 
 
+def entity_to_json(entity_list: list[Node | Relationship], widget: anywidget.AnyWidget) -> list[dict[str, Any]]:
+    return [_serialize_entity(entity) for entity in entity_list]
+
+
 class GraphWidget(anywidget.AnyWidget):
     """Jupyter widget for interactive graph visualization.
 
@@ -51,11 +55,14 @@ class GraphWidget(anywidget.AnyWidget):
     _esm = _STATIC / "widget.js"
     _css = _STATIC / "style.css"
 
-    nodes: traitlets.List[dict[str, Any]] = traitlets.List([]).tag(sync=True)
-    relationships: traitlets.List[dict[str, Any]] = traitlets.List([]).tag(sync=True)
+    nodes: traitlets.List[Node] = traitlets.List([]).tag(sync=True, to_json=entity_to_json)
+    relationships: traitlets.List[Relationship] = traitlets.List([]).tag(sync=True, to_json=entity_to_json)
     width: traitlets.Unicode[str, str | bytes] = traitlets.Unicode("100%").tag(sync=True)
     height: traitlets.Unicode[str, str | bytes] = traitlets.Unicode("600px").tag(sync=True)
     options: traitlets.Dict[str, Any] = traitlets.Dict({}).tag(sync=True)
+    theme: traitlets.Unicode[str, str | bytes] = traitlets.Unicode(
+        default_value="auto", help="Theme of the graph widget. Can be 'auto', 'light', or 'dark'."
+    ).tag(sync=True)
 
     @classmethod
     def from_graph_data(
@@ -65,12 +72,86 @@ class GraphWidget(anywidget.AnyWidget):
         width: str = "100%",
         height: str = "600px",
         options: RenderOptions | None = None,
+        theme: str = "auto",
     ) -> GraphWidget:
         """Create a GraphWidget from Node and Relationship lists."""
         return cls(
-            nodes=[_serialize_entity(n) for n in nodes],
-            relationships=[_serialize_entity(r) for r in relationships],
+            nodes=nodes,
+            relationships=relationships,
             width=width,
             height=height,
             options=options.to_js_options() if options else {},
+            theme=theme,
         )
+
+    def __str__(self) -> str:
+        return f"GraphWidget(nodes={len(self.nodes)}, relationships={len(self.relationships)}, options={self.options}, theme={self.theme}, width={self.width}, height={self.height})"
+
+    def add_data(
+        self, nodes: Node | list[Node] | None = None, relationships: Relationship | list[Relationship] | None = None
+    ) -> None:
+        """
+        Add nodes or relationships to the graph widget.
+
+        Parameters
+        -----------
+        nodes:
+            Nodes to add to the graph widget.
+        relationships:
+            Relationships to add to the graph widget.
+        """
+        if isinstance(nodes, Node):
+            nodes = [nodes]
+        if isinstance(relationships, Relationship):
+            relationships = [relationships]
+
+        if nodes:
+            self.nodes = self.nodes + nodes
+        if relationships:
+            self.relationships = self.relationships + relationships
+
+    def remove_data(
+        self,
+        nodes: Node | list[Node | NodeIdType] | NodeIdType | None = None,
+        relationships: Relationship | list[Relationship | RelationshipIdType] | RelationshipIdType | None = None,
+    ) -> None:
+        """
+        Remove nodes or relationships from the graph widget.
+
+        Parameters
+        -----------
+        nodes:
+            Nodes to remove from the graph widget.
+        relationships:
+            Relationships to remove from the graph widget.
+        """
+        if isinstance(nodes, Node):
+            node_ids_to_remove = {nodes.id}
+        elif isinstance(nodes, NodeIdType):
+            node_ids_to_remove = {nodes}
+        elif nodes is None:
+            node_ids_to_remove = set()
+        else:
+            node_ids_to_remove = {n.id if isinstance(n, Node) else n for n in nodes}
+
+        if isinstance(relationships, Relationship):
+            rel_ids_to_remove = {relationships.id}
+        elif isinstance(relationships, RelationshipIdType):
+            rel_ids_to_remove = {relationships}
+        elif relationships is None:
+            rel_ids_to_remove = set()
+        else:
+            rel_ids_to_remove = {r.id if isinstance(r, Relationship) else r for r in relationships}
+
+        if node_ids_to_remove:
+            self.nodes = [n for n in self.nodes if n.id not in node_ids_to_remove]
+
+        def keep_rel(r: Relationship) -> bool:
+            return (
+                r.id not in rel_ids_to_remove
+                and r.source not in node_ids_to_remove
+                and r.target not in node_ids_to_remove
+            )
+
+        if rel_ids_to_remove:
+            self.relationships = [r for r in self.relationships if keep_rel(r)]

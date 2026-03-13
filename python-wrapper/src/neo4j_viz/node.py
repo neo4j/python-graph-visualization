@@ -9,7 +9,7 @@ from pydantic_extra_types.color import Color, ColorType
 from .node_size import RealNumber
 from .options import CaptionAlignment
 
-NodeIdType = Union[str, int]
+NodeIdType = str | int
 
 
 def create_aliases(field_name: str) -> AliasChoices:
