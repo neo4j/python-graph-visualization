@@ -112,7 +112,7 @@ function GraphWidget() {
   const [height] = useModelState<WidgetData["height"]>("height");
   const [width] = useModelState<WidgetData["width"]>("width");
   const [theme] = useModelState<WidgetData["theme"]>("theme");
-  const [gesture, setGesture] = useState<Gesture>("box");
+  const [gesture, setGesture] = useState<Gesture>("single");
   const { layout, nvlOptions, zoom, pan, layoutOptions, showLayoutButton } =
     options ?? {};
   const setLayout = (layout: Layout) => {
