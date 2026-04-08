@@ -1862,7 +1862,7 @@ wheels = [
 
 [[package]]
 name = "marimo"
-version = "0.20.4"
+version = "0.23.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -1878,15 +1878,16 @@ dependencies = [
     { name = "pygments" },
     { name = "pymdown-extensions" },
     { name = "pyyaml" },
+    { name = "pyzmq", marker = "python_full_version < '3.15'" },
     { name = "starlette" },
     { name = "tomlkit" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
     { name = "uvicorn" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9c/eb/3c19ce54be3440cece96bffbb2027c57d618ab336d53ef6a962f570ce468/marimo-0.20.4.tar.gz", hash = "sha256:7f46ce837953717504673e33e47fb42a619bf5f9d2000d1a3a3b1663a47c5498", size = 38336283, upload-time = "2026-03-04T01:15:13.641Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/65/7dc6568f5973e4aba1bfd47e4c6d5339719ea9e483ae9f53d172505250d8/marimo-0.23.0.tar.gz", hash = "sha256:c125d0db5b369383d2a28d3760cb93b5ca53a3e45910d2fc21294d3de2c843ad", size = 38268543, upload-time = "2026-04-08T17:28:45.828Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/56/62/bf2c92cc7aab69edfb3907e9bf102c37c1e16b8f4bc6ddd4258ae4c8063c/marimo-0.20.4-py3-none-any.whl", hash = "sha256:3200edd7209f470821b58deb4a45e0577889fab1052748d77088f18bef7d9dd8", size = 38752562, upload-time = "2026-03-04T01:15:09.608Z" },
+    { url = "https://files.pythonhosted.org/packages/c8/4a/d4dd553b1a56efd23c1b7295bd9fe43b63fc2b156e394f16e802739ac2f8/marimo-0.23.0-py3-none-any.whl", hash = "sha256:6bfc3114cf388c485389a2e52e64008378b0be8d87da55329fa6e064f2806115", size = 38690254, upload-time = "2026-04-08T17:28:42.773Z" },
 ]
 
 [[package]]
@@ -2389,7 +2390,7 @@ wheels = [
 
 [[package]]
 name = "neo4j-viz"
-version = "1.3.0"
+version = "1.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "anywidget" },
