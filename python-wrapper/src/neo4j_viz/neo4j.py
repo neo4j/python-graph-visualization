@@ -21,7 +21,11 @@ def _parse_validation_error(e: ValidationError, entity_type: type[BaseModel]) ->
         )
 
 
-def _collect_graph_entities(value: object, nodes: dict, rels: dict) -> None:
+def _collect_graph_entities(
+    value: object,
+    nodes: dict[str, neo4j.graph.Node],
+    rels: dict[str, neo4j.graph.Relationship],
+) -> None:
     """Recursively extract Node and Relationship objects from any record value."""
     if isinstance(value, neo4j.graph.Node):
         nodes[value.element_id] = value
@@ -58,16 +62,15 @@ def _graph_from_eager_result(data: "EagerResult") -> neo4j.graph.Graph:
 
     # Fallback: no direct entity columns — walk everything recursively and
     # build a synthetic Graph so the rest of from_neo4j can stay uniform.
-    nodes_dict: dict = {}
-    rels_dict: dict = {}
+    nodes_dict: dict[str, neo4j.graph.Node] = {}
+    rels_dict: dict[str, neo4j.graph.Relationship] = {}
     for record in data.records:
         for value in record.values():
             _collect_graph_entities(value, nodes_dict, rels_dict)
     graph = neo4j.graph.Graph()
-    graph._nodes = nodes_dict  # type: ignore[attr-defined]
-    # Relationships are keyed by element_id in the internal dict
+    graph._nodes = nodes_dict
     for rel in rels_dict.values():
-        graph._relationships[rel.element_id] = rel  # type: ignore[attr-defined]
+        graph._relationships[rel.element_id] = rel
     return graph
 
 
@@ -131,7 +134,9 @@ def from_neo4j(
         raw_nodes = graph.nodes
         raw_relationships = graph.relationships
     else:
-        raise ValueError(f"Invalid input type `{type(data)}`. Expected `neo4j.Graph`, `neo4j.Result`, `neo4j.EagerResult` or `neo4j.Driver`")
+        raise ValueError(
+            f"Invalid input type `{type(data)}`. Expected `neo4j.Graph`, `neo4j.Result`, `neo4j.EagerResult` or `neo4j.Driver`"
+        )
 
     nodes = [_map_node(node) for node in raw_nodes]
 
