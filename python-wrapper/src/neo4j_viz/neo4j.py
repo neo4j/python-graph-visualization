@@ -4,7 +4,7 @@ import warnings
 from typing import Optional, Union
 
 import neo4j.graph
-from neo4j import Driver, Result, RoutingControl
+from neo4j import Driver, EagerResult, Result, RoutingControl
 from pydantic import BaseModel, ValidationError
 
 from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace
@@ -21,12 +21,62 @@ def _parse_validation_error(e: ValidationError, entity_type: type[BaseModel]) ->
         )
 
 
+def _collect_graph_entities(value: object, nodes: dict, rels: dict) -> None:
+    """Recursively extract Node and Relationship objects from any record value."""
+    if isinstance(value, neo4j.graph.Node):
+        nodes[value.element_id] = value
+    elif isinstance(value, neo4j.graph.Relationship):
+        rels[value.element_id] = value
+    elif isinstance(value, neo4j.graph.Path):
+        for node in value.nodes:
+            nodes[node.element_id] = node
+        for rel in value.relationships:
+            rels[rel.element_id] = rel
+    elif isinstance(value, list):
+        for item in value:
+            _collect_graph_entities(item, nodes, rels)
+    elif isinstance(value, dict):
+        for item in value.values():
+            _collect_graph_entities(item, nodes, rels)
+
+
+def _graph_from_eager_result(data: "EagerResult") -> neo4j.graph.Graph:
+    """Return the bolt hydration Graph shared by all entities in an EagerResult.
+
+    Every Node/Relationship produced by the same query references the same
+    internal Graph that the driver built during bolt hydration — identical to
+    what Result.graph() returns.  We find the first entity in the records and
+    return its .graph.  If the result contains no graph entities at all we fall
+    back to walking the records manually.
+    """
+    for record in data.records:
+        for value in record.values():
+            if isinstance(value, (neo4j.graph.Node, neo4j.graph.Relationship)):
+                return value.graph
+            if isinstance(value, neo4j.graph.Path) and value.nodes:
+                return value.nodes[0].graph
+
+    # Fallback: no direct entity columns — walk everything recursively and
+    # build a synthetic Graph so the rest of from_neo4j can stay uniform.
+    nodes_dict: dict = {}
+    rels_dict: dict = {}
+    for record in data.records:
+        for value in record.values():
+            _collect_graph_entities(value, nodes_dict, rels_dict)
+    graph = neo4j.graph.Graph()
+    graph._nodes = nodes_dict  # type: ignore[attr-defined]
+    # Relationships are keyed by element_id in the internal dict
+    for rel in rels_dict.values():
+        graph._relationships[rel.element_id] = rel  # type: ignore[attr-defined]
+    return graph
+
+
 def from_neo4j(
-    data: Union[neo4j.graph.Graph, Result, Driver],
+    data: Union[neo4j.graph.Graph, Result, EagerResult, Driver],
     row_limit: int = 10_000,
 ) -> VisualizationGraph:
     """
-    Create a VisualizationGraph from a Neo4j `Graph`, Neo4j `Result` or Neo4j `Driver`.
+    Create a VisualizationGraph from a Neo4j `Graph`, Neo4j `Result`, Neo4j `EagerResult` or Neo4j `Driver`.
 
     By default:
 
@@ -39,9 +89,10 @@ def from_neo4j(
 
     Parameters
     ----------
-    data : Union[neo4j.graph.Graph, neo4j.Result, neo4j.Driver]
-        Either a query result in the shape of a `neo4j.graph.Graph` or `neo4j.Result`, or a `neo4j.Driver` in
-        which case a simple default query will be executed internally to retrieve the graph data.
+    data : Union[neo4j.graph.Graph, neo4j.Result, neo4j.EagerResult, neo4j.Driver]
+        Either a query result in the shape of a `neo4j.graph.Graph`, `neo4j.Result`, or `neo4j.EagerResult`
+        (as returned by `driver.execute_query()`), or a `neo4j.Driver` in which case a simple default query
+        will be executed internally to retrieve the graph data.
     row_limit : int, optional
         Maximum number of rows to return from the query, by default 10_000.
         This is only used if a `neo4j.Driver` is passed as `result` argument, otherwise the limit is ignored.
@@ -49,8 +100,19 @@ def from_neo4j(
 
     if isinstance(data, Result):
         graph = data.graph()
+        raw_nodes = graph.nodes
+        raw_relationships = graph.relationships
     elif isinstance(data, neo4j.graph.Graph):
-        graph = data
+        raw_nodes = data.nodes
+        raw_relationships = data.relationships
+    elif isinstance(data, EagerResult):
+        # Every Node/Relationship hydrated from the same query shares one Graph
+        # object (the bolt hydration graph). Grabbing it from the first entity
+        # gives us the complete graph — including start/end nodes of
+        # relationships that were never returned as explicit columns.
+        graph = _graph_from_eager_result(data)
+        raw_nodes = graph.nodes
+        raw_relationships = graph.relationships
     elif isinstance(data, Driver):
         rel_count = data.execute_query(
             "MATCH ()-[r]->() RETURN count(r) as count",
@@ -66,14 +128,16 @@ def from_neo4j(
             routing_=RoutingControl.READ,
             result_transformer_=Result.graph,
         )
+        raw_nodes = graph.nodes
+        raw_relationships = graph.relationships
     else:
-        raise ValueError(f"Invalid input type `{type(data)}`. Expected `neo4j.Graph`, `neo4j.Result` or `neo4j.Driver`")
+        raise ValueError(f"Invalid input type `{type(data)}`. Expected `neo4j.Graph`, `neo4j.Result`, `neo4j.EagerResult` or `neo4j.Driver`")
 
-    nodes = [_map_node(node) for node in graph.nodes]
+    nodes = [_map_node(node) for node in raw_nodes]
 
     relationships = []
 
-    for rel in graph.relationships:
+    for rel in raw_relationships:
         mapped_rel = _map_relationship(rel)
         if mapped_rel:
             relationships.append(mapped_rel)
