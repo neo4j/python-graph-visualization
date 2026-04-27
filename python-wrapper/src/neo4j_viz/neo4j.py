@@ -40,7 +40,7 @@ def find_graph_entity(value: object) -> neo4j.graph.Graph | None:
     return None
 
 
-def _graph_from_eager_result(data: "EagerResult") -> neo4j.graph.Graph:
+def _graph_from_eager_result(data: EagerResult) -> neo4j.graph.Graph:
     """Return the bolt hydration Graph shared by all entities in an EagerResult.
 
     Every Node/Relationship produced by the same query references the same
