@@ -1,6 +1,6 @@
 import neo4j.graph
 
-from neo4j_viz.neo4j import _collect_graph_entities
+from neo4j_viz.neo4j import find_graph_entity
 
 
 def _make_graph() -> neo4j.graph.Graph:
@@ -36,14 +36,14 @@ def _make_rel(
     return rel
 
 
+def _find_graph(value: object) -> neo4j.graph.Graph | None:
+    return find_graph_entity(value, {}, {})
+
+
 def test_plain_node() -> None:
     g = _make_graph()
     node = _make_node(g, "n1", ["A"], {"x": 1})
-    nodes: dict[str, neo4j.graph.Node] = {}
-    rels: dict[str, neo4j.graph.Relationship] = {}
-    _collect_graph_entities(node, nodes, rels)
-    assert "n1" in nodes
-    assert rels == {}
+    assert _find_graph(node) is g
 
 
 def test_plain_relationship() -> None:
@@ -51,11 +51,7 @@ def test_plain_relationship() -> None:
     a = _make_node(g, "a", ["A"], {})
     b = _make_node(g, "b", ["B"], {})
     rel = _make_rel(g, "r1", "KNOWS", a, b)
-    nodes: dict[str, neo4j.graph.Node] = {}
-    rels: dict[str, neo4j.graph.Relationship] = {}
-    _collect_graph_entities(rel, nodes, rels)
-    assert "r1" in rels
-    assert nodes == {}
+    assert _find_graph(rel) is g
 
 
 def test_path() -> None:
@@ -64,68 +60,49 @@ def test_path() -> None:
     b = _make_node(g, "b", ["B"], {})
     rel = _make_rel(g, "r1", "KNOWS", a, b)
     path = neo4j.graph.Path(a, rel)
-    nodes: dict[str, neo4j.graph.Node] = {}
-    rels: dict[str, neo4j.graph.Relationship] = {}
-    _collect_graph_entities(path, nodes, rels)
-    assert set(nodes) == {"a", "b"}
-    assert set(rels) == {"r1"}
+    assert _find_graph(path) is g
 
 
 def test_list_of_nodes() -> None:
     g = _make_graph()
     a = _make_node(g, "a", ["A"], {})
     b = _make_node(g, "b", ["B"], {})
-    nodes: dict[str, neo4j.graph.Node] = {}
-    rels: dict[str, neo4j.graph.Relationship] = {}
-    _collect_graph_entities([a, b], nodes, rels)
-    assert set(nodes) == {"a", "b"}
+    assert _find_graph([a, b]) is g
 
 
 def test_nested_list() -> None:
     g = _make_graph()
     a = _make_node(g, "a", ["A"], {})
-    nodes: dict[str, neo4j.graph.Node] = {}
-    rels: dict[str, neo4j.graph.Relationship] = {}
-    _collect_graph_entities([[a]], nodes, rels)
-    assert "a" in nodes
+    assert _find_graph([[a]]) is g
 
 
 def test_dict_of_nodes() -> None:
     g = _make_graph()
     a = _make_node(g, "a", ["A"], {})
-    nodes: dict[str, neo4j.graph.Node] = {}
-    rels: dict[str, neo4j.graph.Relationship] = {}
-    _collect_graph_entities({"key": a}, nodes, rels)
-    assert "a" in nodes
+    assert _find_graph({"key": a}) is g
 
 
 def test_deduplication() -> None:
     g = _make_graph()
     a = _make_node(g, "a", ["A"], {})
-    nodes: dict[str, neo4j.graph.Node] = {}
-    rels: dict[str, neo4j.graph.Relationship] = {}
-    _collect_graph_entities([a, a], nodes, rels)
-    assert len(nodes) == 1
+    assert _find_graph([a, a]) is g
 
 
 def test_scalar_ignored() -> None:
-    nodes: dict[str, neo4j.graph.Node] = {}
-    rels: dict[str, neo4j.graph.Relationship] = {}
-    _collect_graph_entities("hello", nodes, rels)
-    _collect_graph_entities(42, nodes, rels)
-    _collect_graph_entities(None, nodes, rels)
-    assert nodes == {} and rels == {}
+    assert _find_graph("hello") is None
+    assert _find_graph(42) is None
+    assert _find_graph(None) is None
 
 
-def test_mixed_list_with_path_and_node() -> None:
+def test_mixed_list_with_graph_entities_and_scalars() -> None:
     g = _make_graph()
     a = _make_node(g, "a", ["A"], {})
     b = _make_node(g, "b", ["B"], {})
-    c = _make_node(g, "c", ["C"], {})
     rel = _make_rel(g, "r1", "KNOWS", a, b)
-    path = neo4j.graph.Path(a, rel)
-    nodes: dict[str, neo4j.graph.Node] = {}
-    rels: dict[str, neo4j.graph.Relationship] = {}
-    _collect_graph_entities([path, c], nodes, rels)
-    assert set(nodes) == {"a", "b", "c"}
-    assert set(rels) == {"r1"}
+    assert _find_graph(["hello", rel, 42, None]) is g
+
+
+def test_mixed_dict_with_graph_entities_and_scalars() -> None:
+    g = _make_graph()
+    a = _make_node(g, "a", ["A"], {})
+    assert _find_graph({"text": "hello", "node": a, "count": 42, "empty": None}) is g

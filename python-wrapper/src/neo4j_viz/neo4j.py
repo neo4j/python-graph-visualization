@@ -21,27 +21,23 @@ def _parse_validation_error(e: ValidationError, entity_type: type[BaseModel]) ->
         )
 
 
-def _collect_graph_entities(
-    value: object,
-    nodes: dict[str, neo4j.graph.Node],
-    rels: dict[str, neo4j.graph.Relationship],
-) -> None:
-    """Recursively extract Node and Relationship objects from any record value."""
-    if isinstance(value, neo4j.graph.Node):
-        nodes[value.element_id] = value
-    elif isinstance(value, neo4j.graph.Relationship):
-        rels[value.element_id] = value
+def find_graph_entity(value: object) -> neo4j.graph.Graph | None:
+    """Recursively traverse lists and dicts to find a Graph entity."""
+    if isinstance(value, neo4j.graph.Entity):
+        return value.graph
     elif isinstance(value, neo4j.graph.Path):
-        for node in value.nodes:
-            nodes[node.element_id] = node
-        for rel in value.relationships:
-            rels[rel.element_id] = rel
+        return value.graph
     elif isinstance(value, list):
         for item in value:
-            _collect_graph_entities(item, nodes, rels)
+            G = find_graph_entity(item)
+            if G:
+                return G
     elif isinstance(value, dict):
         for item in value.values():
-            _collect_graph_entities(item, nodes, rels)
+            G = find_graph_entity(item)
+            if G:
+                return G
+    return None
 
 
 def _graph_from_eager_result(data: "EagerResult") -> neo4j.graph.Graph:
@@ -60,18 +56,14 @@ def _graph_from_eager_result(data: "EagerResult") -> neo4j.graph.Graph:
             if isinstance(value, neo4j.graph.Path) and value.nodes:
                 return value.nodes[0].graph
 
-    # Fallback: no direct entity columns — walk everything recursively and
-    # build a synthetic Graph so the rest of from_neo4j can stay uniform.
-    nodes_dict: dict[str, neo4j.graph.Node] = {}
-    rels_dict: dict[str, neo4j.graph.Relationship] = {}
+    # Fallback: no direct entity columns — walk everything recursively and return the first graph we find.
     for record in data.records:
         for value in record.values():
-            _collect_graph_entities(value, nodes_dict, rels_dict)
-    graph = neo4j.graph.Graph()
-    graph._nodes = nodes_dict
-    for rel in rels_dict.values():
-        graph._relationships[rel.element_id] = rel
-    return graph
+            G = find_graph_entity(value)
+            if G:
+                return G
+
+    raise ValueError("No graph entities found in eager result")
 
 
 def from_neo4j(
@@ -127,8 +119,9 @@ def from_neo4j(
                 f"Database relationship count ({rel_count}) exceeds `row_limit` ({row_limit}), so limiting will be applied. Increase the `row_limit` if needed"
             )
         graph = data.execute_query(
-            f"MATCH (n)-[r]->(m) RETURN n,r,m LIMIT {row_limit}",
+            "MATCH (n)-[r]->(m) RETURN n,r,m LIMIT $rowLimit",
             routing_=RoutingControl.READ,
+            parameters_={"rowLimit": row_limit},
             result_transformer_=Result.graph,
         )
         raw_nodes = graph.nodes
