@@ -9,7 +9,23 @@ updates:
     directory: "/python-wrapper"
     schedule:
       interval: "weekly"
+    groups:
+      python-patch-and-minor:
+        update-types:
+          - "patch"
+          - "minor"
+      python-major:
+        update-types:
+          - "major"
   - package-ecosystem: "npm"
     directory: "/js-applet"
     schedule:
       interval: "weekly"
+    groups:
+      js-patch-and-minor:
+        update-types:
+          - "patch"
+          - "minor"
+      js-major:
+        update-types:
+          - "major"
