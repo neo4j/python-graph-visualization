@@ -82283,7 +82283,6 @@ function Xdr() {
               zoom: u,
               pan: g,
               layoutOptions: b,
-              portalTarget: y,
               sidepanel: {
                 isSidePanelOpen: E,
                 setIsSidePanelOpen: O,

@@ -121,15 +121,10 @@ function GraphWidget() {
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const resolvedTheme = resolveTheme(theme ?? "auto");
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!wrapperRef.current) return;
     injectNdlCss(wrapperRef.current);
-
-    if (wrapperRef.current.getRootNode() instanceof ShadowRoot) {
-      setPortalTarget(wrapperRef.current);
-    }
   }, []);
 
   const [neoNodes, neoRelationships] = useMemo(
@@ -172,7 +167,6 @@ function GraphWidget() {
           zoom={zoom}
           pan={pan}
           layoutOptions={layoutOptions}
-          portalTarget={portalTarget}
           sidepanel={{
             isSidePanelOpen,
             setIsSidePanelOpen,
