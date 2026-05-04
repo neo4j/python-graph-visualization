@@ -80,27 +80,42 @@ if (fontFaceRules) {
   document.head.appendChild(fontStyle);
 }
 
-let cssInjected = false;
+const documentStyleSelector = "[data-neo4j-viz-ndl-main]";
+const overlayStyleSelector = "[data-neo4j-viz-ndl-overlays]";
+const shadowRootStyleSelector = "[data-neo4j-viz-ndl-shadow-root]";
+
+function appendStyle(
+  root: Node & ParentNode,
+  attributeName: string,
+  cssText: string
+) {
+  const style = document.createElement("style");
+  style.setAttribute(attributeName, "true");
+  style.textContent = cssText;
+  root.appendChild(style);
+}
 
 /**
- * Injects the full NDL stylesheet into the appropriate scope. In a shadow DOM
- * context (e.g. Marimo notebooks), the CSS is adopted onto the shadow root so
- * tokens, resets and component styles are properly scoped. Outside shadow DOM,
- * a regular <style> element is appended to document.head.
+ * Injects the full NDL stylesheet into the appropriate scope. In shadow DOM
+ * contexts (e.g. Marimo notebooks), widget content stays styled inside the
+ * shadow root and portaled overlays get the same stylesheet in document.head.
  */
 function injectNdlCss(el: HTMLElement) {
-  if (cssInjected) return;
-  cssInjected = true;
-
   const rootNode = el.getRootNode();
   if (rootNode instanceof ShadowRoot) {
-    const sheet = new CSSStyleSheet();
-    sheet.replaceSync(ndlCssText);
-    rootNode.adoptedStyleSheets = [...rootNode.adoptedStyleSheets, sheet];
-  } else {
-    const style = document.createElement("style");
-    style.textContent = ndlCssText;
-    document.head.appendChild(style);
+    if (!rootNode.querySelector(shadowRootStyleSelector)) {
+      appendStyle(rootNode, "data-neo4j-viz-ndl-shadow-root", ndlCssText);
+    }
+
+    if (!document.head.querySelector(overlayStyleSelector)) {
+      appendStyle(document.head, "data-neo4j-viz-ndl-overlays", ndlCssText);
+    }
+
+    return;
+  }
+
+  if (!document.head.querySelector(documentStyleSelector)) {
+    appendStyle(document.head, "data-neo4j-viz-ndl-main", ndlCssText);
   }
 }
 

@@ -78,6 +78,40 @@ async function renderWidget(
   return { el, teardown };
 }
 
+async function renderWidgetInShadowRoot(
+  overrides: Partial<WidgetState["options"]> = {}
+): Promise<RenderedWidget & { host: HTMLDivElement; shadowRoot: ShadowRoot }> {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const shadowRoot = host.attachShadow({ mode: "open" });
+  const el = document.createElement("div");
+  shadowRoot.appendChild(el);
+
+  const model = new FakeModel({
+    nodes: [{ id: "n1", caption: "Node 1", properties: {} }],
+    relationships: [{ id: "r1", from: "n1", to: "n1", properties: {} }],
+    options: {
+      layout: "d3Force",
+      showLayoutButton: true,
+      ...overrides,
+    },
+    height: "400px",
+    width: "600px",
+    theme: "light",
+  });
+
+  let teardown: RenderedWidget["teardown"] = undefined;
+  await act(async () => {
+    teardown = await widget.render({
+      el,
+      model: model as never,
+      experimental: {} as never,
+    });
+  });
+
+  return { el, host, shadowRoot, teardown };
+}
+
 afterEach(() => {
   document.body.innerHTML = "";
 });
@@ -116,6 +150,24 @@ describe("graph-widget button testing", () => {
       });
 
       expect(await screen.findByText("Download as PNG")).toBeTruthy();
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("bridges NDL styles to document.head when rendered inside a shadow root", async () => {
+    const { shadowRoot, teardown } = await renderWidgetInShadowRoot();
+
+    try {
+      expect(
+        shadowRoot.querySelector('[data-neo4j-viz-ndl-shadow-root]')
+      ).toBeTruthy();
+
+      expect(
+        document.head.querySelector('[data-neo4j-viz-ndl-overlays]')
+      ).toBeTruthy();
     } finally {
       if (typeof teardown === "function") {
         await teardown();
