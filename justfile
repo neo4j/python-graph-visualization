@@ -40,6 +40,9 @@ local-neo4j-teardown:
 js-dev:
     cd js-applet && yarn && yarn dev
 
+js-test:
+    cd js-applet && yarn && yarn test
+
 js-rebuild:
     ./scripts/clean_js_applet.sh && ./scripts/build_js_applet.sh
 
