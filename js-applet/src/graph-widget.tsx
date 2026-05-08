@@ -68,6 +68,46 @@ function resolveTheme(theme: Theme): "light" | "dark" {
   return theme === "auto" ? detectTheme() : theme;
 }
 
+function useResolvedTheme(theme: Theme | undefined): "light" | "dark" {
+  const normalizedTheme = theme ?? "auto";
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() =>
+    resolveTheme(normalizedTheme)
+  );
+
+  useEffect(() => {
+    if (normalizedTheme !== "auto") {
+      setResolvedTheme(normalizedTheme);
+      return;
+    }
+
+    const updateTheme = () => {
+      const nextTheme = detectTheme();
+      setResolvedTheme((currentTheme) =>
+        currentTheme === nextTheme ? currentTheme : nextTheme
+      );
+    };
+
+    updateTheme();
+
+    if (typeof MutationObserver === "undefined") {
+      return;
+    }
+
+    const observer = new MutationObserver(updateTheme);
+    const observerOptions = {
+      attributes: true,
+      attributeFilter: ["class", "style"],
+    } satisfies MutationObserverInit;
+
+    observer.observe(document.documentElement, observerOptions);
+    observer.observe(document.body, observerOptions);
+
+    return () => observer.disconnect();
+  }, [normalizedTheme]);
+
+  return resolvedTheme;
+}
+
 // @font-face rules in shadow DOM adopted stylesheets don't register fonts at the
 // document level, so the browser can't find them for rendering. We extract and hoist
 // them into document.head eagerly at module load so fonts begin loading immediately.
@@ -135,7 +175,7 @@ function GraphWidget() {
   };
 
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const resolvedTheme = resolveTheme(theme ?? "auto");
+  const resolvedTheme = useResolvedTheme(theme);
 
   useEffect(() => {
     if (!wrapperRef.current) return;

@@ -1,6 +1,27 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { act } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, type ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@neo4j-ndl/react", async () => {
+  const actual =
+    await vi.importActual<typeof import("@neo4j-ndl/react")>("@neo4j-ndl/react");
+
+  return {
+    ...actual,
+    NeedleThemeProvider: ({
+      theme,
+      children,
+    }: {
+      theme: "light" | "dark";
+      children: ReactNode;
+    }) => (
+      <div data-testid="needle-theme-provider" data-theme={theme}>
+        {children}
+      </div>
+    ),
+  };
+});
+
 import widget from "./graph-widget";
 
 type WidgetState = {
@@ -48,22 +69,27 @@ type RenderedWidget = {
 };
 
 async function renderWidget(
-  overrides: Partial<WidgetState["options"]> = {}
+  overrides: Partial<WidgetState> = {}
 ): Promise<RenderedWidget> {
   const el = document.createElement("div");
   document.body.appendChild(el);
 
+  const defaultNodes = [{ id: "n1", caption: "Node 1", properties: {} }];
+  const defaultRelationships = [
+    { id: "r1", from: "n1", to: "n1", properties: {} },
+  ];
+
   const model = new FakeModel({
-    nodes: [{ id: "n1", caption: "Node 1", properties: {} }],
-    relationships: [{ id: "r1", from: "n1", to: "n1", properties: {} }],
+    nodes: overrides.nodes ?? defaultNodes,
+    relationships: overrides.relationships ?? defaultRelationships,
     options: {
       layout: "d3Force",
       showLayoutButton: true,
-      ...overrides,
+      ...(overrides.options ?? {}),
     },
-    height: "400px",
-    width: "600px",
-    theme: "light",
+    height: overrides.height ?? "400px",
+    width: overrides.width ?? "600px",
+    theme: overrides.theme ?? "light",
   });
 
   let teardown: RenderedWidget["teardown"] = undefined;
@@ -168,6 +194,62 @@ describe("graph-widget button testing", () => {
       expect(
         document.head.querySelector('[data-neo4j-viz-ndl-overlays]')
       ).toBeTruthy();
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("updates the resolved theme when host theme classes change after mount", async () => {
+    document.body.className = "light-theme";
+
+    const { teardown } = await renderWidget({ theme: "auto" });
+
+    try {
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("needle-theme-provider").getAttribute("data-theme")
+        ).toBe("light");
+      });
+
+      await act(async () => {
+        document.body.className = "dark-theme";
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("needle-theme-provider").getAttribute("data-theme")
+        ).toBe("dark");
+      });
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("keeps an explicit light theme fixed when host theme classes change", async () => {
+    document.body.className = "dark-theme";
+
+    const { teardown } = await renderWidget({ theme: "light" });
+
+    try {
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("needle-theme-provider").getAttribute("data-theme")
+        ).toBe("light");
+      });
+
+      await act(async () => {
+        document.body.className = "light-theme";
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("needle-theme-provider").getAttribute("data-theme")
+        ).toBe("light");
+      });
     } finally {
       if (typeof teardown === "function") {
         await teardown();
