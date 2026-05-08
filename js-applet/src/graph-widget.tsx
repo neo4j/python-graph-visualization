@@ -68,6 +68,46 @@ function resolveTheme(theme: Theme): "light" | "dark" {
   return theme === "auto" ? detectTheme() : theme;
 }
 
+function useResolvedTheme(theme: Theme | undefined): "light" | "dark" {
+  const normalizedTheme = theme ?? "auto";
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() =>
+    resolveTheme(normalizedTheme)
+  );
+
+  useEffect(() => {
+    if (normalizedTheme !== "auto") {
+      setResolvedTheme(normalizedTheme);
+      return;
+    }
+
+    const updateTheme = () => {
+      const nextTheme = detectTheme();
+      setResolvedTheme((currentTheme) =>
+        currentTheme === nextTheme ? currentTheme : nextTheme
+      );
+    };
+
+    updateTheme();
+
+    if (typeof MutationObserver === "undefined") {
+      return;
+    }
+
+    const observer = new MutationObserver(updateTheme);
+    const observerOptions = {
+      attributes: true,
+      attributeFilter: ["class", "style"],
+    } satisfies MutationObserverInit;
+
+    observer.observe(document.documentElement, observerOptions);
+    observer.observe(document.body, observerOptions);
+
+    return () => observer.disconnect();
+  }, [normalizedTheme]);
+
+  return resolvedTheme;
+}
+
 // @font-face rules in shadow DOM adopted stylesheets don't register fonts at the
 // document level, so the browser can't find them for rendering. We extract and hoist
 // them into document.head eagerly at module load so fonts begin loading immediately.
@@ -80,27 +120,42 @@ if (fontFaceRules) {
   document.head.appendChild(fontStyle);
 }
 
-let cssInjected = false;
+const documentStyleSelector = "[data-neo4j-viz-ndl-main]";
+const overlayStyleSelector = "[data-neo4j-viz-ndl-overlays]";
+const shadowRootStyleSelector = "[data-neo4j-viz-ndl-shadow-root]";
+
+function appendStyle(
+  root: Node & ParentNode,
+  attributeName: string,
+  cssText: string
+) {
+  const style = document.createElement("style");
+  style.setAttribute(attributeName, "true");
+  style.textContent = cssText;
+  root.appendChild(style);
+}
 
 /**
- * Injects the full NDL stylesheet into the appropriate scope. In a shadow DOM
- * context (e.g. Marimo notebooks), the CSS is adopted onto the shadow root so
- * tokens, resets and component styles are properly scoped. Outside shadow DOM,
- * a regular <style> element is appended to document.head.
+ * Injects the full NDL stylesheet into the appropriate scope. In shadow DOM
+ * contexts (e.g. Marimo notebooks), widget content stays styled inside the
+ * shadow root and portaled overlays get the same stylesheet in document.head.
  */
 function injectNdlCss(el: HTMLElement) {
-  if (cssInjected) return;
-  cssInjected = true;
-
   const rootNode = el.getRootNode();
   if (rootNode instanceof ShadowRoot) {
-    const sheet = new CSSStyleSheet();
-    sheet.replaceSync(ndlCssText);
-    rootNode.adoptedStyleSheets = [...rootNode.adoptedStyleSheets, sheet];
-  } else {
-    const style = document.createElement("style");
-    style.textContent = ndlCssText;
-    document.head.appendChild(style);
+    if (!rootNode.querySelector(shadowRootStyleSelector)) {
+      appendStyle(rootNode, "data-neo4j-viz-ndl-shadow-root", ndlCssText);
+    }
+
+    if (!document.head.querySelector(overlayStyleSelector)) {
+      appendStyle(document.head, "data-neo4j-viz-ndl-overlays", ndlCssText);
+    }
+
+    return;
+  }
+
+  if (!document.head.querySelector(documentStyleSelector)) {
+    appendStyle(document.head, "data-neo4j-viz-ndl-main", ndlCssText);
   }
 }
 
@@ -120,16 +175,11 @@ function GraphWidget() {
   };
 
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const resolvedTheme = resolveTheme(theme ?? "auto");
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const resolvedTheme = useResolvedTheme(theme);
 
   useEffect(() => {
     if (!wrapperRef.current) return;
     injectNdlCss(wrapperRef.current);
-
-    if (wrapperRef.current.getRootNode() instanceof ShadowRoot) {
-      setPortalTarget(wrapperRef.current);
-    }
   }, []);
 
   const [neoNodes, neoRelationships] = useMemo(
@@ -172,7 +222,6 @@ function GraphWidget() {
           zoom={zoom}
           pan={pan}
           layoutOptions={layoutOptions}
-          portalTarget={portalTarget}
           sidepanel={{
             isSidePanelOpen,
             setIsSidePanelOpen,

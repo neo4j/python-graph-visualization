@@ -93,6 +93,12 @@ To run unit tests, execute:
 just py-test
 ```
 
+To run the JavaScript tests for the widget, execute:
+
+```sh
+just js-test
+```
+
 Additionally, there are integration tests that require an external data source.
 These require additional setup and configuration, such as environment variables specifying connection details.
 
