@@ -50,7 +50,7 @@ snowflake = ["snowflake-snowpark-python>=1, <2"]
 [dependency-groups]
 dev = [
     "ruff==0.15.12",
-    "mypy==1.20.2",
+    "mypy==2.1.0",
     "pytest==9.0.3",
     "selenium==4.43.0",
     "ipykernel==7.2.0",
