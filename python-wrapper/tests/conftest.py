@@ -42,27 +42,31 @@ def aura_db_instance() -> Generator[Any, None, None]:
         yield None
         return
 
-    from tests.gds_helper import aura_api, create_auradb_instance
+    from tests.gds_helper import aura_api, create_auradb_instance, wait_for_instance
 
     api = aura_api()
-    dbms_connection_info = create_auradb_instance(api)
+    instance_details = create_auradb_instance(api)
 
-    # setting as environment variables to run notebooks with this connection
-    os.environ["NEO4J_URI"] = dbms_connection_info.get_uri()
-    assert isinstance(dbms_connection_info.username, str)
-    os.environ["NEO4J_USERNAME"] = dbms_connection_info.username
-    assert isinstance(dbms_connection_info.password, str)
-    os.environ["NEO4J_PASSWORD"] = dbms_connection_info.password
-    old_instance = os.environ.get("AURA_INSTANCEID", "")
-    if dbms_connection_info.aura_instance_id:
-        os.environ["AURA_INSTANCEID"] = dbms_connection_info.aura_instance_id
+    try:
+        dbms_connection_info = wait_for_instance(api, instance_details)
 
-    yield dbms_connection_info
+        # setting as environment variables to run notebooks with this connection
+        os.environ["NEO4J_URI"] = dbms_connection_info.get_uri()
+        assert isinstance(dbms_connection_info.username, str)
+        os.environ["NEO4J_USERNAME"] = dbms_connection_info.username
+        assert isinstance(dbms_connection_info.password, str)
+        os.environ["NEO4J_PASSWORD"] = dbms_connection_info.password
+        old_instance = os.environ.get("AURA_INSTANCEID", "")
+        if dbms_connection_info.aura_instance_id:
+            os.environ["AURA_INSTANCEID"] = dbms_connection_info.aura_instance_id
 
-    # Clear Neo4j_URI after test (rerun should create a new instance)
-    os.environ["AURA_INSTANCEID"] = old_instance
-    assert dbms_connection_info.aura_instance_id is not None
-    api.delete_instance(dbms_connection_info.aura_instance_id)
+        yield dbms_connection_info
+
+        # Clear Neo4j_URI after test (rerun should create a new instance)
+        os.environ["AURA_INSTANCEID"] = old_instance
+        assert dbms_connection_info.aura_instance_id is not None
+    finally:
+        api.delete_instance(instance_details.id)
 
 
 @pytest.fixture(scope="package")
