@@ -20,12 +20,23 @@ def db_setup(gds: Any) -> Generator[None, None, None]:
     gds.run_cypher("MATCH (n:_CI_A|_CI_B) DETACH DELETE n")
 
 
+def project_graph(gds: Any) -> Any:
+    from graphdatascience import GraphDataScience
+    from graphdatascience.session import AuraGraphDataScience
+
+    if isinstance(gds, GraphDataScience):
+        return gds.v2.graph.project("g2", "*", "*")
+    elif isinstance(gds, AuraGraphDataScience):
+        return gds.v2.graph.project("g2", "MATCH (n)–->(m) RETURN gds.graph.project.remote(n, m)")
+    raise Exception(f"Unsupported GDS type {type(gds)}")
+
+
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")
 @pytest.mark.requires_neo4j_and_gds
 def test_from_gds_integration_all_db_properties(gds: Any, db_setup: None) -> None:
     from neo4j_viz.gds import from_gds
 
-    with gds.graph.project("g2", ["_CI_A", "_CI_B"], "*") as G:
+    with project_graph(gds) as G:
         VG = from_gds(gds, G, db_node_properties=["name"])
 
         assert len(VG.nodes) == 2
@@ -55,7 +66,7 @@ def test_from_gds_integration_all_properties(gds: Any) -> None:
         }
     )
 
-    with gds.graph.construct("flo", nodes, rels) as G:
+    with gds.v2.graph.construct("flo", nodes, rels) as G:
         VG = from_gds(gds, G)
 
         assert len(VG.nodes) == 3
@@ -106,7 +117,7 @@ def test_from_gds_integration_all_properties(gds: Any) -> None:
 def test_from_gds_sample(gds: Any) -> None:
     from neo4j_viz.gds import from_gds
 
-    with gds.graph.generate("hello", node_count=11_000, average_degree=1) as G:
+    with gds.v2.graph.generate("hello", node_count=11_000, average_degree=1) as G:
         with pytest.warns(
             UserWarning,
             match=re.escape(
@@ -159,7 +170,7 @@ def test_from_gds_hetero(gds: Any) -> None:
         }
     )
 
-    with gds.graph.construct("flo", [A_nodes, B_nodes], [X_rels, Y_rels]) as G:
+    with gds.v2.graph.construct("flo", [A_nodes, B_nodes], [X_rels, Y_rels]) as G:
         VG = from_gds(
             gds,
             G,
