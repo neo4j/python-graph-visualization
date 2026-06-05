@@ -70,7 +70,9 @@ def gds_sessions() -> GdsSessions:
 
 
 def create_auradb_instance(api: AuraApi) -> InstanceCreateDetails:
-    type = "enterprise-db" if os.environ.get("AURA_ENTERPRISE_PROJECT", "false").lower() == "true" else "professional-db"
+    type = (
+        "enterprise-db" if os.environ.get("AURA_ENTERPRISE_PROJECT", "false").lower() == "true" else "professional-db"
+    )
     instance_details: InstanceCreateDetails = api.create_instance(
         name="ci-neo4j-viz-db",
         memory=SessionMemory.m_2GB.value,
@@ -83,11 +85,15 @@ def create_auradb_instance(api: AuraApi) -> InstanceCreateDetails:
 
     return instance_details
 
+
 def wait_for_instance(api: AuraApi, instance_details: InstanceCreateDetails) -> DbmsConnectionInfo:
     wait_result = api.wait_for_instance_running(instance_id=instance_details.id, max_wait_time=600)
     if wait_result.error:
         raise Exception(f"Error while waiting for instance to be running: {wait_result.error}")
 
     return DbmsConnectionInfo(
-        username="neo4j", password=instance_details.password, aura_instance_id=instance_details.id, uri=wait_result.connection_url
+        username="neo4j",
+        password=instance_details.password,
+        aura_instance_id=instance_details.id,
+        uri=wait_result.connection_url,
     )
