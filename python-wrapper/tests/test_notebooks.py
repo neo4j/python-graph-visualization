@@ -1,3 +1,4 @@
+import os
 import pathlib
 import signal
 import sys
@@ -6,6 +7,7 @@ from typing import Any, Callable, NamedTuple
 
 import nbformat
 import pytest
+from dotenv import load_dotenv
 from nbclient.exceptions import CellExecutionError
 from nbconvert.preprocessors.execute import ExecutePreprocessor
 
@@ -116,6 +118,8 @@ def run_notebooks(filter_func: Callable[[str], bool]) -> None:
 @pytest.mark.requires_neo4j_and_gds
 def test_neo4j(gds: Any) -> None:
     neo4j_notebooks = ["neo4j-example.ipynb", "gds-example.ipynb"]
+
+    load_dotenv(os.environ.get("ENV_FILE"))
 
     def filter_func(notebook: str) -> bool:
         return notebook in neo4j_notebooks

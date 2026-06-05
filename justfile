@@ -18,12 +18,24 @@ py-test-gds:
     trap "cd $ENV_DIR && docker compose down" EXIT
     cd $ENV_DIR && docker compose up -d
     cd -
+    cd python-wrapper && \
     NEO4J_URI=bolt://localhost:7687 \
-    NEO4J_USER=neo4j \
+    NEO4J_USERNAME=neo4j \
     NEO4J_PASSWORD=password \
     NEO4J_DB=neo4j \
-    cd python-wrapper && uv run --group dev --extra gds pytest tests --include-neo4j-and-gds
+    uv run --group dev --extra gds pytest tests --include-neo4j-and-gds
     cd ..
+
+
+# this expects the local compose setup to be running.
+py-test-gds-sessions filter="":
+    #!/usr/bin/env bash
+    cd python-wrapper && \
+    GDS_SESSION_URI=bolt://localhost:7688 \
+    NEO4J_URI=bolt://localhost:7687 \
+    NEO4J_USERNAME=neo4j \
+    NEO4J_PASSWORD=password \
+    uv run --group dev --extra gds pytest tests --include-neo4j-and-gds {{ if filter != "" { "-k '" + filter + "'" } else { "" } }}
 
 local-neo4j-setup:
     #!/usr/bin/env bash
