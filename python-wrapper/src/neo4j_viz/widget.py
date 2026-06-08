@@ -98,6 +98,14 @@ class GraphWidget(anywidget.AnyWidget):
     def _entity_ops(self) -> GraphEntityOperations:
         return GraphEntityOperations(self)
 
+    def sync_nodes(self) -> None:
+        """Manually trigger a sync of the `nodes` list to the frontend."""
+        self._sync_entities(nodes=True)
+
+    def sync_relationships(self) -> None:
+        """Manually trigger a sync of the `relationships` list to the frontend."""
+        self._sync_entities(relationships=True)
+
     def _sync_entities(self, *, nodes: bool = False, relationships: bool = False) -> None:
         """Propagate in-place entity mutations to the frontend.
 
