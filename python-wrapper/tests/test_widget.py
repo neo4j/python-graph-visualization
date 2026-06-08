@@ -213,6 +213,87 @@ class TestWidgetDataBinding:
         assert {r.id for r in widget.relationships} == {43}
 
 
+class TestWidgetUtilityMethods:
+    def _spy_send_state(self, widget: GraphWidget) -> list[Any]:
+        synced: list[Any] = []
+        widget.send_state = lambda key=None: synced.append(key)
+        return synced
+
+    def test_color_nodes(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1", properties={"label": "A"}), Node(id="n2", properties={"label": "B"})])
+        synced = self._spy_send_state(widget)
+
+        widget.color_nodes(property="label")
+
+        assert widget.nodes[0].color is not None
+        assert widget.nodes[1].color is not None
+        assert widget.nodes[0].color != widget.nodes[1].color
+        # Mutating in place must still push the updated nodes to the frontend.
+        assert synced == ["nodes"]
+
+    def test_color_relationships(self) -> None:
+        widget = GraphWidget(
+            nodes=[Node(id="n1"), Node(id="n2")],
+            relationships=[
+                Relationship(source="n1", target="n2", caption="KNOWS"),
+                Relationship(source="n2", target="n1", caption="LIKES"),
+            ],
+        )
+        synced = self._spy_send_state(widget)
+
+        widget.color_relationships(field="caption")
+
+        assert widget.relationships[0].color is not None
+        assert widget.relationships[0].color != widget.relationships[1].color
+        assert synced == ["relationships"]
+
+    def test_resize_nodes(self) -> None:
+        widget = GraphWidget(
+            nodes=[
+                Node(id="n1", properties={"score": 10}),
+                Node(id="n2", properties={"score": 20}),
+            ]
+        )
+        synced = self._spy_send_state(widget)
+
+        widget.resize_nodes(property="score", node_radius_min_max=(10, 50))
+
+        assert widget.nodes[0].size == 10
+        assert widget.nodes[1].size == 50
+        assert synced == ["nodes"]
+
+    def test_resize_relationships(self) -> None:
+        widget = GraphWidget(
+            nodes=[Node(id="n1"), Node(id="n2")],
+            relationships=[Relationship(id="r1", source="n1", target="n2")],
+        )
+        synced = self._spy_send_state(widget)
+
+        widget.resize_relationships(widths={"r1": 5})
+
+        assert widget.relationships[0].width == 5
+        assert synced == ["relationships"]
+
+    def test_set_node_captions(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1", properties={"name": "Alice"})])
+        synced = self._spy_send_state(widget)
+
+        widget.set_node_captions(property="name")
+
+        assert widget.nodes[0].caption == "Alice"
+        assert synced == ["nodes"]
+
+    def test_toggle_nodes_pinned(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1", pinned=False), Node(id="n2")])
+        synced = self._spy_send_state(widget)
+
+        widget.toggle_nodes_pinned({"n1": True})
+
+        assert widget.nodes[0].pinned is True
+        assert widget.nodes[1].pinned is None
+        assert synced == ["nodes"]
+
+
 render_widget_cases = {
     "default": {},
     "force layout": {"layout": Layout.FORCE_DIRECTED},

@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import warnings
-from collections.abc import Hashable, Iterable
-from typing import Any, Callable, Literal
+from functools import cached_property
+from typing import Any, Literal
 
 from IPython.display import HTML
-from pydantic.alias_generators import to_snake
-from pydantic_extra_types.color import Color, ColorType
 
-from .colors import NEO4J_COLORS_CONTINUOUS, NEO4J_COLORS_DISCRETE, ColorSpace, ColorsType
+from ._graph_entity_operations import GraphEntityOperations, delegate_doc
+from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
-from .node_size import RealNumber, verify_radii
+from .node_size import RealNumber
 from .nvl import NVL
 from .options import (
     Layout,
@@ -86,6 +84,72 @@ class VisualizationGraph:
 
     def __str__(self) -> str:
         return f"VisualizationGraph(nodes={len(self.nodes)}, relationships={len(self.relationships)})"
+
+    @cached_property
+    def _entity_ops(self) -> GraphEntityOperations:
+        return GraphEntityOperations(self)
+
+    def _sync_entities(self, *, nodes: bool = False, relationships: bool = False) -> None:
+        """Hook invoked after entities are mutated in place. A no-op for a plain graph."""
+
+    @delegate_doc(GraphEntityOperations.toggle_nodes_pinned)
+    def toggle_nodes_pinned(self, pinned: dict[NodeIdType, bool]) -> None:
+        self._entity_ops.toggle_nodes_pinned(pinned)
+
+    @delegate_doc(GraphEntityOperations.set_node_captions)
+    def set_node_captions(
+        self,
+        *,
+        field: str | None = None,
+        property: str | None = None,
+        override: bool = True,
+    ) -> None:
+        self._entity_ops.set_node_captions(field=field, property=property, override=override)
+
+    @delegate_doc(GraphEntityOperations.resize_nodes)
+    def resize_nodes(
+        self,
+        sizes: dict[NodeIdType, RealNumber] | None = None,
+        node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
+        property: str | None = None,
+    ) -> None:
+        self._entity_ops.resize_nodes(sizes=sizes, node_radius_min_max=node_radius_min_max, property=property)
+
+    @delegate_doc(GraphEntityOperations.resize_relationships)
+    def resize_relationships(
+        self,
+        widths: dict[str | int, RealNumber] | None = None,
+        property: str | None = None,
+    ) -> None:
+        self._entity_ops.resize_relationships(widths=widths, property=property)
+
+    @delegate_doc(GraphEntityOperations.color_nodes)
+    def color_nodes(
+        self,
+        *,
+        field: str | None = None,
+        property: str | None = None,
+        colors: ColorsType | None = None,
+        color_space: ColorSpace = ColorSpace.DISCRETE,
+        override: bool = True,
+    ) -> None:
+        self._entity_ops.color_nodes(
+            field=field, property=property, colors=colors, color_space=color_space, override=override
+        )
+
+    @delegate_doc(GraphEntityOperations.color_relationships)
+    def color_relationships(
+        self,
+        *,
+        field: str | None = None,
+        property: str | None = None,
+        colors: ColorsType | None = None,
+        color_space: ColorSpace = ColorSpace.DISCRETE,
+        override: bool = True,
+    ) -> None:
+        self._entity_ops.color_relationships(
+            field=field, property=property, colors=colors, color_space=color_space, override=override
+        )
 
     def _build_render_options(
         self,
@@ -283,524 +347,3 @@ class VisualizationGraph:
             options=render_options,
             theme=theme,
         )
-
-    def toggle_nodes_pinned(self, pinned: dict[NodeIdType, bool]) -> None:
-        """
-        Toggle whether nodes should be pinned or not.
-
-        Parameters
-        ----------
-        pinned:
-            A dictionary mapping from node ID to whether the node should be pinned or not.
-        """
-        for node in self.nodes:
-            node_pinned = pinned.get(node.id)
-
-            if node_pinned is None:
-                continue
-
-            node.pinned = node_pinned
-
-    def set_node_captions(
-        self,
-        *,
-        field: str | None = None,
-        property: str | None = None,
-        override: bool = True,
-    ) -> None:
-        """
-        Set the caption for nodes in the graph based on either a node field or a node property.
-
-        Parameters
-        ----------
-        field:
-            The field of the nodes to use as the caption. Must be None if `property` is provided.
-        property:
-            The property of the nodes to use as the caption. Must be None if `field` is provided.
-        override:
-            Whether to override existing captions of the nodes, if they have any.
-
-        Examples
-        --------
-        Given a VisualizationGraph `VG`:
-
-        >>> nodes = [
-        ...    Node(id="0", properties={"name": "Alice", "age": 30}),
-        ...    Node(id="1", properties={"name": "Bob", "age": 25}),
-        ... ]
-        >>> VG = VisualizationGraph(nodes=nodes)
-
-        Set node captions from a property:
-
-        >>> VG.set_node_captions(property="name")
-
-        Set node captions from a field, only if not already set:
-
-        >>> VG.set_node_captions(field="id", override=False)
-
-        Set captions from multiple properties with fallback:
-
-        >>> for node in VG.nodes:
-        ...     caption = node.properties.get("name") or node.properties.get("title") or node.id
-        ...     if override or node.caption is None:
-        ...         node.caption = str(caption)
-        """
-        if not ((field is None) ^ (property is None)):
-            raise ValueError(
-                f"Exactly one of the arguments `field` (received '{field}') and `property` (received '{property}') must be provided"
-            )
-
-        if property:
-            # Use property
-            for node in self.nodes:
-                if not override and node.caption is not None:
-                    continue
-
-                value = node.properties.get(property, "")
-                node.caption = str(value)
-        else:
-            # Use field
-            assert field is not None
-            attribute = to_snake(field)
-
-            for node in self.nodes:
-                if not override and node.caption is not None:
-                    continue
-
-                value = getattr(node, attribute, "")
-                node.caption = str(value)
-
-    def resize_nodes(
-        self,
-        sizes: dict[NodeIdType, RealNumber] | None = None,
-        node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
-        property: str | None = None,
-    ) -> None:
-        """
-        Resize the nodes in the graph.
-
-        Parameters
-        ----------
-        sizes:
-            A dictionary mapping from node ID to the new size of the node.
-            If a node ID is not in the dictionary, the size of the node is not changed.
-            Must be None if `property` is provided.
-        node_radius_min_max:
-            Minimum and maximum node size radius as a tuple. To avoid tiny or huge nodes in the visualization, the
-            node sizes are scaled to fit in the given range. If None, the sizes are used as is.
-        property:
-            The property of the nodes to use for sizing. Must be None if `sizes` is provided.
-        """
-        if sizes is not None and property is not None:
-            raise ValueError("At most one of the arguments `sizes` and `property` can be provided")
-
-        if sizes is None and property is None and node_radius_min_max is None:
-            raise ValueError("At least one of `sizes`, `property` or `node_radius_min_max` must be given")
-
-        # Gather node sizes
-        all_sizes = {}
-        if sizes is not None:
-            for node in self.nodes:
-                size = sizes.get(node.id, node.size)
-                if size is not None:
-                    all_sizes[node.id] = size
-        elif property is not None:
-            for node in self.nodes:
-                size = node.properties.get(property, node.size)
-                if size is not None:
-                    all_sizes[node.id] = size
-        else:
-            for node in self.nodes:
-                if node.size is not None:
-                    all_sizes[node.id] = node.size
-
-        # Validate node sizes
-        for id, size in all_sizes.items():
-            if size is None:
-                continue
-
-            if not isinstance(size, (int, float)):
-                raise ValueError(f"Size for node '{id}' must be a real number, but was {size}")
-
-            if size < 0:
-                raise ValueError(f"Size for node '{id}' must be non-negative, but was {size}")
-
-        if node_radius_min_max is not None:
-            verify_radii(node_radius_min_max)
-
-            final_sizes = self._normalize_values(all_sizes, node_radius_min_max)
-        else:
-            final_sizes = all_sizes
-
-        # Apply the final sizes to the nodes
-        for node in self.nodes:
-            size = final_sizes.get(node.id)
-
-            if size is None:
-                continue
-
-            node.size = size
-
-    def resize_relationships(
-        self,
-        widths: dict[str | int, RealNumber] | None = None,
-        property: str | None = None,
-    ) -> None:
-        """
-        Resize the width of relationships in the graph.
-
-        Parameters
-        ----------
-        widths:
-            A dictionary mapping from relationship ID to the new width of the relationship.
-            If a relationship ID is not in the dictionary, the width of the relationship is not changed.
-            Must be None if `property` is provided.
-        property:
-            The property of the relationships to use for sizing. Must be None if `widths` is provided.
-        """
-        if widths is not None and property is not None:
-            raise ValueError("At most one of the arguments `widths` and `property` can be provided")
-
-        if widths is None and property is None:
-            raise ValueError("At least one of `widths` or `property` must be given")
-
-        # Gather relationship widths
-        all_widths = {}
-        if widths is not None:
-            for rel in self.relationships:
-                width = widths.get(rel.id, rel.width)
-                if width is not None:
-                    all_widths[rel.id] = width
-        elif property is not None:
-            for rel in self.relationships:
-                width = rel.properties.get(property, rel.width)
-                if width is not None:
-                    all_widths[rel.id] = width
-
-        # Validate and apply relationship widths
-        for rel in self.relationships:
-            width = all_widths.get(rel.id)
-
-            if width is None:
-                continue
-
-            if not isinstance(width, (int, float)):
-                raise ValueError(f"Width for relationship '{rel.id}' must be a real number, but was {width}")
-
-            if width <= 0:
-                raise ValueError(f"Width for relationship '{rel.id}' must be positive, but was {width}")
-
-            rel.width = width
-
-    @staticmethod
-    def _normalize_values(
-        node_map: dict[NodeIdType, RealNumber], min_max: tuple[float, float] = (0, 1)
-    ) -> dict[NodeIdType, RealNumber]:
-        unscaled_min_size = min(node_map.values())
-        unscaled_max_size = max(node_map.values())
-        unscaled_size_range = float(unscaled_max_size - unscaled_min_size)
-
-        new_min_size, new_max_size = min_max
-        new_size_range = new_max_size - new_min_size
-
-        if abs(unscaled_size_range) < 1e-6:
-            default_node_size = new_min_size + new_size_range / 2.0
-            new_map = {id: default_node_size for id in node_map}
-        else:
-            new_map = {
-                id: new_min_size + new_size_range * ((nz - unscaled_min_size) / unscaled_size_range)
-                for id, nz in node_map.items()
-            }
-
-        return new_map
-
-    def color_nodes(
-        self,
-        *,
-        field: str | None = None,
-        property: str | None = None,
-        colors: ColorsType | None = None,
-        color_space: ColorSpace = ColorSpace.DISCRETE,
-        override: bool = True,
-    ) -> None:
-        """
-        Color the nodes in the graph based on either a node field, or a node property.
-
-        It's possible to color the nodes based on a discrete or continuous color space. In the discrete case, a new
-        color from the `colors` provided is assigned to each unique value of the node field/property.
-        In the continuous case, the `colors` should be a list of colors representing a range that are used to
-        create a gradient of colors based on the values of the node field/property.
-
-        Parameters
-        ----------
-        field:
-            The field of the nodes to base the coloring on. The type of this field must be hashable, or be a
-            list, set or dict containing only hashable types. Must be None if `property` is provided.
-        property:
-            The property of the nodes to base the coloring on. The type of this property must be hashable, or be a
-            list, set or dict containing only hashable types. Must be None if `field` is provided.
-        colors:
-            The colors to use for the nodes.
-            If `color_space` is `ColorSpace.DISCRETE`, the colors can be a dictionary mapping from field/property value
-            to color, or an iterable of colors in which case the colors are used in order.
-            If `color_space` is `ColorSpace.CONTINUOUS`, the colors must be a list of colors representing a range.
-            Allowed color values are for example “#FF0000”, “red” or (255, 0, 0) (full list: https://docs.pydantic.dev/2.0/usage/types/extra_types/color_types/).
-            The default colors are the Neo4j graph colors.
-        color_space:
-            The type of space of the provided `colors`. Either `ColorSpace.DISCRETE` or `ColorSpace.CONTINUOUS`. It determines whether
-            colors are assigned based on unique field/property values or a gradient of the values of the field/property.
-        override:
-            Whether to override existing colors of the nodes, if they have any.
-
-        Examples
-        --------
-
-        Given a VisualizationGraph `VG`:
-
-        >>> nodes = [
-        ...    Node(id="0", properties={"label": "Person", "score": 10}),
-        ...    Node(id="1", properties={"label": "Person", "score": 20}),
-        ... ]
-        >>> VG = VisualizationGraph(nodes=nodes)
-
-        Color nodes based on a discrete field such as "label":
-
-        >>> VG.color_nodes(field="label", color_space=ColorSpace.DISCRETE)
-
-        Color nodes based on a continuous field such as "score":
-
-        >>> VG.color_nodes(field="score", color_space=ColorSpace.CONTINUOUS)
-
-        Color nodes based on a custom colors such as from palettable:
-
-        >>> from palettable.wesanderson import Moonrise1_5  # type: ignore[import-untyped]
-        >>> VG.color_nodes(field="label", colors=Moonrise1_5.colors)
-        """
-        if not ((field is None) ^ (property is None)):
-            raise ValueError(
-                f"Exactly one of the arguments `field` (received '{field}') and `property` (received '{property}') must be provided"
-            )
-
-        if field is None:
-            assert property is not None
-            attribute = property
-
-            def node_to_attr(node: Node) -> Any:
-                return node.properties.get(attribute)
-
-        else:
-            assert field is not None
-            attribute = to_snake(field)
-
-            def node_to_attr(node: Node) -> Any:
-                return getattr(node, attribute)
-
-        if color_space == ColorSpace.DISCRETE:
-            if colors is None:
-                colors = NEO4J_COLORS_DISCRETE
-        else:
-            node_map = {node.id: node_to_attr(node) for node in self.nodes if node_to_attr(node) is not None}
-            normalized_map = self._normalize_values(node_map)
-
-            if colors is None:
-                colors = NEO4J_COLORS_CONTINUOUS
-
-            if not isinstance(colors, list):
-                raise ValueError("For continuous properties, `colors` must be a list of colors representing a range")
-
-            num_colors = len(colors)
-            colors = {
-                node_to_attr(node): colors[round(normalized_map[node.id] * (num_colors - 1))]
-                for node in self.nodes
-                if node_to_attr(node) is not None
-            }
-
-        if isinstance(colors, dict):
-            self._color_items_dict(self.nodes, colors, override, node_to_attr)
-        else:
-            self._color_items_iter(self.nodes, attribute, colors, override, node_to_attr)
-
-    def color_relationships(
-        self,
-        *,
-        field: str | None = None,
-        property: str | None = None,
-        colors: ColorsType | None = None,
-        color_space: ColorSpace = ColorSpace.DISCRETE,
-        override: bool = True,
-    ) -> None:
-        """
-        Color the relationships in the graph based on either a relationship field, or a relationship property.
-
-        It's possible to color the relationships based on a discrete or continuous color space. In the discrete case,
-        a new color from the `colors` provided is assigned to each unique value of the relationship field/property.
-        In the continuous case, the `colors` should be a list of colors representing a range that are used to
-        create a gradient of colors based on the values of the relationship field/property.
-
-        Parameters
-        ----------
-        field:
-            The field of the relationships to base the coloring on. The type of this field must be hashable, or be a
-            list, set or dict containing only hashable types. Must be None if `property` is provided.
-        property:
-            The property of the relationships to base the coloring on. The type of this property must be hashable, or be a
-            list, set or dict containing only hashable types. Must be None if `field` is provided.
-        colors:
-            The colors to use for the relationships.
-            If `color_space` is `ColorSpace.DISCRETE`, the colors can be a dictionary mapping from field/property value
-            to color, or an iterable of colors in which case the colors are used in order.
-            If `color_space` is `ColorSpace.CONTINUOUS`, the colors must be a list of colors representing a range.
-            Allowed color values are for example “#FF0000”, “red” or (255, 0, 0) (full list: https://docs.pydantic.dev/2.0/usage/types/extra_types/color_types/).
-            The default colors are the Neo4j graph colors.
-        color_space:
-            The type of space of the provided `colors`. Either `ColorSpace.DISCRETE` or `ColorSpace.CONTINUOUS`. It determines whether
-            colors are assigned based on unique field/property values or a gradient of the values of the field/property.
-        override:
-            Whether to override existing colors of the relationships, if they have any.
-
-        Examples
-        --------
-
-        Given a VisualizationGraph `VG`:
-
-        >>> nodes = [Node(id="0"), Node(id="1")]
-        >>> relationships = [
-        ...    Relationship(source="0", target="1", caption="ACTED_IN", properties={"score": 10}),
-        ...    Relationship(source="1", target="0", caption="DIRECTED", properties={"score": 20}),
-        ... ]
-        >>> VG = VisualizationGraph(nodes=nodes, relationships=relationships)
-
-        Color relationships based on a discrete field such as "caption":
-
-        >>> VG.color_relationships(field="caption", color_space=ColorSpace.DISCRETE)
-
-        Color relationships based on a continuous field such as "score":
-
-        >>> VG.color_relationships(property="score", color_space=ColorSpace.CONTINUOUS)
-        """
-        if not ((field is None) ^ (property is None)):
-            raise ValueError(
-                f"Exactly one of the arguments `field` (received '{field}') and `property` (received '{property}') must be provided"
-            )
-
-        if field is None:
-            assert property is not None
-            attribute = property
-
-            def rel_to_attr(rel: Relationship) -> Any:
-                return rel.properties.get(attribute)
-
-        else:
-            assert field is not None
-            attribute = to_snake(field)
-
-            def rel_to_attr(rel: Relationship) -> Any:
-                return getattr(rel, attribute)
-
-        if color_space == ColorSpace.DISCRETE:
-            if colors is None:
-                colors = NEO4J_COLORS_DISCRETE
-        else:
-            rel_map = {rel.id: rel_to_attr(rel) for rel in self.relationships if rel_to_attr(rel) is not None}
-            normalized_map = self._normalize_values(rel_map)
-
-            if colors is None:
-                colors = NEO4J_COLORS_CONTINUOUS
-
-            if not isinstance(colors, list):
-                raise ValueError("For continuous properties, `colors` must be a list of colors representing a range")
-
-            num_colors = len(colors)
-            colors = {
-                rel_to_attr(rel): colors[round(normalized_map[rel.id] * (num_colors - 1))]
-                for rel in self.relationships
-                if rel_to_attr(rel) is not None
-            }
-
-        if isinstance(colors, dict):
-            self._color_items_dict(self.relationships, colors, override, rel_to_attr)
-        else:
-            self._color_items_iter(self.relationships, attribute, colors, override, rel_to_attr)
-
-    def _color_items_dict(
-        self,
-        items: list[Node] | list[Relationship],
-        colors: dict[Hashable, ColorType],
-        override: bool,
-        item_to_attr: Callable[[Any], Any],
-    ) -> None:
-        for item in items:
-            color = colors.get(item_to_attr(item))
-
-            if color is None:
-                continue
-
-            if item.color is not None and not override:
-                continue
-
-            if not isinstance(color, Color):
-                item.color = Color(color)
-            else:
-                item.color = color
-
-    def _color_items_iter(
-        self,
-        items: list[Node] | list[Relationship],
-        attribute: str,
-        colors: Iterable[ColorType],
-        override: bool,
-        item_to_attr: Callable[[Any], Any],
-    ) -> None:
-        exhausted_colors = False
-        prop_to_color = {}
-        colors_iter = iter(colors)
-        for item in items:
-            raw_prop = item_to_attr(item)
-            try:
-                prop = self._make_hashable(raw_prop)
-            except ValueError:
-                item_type = "nodes" if isinstance(item, Node) else "relationships"
-                raise ValueError(f"Unable to color {item_type} by unhashable property type '{type(raw_prop)}'")
-
-            if prop not in prop_to_color:
-                next_color = next(colors_iter, None)
-                if next_color is None:
-                    exhausted_colors = True
-                    colors_iter = iter(colors)
-                    next_color = next(colors_iter)
-                prop_to_color[prop] = next_color
-
-            color = prop_to_color[prop]
-
-            if item.color is not None and not override:
-                continue
-
-            if not isinstance(color, Color):
-                item.color = Color(color)
-            else:
-                item.color = color
-
-        if exhausted_colors:
-            warnings.warn(
-                f"Ran out of colors for property '{attribute}'. {len(prop_to_color)} colors were needed, but only "
-                f"{len(set(prop_to_color.values()))} were given, so reused colors"
-            )
-
-    @staticmethod
-    def _make_hashable(raw_prop: Any) -> Hashable:
-        prop = raw_prop
-        if isinstance(raw_prop, list):
-            prop = tuple(raw_prop)
-        elif isinstance(raw_prop, set):
-            prop = frozenset(raw_prop)
-        elif isinstance(raw_prop, dict):
-            prop = tuple(sorted(raw_prop.items()))
-
-        try:
-            hash(prop)
-        except TypeError:
-            raise ValueError(f"Unable to convert '{raw_prop}' of type {type(raw_prop)} to a hashable type")
-
-        assert isinstance(prop, Hashable)
-
-        return prop

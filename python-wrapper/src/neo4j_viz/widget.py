@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import json
 import pathlib
+from functools import cached_property
 from typing import Any, Union
 
 import anywidget
 import traitlets
 
+from ._graph_entity_operations import GraphEntityOperations, delegate_doc
+from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
+from .node_size import RealNumber
 from .options import RenderOptions
 from .relationship import Relationship, RelationshipIdType
 
@@ -48,6 +52,9 @@ class GraphWidget(anywidget.AnyWidget):
     Uses anywidget to render a React-based graph component with
     two-way data sync between Python and JavaScript.
 
+    The widget exposes utility methods that mutate the graph in place and
+    automatically sync the changes to the frontend.
+
     Dev mode: set ANYWIDGET_HMR=1 and run ``yarn dev`` in js-applet/
     for hot module replacement during development.
     """
@@ -86,6 +93,87 @@ class GraphWidget(anywidget.AnyWidget):
 
     def __str__(self) -> str:
         return f"GraphWidget(nodes={len(self.nodes)}, relationships={len(self.relationships)}, options={self.options}, theme={self.theme}, width={self.width}, height={self.height})"
+
+    @cached_property
+    def _entity_ops(self) -> GraphEntityOperations:
+        return GraphEntityOperations(self)
+
+    def _sync_entities(self, *, nodes: bool = False, relationships: bool = False) -> None:
+        """Propagate in-place entity mutations to the frontend.
+
+        The utility methods delegated to :class:`GraphEntityOperations` mutate the `Node`
+        and `Relationship` objects in place. This does not change the identity (or equality)
+        of the `nodes`/`relationships` lists, so traitlets does not detect a change and would
+        not sync. We therefore explicitly push the affected trait(s) to JavaScript, which
+        re-serializes them via `entity_to_json`. When the widget is not connected to a
+        frontend (e.g. outside a notebook), `send_state` is a no-op.
+        """
+        keys = []
+        if nodes:
+            keys.append("nodes")
+        if relationships:
+            keys.append("relationships")
+        if keys:
+            self.send_state(keys if len(keys) > 1 else keys[0])
+
+    @delegate_doc(GraphEntityOperations.toggle_nodes_pinned)
+    def toggle_nodes_pinned(self, pinned: dict[NodeIdType, bool]) -> None:
+        self._entity_ops.toggle_nodes_pinned(pinned)
+
+    @delegate_doc(GraphEntityOperations.set_node_captions)
+    def set_node_captions(
+        self,
+        *,
+        field: str | None = None,
+        property: str | None = None,
+        override: bool = True,
+    ) -> None:
+        self._entity_ops.set_node_captions(field=field, property=property, override=override)
+
+    @delegate_doc(GraphEntityOperations.resize_nodes)
+    def resize_nodes(
+        self,
+        sizes: dict[NodeIdType, RealNumber] | None = None,
+        node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
+        property: str | None = None,
+    ) -> None:
+        self._entity_ops.resize_nodes(sizes=sizes, node_radius_min_max=node_radius_min_max, property=property)
+
+    @delegate_doc(GraphEntityOperations.resize_relationships)
+    def resize_relationships(
+        self,
+        widths: dict[str | int, RealNumber] | None = None,
+        property: str | None = None,
+    ) -> None:
+        self._entity_ops.resize_relationships(widths=widths, property=property)
+
+    @delegate_doc(GraphEntityOperations.color_nodes)
+    def color_nodes(
+        self,
+        *,
+        field: str | None = None,
+        property: str | None = None,
+        colors: ColorsType | None = None,
+        color_space: ColorSpace = ColorSpace.DISCRETE,
+        override: bool = True,
+    ) -> None:
+        self._entity_ops.color_nodes(
+            field=field, property=property, colors=colors, color_space=color_space, override=override
+        )
+
+    @delegate_doc(GraphEntityOperations.color_relationships)
+    def color_relationships(
+        self,
+        *,
+        field: str | None = None,
+        property: str | None = None,
+        colors: ColorsType | None = None,
+        color_space: ColorSpace = ColorSpace.DISCRETE,
+        override: bool = True,
+    ) -> None:
+        self._entity_ops.color_relationships(
+            field=field, property=property, colors=colors, color_space=color_space, override=override
+        )
 
     def add_data(
         self, nodes: Node | list[Node] | None = None, relationships: Relationship | list[Relationship] | None = None
