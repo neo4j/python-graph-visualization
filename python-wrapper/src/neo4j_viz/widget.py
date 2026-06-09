@@ -8,7 +8,7 @@ from typing import Any, Union, cast
 import anywidget
 import traitlets
 
-from ._graph_entity_operations import GraphEntityOperations, delegate_doc
+from ._graph_entity_operations import GraphEntityOperations
 from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
 from .node_size import RealNumber
@@ -56,6 +56,8 @@ def entity_to_json(entity_list: list[Node | Relationship], widget: anywidget.Any
 
 # Dev mode: set ANYWIDGET_HMR=1 and run ``yarn dev`` in js-applet/
 # for hot module replacement during development.
+
+
 class GraphWidget(anywidget.AnyWidget):
     """Jupyter widget for interactive graph visualization.
 
@@ -80,13 +82,13 @@ class GraphWidget(anywidget.AnyWidget):
 
     @classmethod
     def from_graph_data(
-            cls,
-            nodes: list[Node],
-            relationships: list[Relationship],
-            width: str = "100%",
-            height: str = "600px",
-            options: RenderOptions | None = None,
-            theme: str = "auto",
+        cls,
+        nodes: list[Node],
+        relationships: list[Relationship],
+        width: str = "100%",
+        height: str = "600px",
+        options: RenderOptions | None = None,
+        theme: str = "auto",
     ) -> GraphWidget:
         """Create a GraphWidget from Node and Relationship lists."""
         return cls(
@@ -131,61 +133,222 @@ class GraphWidget(anywidget.AnyWidget):
         if keys:
             self.send_state(keys if len(keys) > 1 else keys[0])
 
-    @delegate_doc(GraphEntityOperations.toggle_nodes_pinned)
     def toggle_nodes_pinned(self, pinned: dict[NodeIdType, bool]) -> None:
+        """
+        Toggle whether nodes should be pinned or not.
+
+        Parameters
+        ----------
+        pinned:
+            A dictionary mapping from node ID to whether the node should be pinned or not.
+        """
         self._entity_ops.toggle_nodes_pinned(pinned)
 
-    @delegate_doc(GraphEntityOperations.set_node_captions)
     def set_node_captions(
-            self,
-            *,
-            field: str | None = None,
-            property: str | None = None,
-            override: bool = True,
+        self,
+        *,
+        field: str | None = None,
+        property: str | None = None,
+        override: bool = True,
     ) -> None:
+        """
+        Set the caption for nodes in the graph based on either a node field or a node property.
+
+        Parameters
+        ----------
+        field:
+            The field of the nodes to use as the caption. Must be None if `property` is provided.
+        property:
+            The property of the nodes to use as the caption. Must be None if `field` is provided.
+        override:
+            Whether to override existing captions of the nodes, if they have any.
+
+        Examples
+        --------
+        Given a GraphWidget `widget`:
+
+        >>> nodes = [
+        ...    Node(id="0", properties={"name": "Alice", "age": 30}),
+        ...    Node(id="1", properties={"name": "Bob", "age": 25}),
+        ... ]
+        >>> widget = GraphWidget(nodes=nodes)
+
+        Set node captions from a property:
+
+        >>> widget.set_node_captions(property="name")
+
+        Set node captions from a field, only if not already set:
+
+        >>> widget.set_node_captions(field="id", override=False)
+        """
         self._entity_ops.set_node_captions(field=field, property=property, override=override)
 
-    @delegate_doc(GraphEntityOperations.resize_nodes)
     def resize_nodes(
-            self,
-            sizes: dict[NodeIdType, RealNumber] | None = None,
-            node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
-            property: str | None = None,
+        self,
+        sizes: dict[NodeIdType, RealNumber] | None = None,
+        node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
+        property: str | None = None,
     ) -> None:
+        """
+        Resize the nodes in the graph.
+
+        Parameters
+        ----------
+        sizes:
+            A dictionary mapping from node ID to the new size of the node.
+            If a node ID is not in the dictionary, the size of the node is not changed.
+            Must be None if `property` is provided.
+        node_radius_min_max:
+            Minimum and maximum node size radius as a tuple. To avoid tiny or huge nodes in the visualization, the
+            node sizes are scaled to fit in the given range. If None, the sizes are used as is.
+        property:
+            The property of the nodes to use for sizing. Must be None if `sizes` is provided.
+        """
         self._entity_ops.resize_nodes(sizes=sizes, node_radius_min_max=node_radius_min_max, property=property)
 
-    @delegate_doc(GraphEntityOperations.resize_relationships)
     def resize_relationships(
-            self,
-            widths: dict[str | int, RealNumber] | None = None,
-            property: str | None = None,
+        self,
+        widths: dict[str | int, RealNumber] | None = None,
+        property: str | None = None,
     ) -> None:
+        """
+        Resize the width of relationships in the graph.
+
+        Parameters
+        ----------
+        widths:
+            A dictionary mapping from relationship ID to the new width of the relationship.
+            If a relationship ID is not in the dictionary, the width of the relationship is not changed.
+            Must be None if `property` is provided.
+        property:
+            The property of the relationships to use for sizing. Must be None if `widths` is provided.
+        """
         self._entity_ops.resize_relationships(widths=widths, property=property)
 
-    @delegate_doc(GraphEntityOperations.color_nodes)
     def color_nodes(
-            self,
-            *,
-            field: str | None = None,
-            property: str | None = None,
-            colors: ColorsType | None = None,
-            color_space: ColorSpace = ColorSpace.DISCRETE,
-            override: bool = True,
+        self,
+        *,
+        field: str | None = None,
+        property: str | None = None,
+        colors: ColorsType | None = None,
+        color_space: ColorSpace = ColorSpace.DISCRETE,
+        override: bool = True,
     ) -> None:
+        """
+        Color the nodes in the graph based on either a node field, or a node property.
+
+        It's possible to color the nodes based on a discrete or continuous color space. In the discrete case, a new
+        color from the `colors` provided is assigned to each unique value of the node field/property.
+        In the continuous case, the `colors` should be a list of colors representing a range that are used to
+        create a gradient of colors based on the values of the node field/property.
+
+        Parameters
+        ----------
+        field:
+            The field of the nodes to base the coloring on. The type of this field must be hashable, or be a
+            list, set or dict containing only hashable types. Must be None if `property` is provided.
+        property:
+            The property of the nodes to base the coloring on. The type of this property must be hashable, or be a
+            list, set or dict containing only hashable types. Must be None if `field` is provided.
+        colors:
+            The colors to use for the nodes.
+            If `color_space` is `ColorSpace.DISCRETE`, the colors can be a dictionary mapping from field/property value
+            to color, or an iterable of colors in which case the colors are used in order.
+            If `color_space` is `ColorSpace.CONTINUOUS`, the colors must be a list of colors representing a range.
+            Allowed color values are for example “#FF0000”, “red” or (255, 0, 0) (full list: https://docs.pydantic.dev/2.0/usage/types/extra_types/color_types/).
+            The default colors are the Neo4j graph colors.
+        color_space:
+            The type of space of the provided `colors`. Either `ColorSpace.DISCRETE` or `ColorSpace.CONTINUOUS`. It determines whether
+            colors are assigned based on unique field/property values or a gradient of the values of the field/property.
+        override:
+            Whether to override existing colors of the nodes, if they have any.
+
+        Examples
+        --------
+
+        Given a GraphWidget `widget`:
+
+        >>> nodes = [
+        ...    Node(id="0", properties={"label": "Person", "score": 10}),
+        ...    Node(id="1", properties={"label": "Person", "score": 20}),
+        ... ]
+        >>> widget = GraphWidget(nodes=nodes)
+
+        Color nodes based on a discrete field such as "label":
+
+        >>> widget.color_nodes(field="label", color_space=ColorSpace.DISCRETE)
+
+        Color nodes based on a continuous field such as "score":
+
+        >>> widget.color_nodes(field="score", color_space=ColorSpace.CONTINUOUS)
+
+        Color nodes based on a custom colors such as from palettable:
+
+        >>> from palettable.wesanderson import Moonrise1_5  # type: ignore[import-untyped]
+        >>> widget.color_nodes(field="label", colors=Moonrise1_5.colors)
+        """
         self._entity_ops.color_nodes(
             field=field, property=property, colors=colors, color_space=color_space, override=override
         )
 
-    @delegate_doc(GraphEntityOperations.color_relationships)
     def color_relationships(
-            self,
-            *,
-            field: str | None = None,
-            property: str | None = None,
-            colors: ColorsType | None = None,
-            color_space: ColorSpace = ColorSpace.DISCRETE,
-            override: bool = True,
+        self,
+        *,
+        field: str | None = None,
+        property: str | None = None,
+        colors: ColorsType | None = None,
+        color_space: ColorSpace = ColorSpace.DISCRETE,
+        override: bool = True,
     ) -> None:
+        """
+        Color the relationships in the graph based on either a relationship field, or a relationship property.
+
+        It's possible to color the relationships based on a discrete or continuous color space. In the discrete case,
+        a new color from the `colors` provided is assigned to each unique value of the relationship field/property.
+        In the continuous case, the `colors` should be a list of colors representing a range that are used to
+        create a gradient of colors based on the values of the relationship field/property.
+
+        Parameters
+        ----------
+        field:
+            The field of the relationships to base the coloring on. The type of this field must be hashable, or be a
+            list, set or dict containing only hashable types. Must be None if `property` is provided.
+        property:
+            The property of the relationships to base the coloring on. The type of this property must be hashable, or be a
+            list, set or dict containing only hashable types. Must be None if `field` is provided.
+        colors:
+            The colors to use for the relationships.
+            If `color_space` is `ColorSpace.DISCRETE`, the colors can be a dictionary mapping from field/property value
+            to color, or an iterable of colors in which case the colors are used in order.
+            If `color_space` is `ColorSpace.CONTINUOUS`, the colors must be a list of colors representing a range.
+            Allowed color values are for example “#FF0000”, “red” or (255, 0, 0) (full list: https://docs.pydantic.dev/2.0/usage/types/extra_types/color_types/).
+            The default colors are the Neo4j graph colors.
+        color_space:
+            The type of space of the provided `colors`. Either `ColorSpace.DISCRETE` or `ColorSpace.CONTINUOUS`. It determines whether
+            colors are assigned based on unique field/property values or a gradient of the values of the field/property.
+        override:
+            Whether to override existing colors of the relationships, if they have any.
+
+        Examples
+        --------
+
+        Given a GraphWidget `widget`:
+
+        >>> nodes = [Node(id="0"), Node(id="1")]
+        >>> relationships = [
+        ...    Relationship(source="0", target="1", caption="ACTED_IN", properties={"score": 10}),
+        ...    Relationship(source="1", target="0", caption="DIRECTED", properties={"score": 20}),
+        ... ]
+        >>> widget = GraphWidget(nodes=nodes, relationships=relationships)
+
+        Color relationships based on a discrete field such as "caption":
+
+        >>> widget.color_relationships(field="caption", color_space=ColorSpace.DISCRETE)
+
+        Color relationships based on a continuous field such as "score":
+
+        >>> widget.color_relationships(property="score", color_space=ColorSpace.CONTINUOUS)
+        """
         self._entity_ops.color_relationships(
             field=field, property=property, colors=colors, color_space=color_space, override=override
         )
@@ -282,7 +445,7 @@ class GraphWidget(anywidget.AnyWidget):
         self.options = dict(new)
 
     def add_data(
-            self, nodes: Node | list[Node] | None = None, relationships: Relationship | list[Relationship] | None = None
+        self, nodes: Node | list[Node] | None = None, relationships: Relationship | list[Relationship] | None = None
     ) -> None:
         """
         Add nodes or relationships to the graph widget.
@@ -305,9 +468,9 @@ class GraphWidget(anywidget.AnyWidget):
             self.relationships = self.relationships + relationships
 
     def remove_data(
-            self,
-            nodes: Node | list[Node | NodeIdType] | NodeIdType | None = None,
-            relationships: Relationship | list[Relationship | RelationshipIdType] | RelationshipIdType | None = None,
+        self,
+        nodes: Node | list[Node | NodeIdType] | NodeIdType | None = None,
+        relationships: Relationship | list[Relationship | RelationshipIdType] | RelationshipIdType | None = None,
     ) -> None:
         """
         Remove nodes or relationships from the graph widget.
@@ -342,9 +505,9 @@ class GraphWidget(anywidget.AnyWidget):
 
         def keep_rel(r: Relationship) -> bool:
             return (
-                    r.id not in rel_ids_to_remove
-                    and r.source not in node_ids_to_remove
-                    and r.target not in node_ids_to_remove
+                r.id not in rel_ids_to_remove
+                and r.source not in node_ids_to_remove
+                and r.target not in node_ids_to_remove
             )
 
         if rel_ids_to_remove:

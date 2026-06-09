@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Hashable, Iterable
-from typing import Any, Callable, Protocol, TypeVar
+from typing import Any, Callable, Protocol
 
 from pydantic.alias_generators import to_snake
 from pydantic_extra_types.color import Color, ColorType
@@ -11,22 +11,6 @@ from .colors import NEO4J_COLORS_CONTINUOUS, NEO4J_COLORS_DISCRETE, ColorSpace, 
 from .node import Node, NodeIdType
 from .node_size import RealNumber, verify_radii
 from .relationship import Relationship
-
-F = TypeVar("F", bound=Callable[..., Any])
-
-
-def delegate_doc(target: Callable[..., Any]) -> Callable[[F], F]:
-    """Copy the docstring of `target` onto the decorated function.
-
-    Lets the thin delegating methods on the host classes reuse the canonical docstrings
-    defined on `GraphEntityOperations` without duplicating the text.
-    """
-
-    def decorator(fn: F) -> F:
-        fn.__doc__ = target.__doc__
-        return fn
-
-    return decorator
 
 
 class EntityHost(Protocol):
@@ -59,14 +43,7 @@ class GraphEntityOperations:
         return self._host.relationships
 
     def toggle_nodes_pinned(self, pinned: dict[NodeIdType, bool]) -> None:
-        """
-        Toggle whether nodes should be pinned or not.
-
-        Parameters
-        ----------
-        pinned:
-            A dictionary mapping from node ID to whether the node should be pinned or not.
-        """
+        """Pin or unpin nodes. See `VisualizationGraph.toggle_nodes_pinned` for details."""
         for node in self.nodes:
             node_pinned = pinned.get(node.id)
 
@@ -84,43 +61,7 @@ class GraphEntityOperations:
         property: str | None = None,
         override: bool = True,
     ) -> None:
-        """
-        Set the caption for nodes in the graph based on either a node field or a node property.
-
-        Parameters
-        ----------
-        field:
-            The field of the nodes to use as the caption. Must be None if `property` is provided.
-        property:
-            The property of the nodes to use as the caption. Must be None if `field` is provided.
-        override:
-            Whether to override existing captions of the nodes, if they have any.
-
-        Examples
-        --------
-        Given a VisualizationGraph `VG`:
-
-        >>> nodes = [
-        ...    Node(id="0", properties={"name": "Alice", "age": 30}),
-        ...    Node(id="1", properties={"name": "Bob", "age": 25}),
-        ... ]
-        >>> VG = VisualizationGraph(nodes=nodes)
-
-        Set node captions from a property:
-
-        >>> VG.set_node_captions(property="name")
-
-        Set node captions from a field, only if not already set:
-
-        >>> VG.set_node_captions(field="id", override=False)
-
-        Set captions from multiple properties with fallback:
-
-        >>> for node in VG.nodes:
-        ...     caption = node.properties.get("name") or node.properties.get("title") or node.id
-        ...     if override or node.caption is None:
-        ...         node.caption = str(caption)
-        """
+        """Set node captions from a field or property. See `VisualizationGraph.set_node_captions` for details."""
         if not ((field is None) ^ (property is None)):
             raise ValueError(
                 f"Exactly one of the arguments `field` (received '{field}') and `property` (received '{property}') must be provided"
@@ -154,21 +95,7 @@ class GraphEntityOperations:
         node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
         property: str | None = None,
     ) -> None:
-        """
-        Resize the nodes in the graph.
-
-        Parameters
-        ----------
-        sizes:
-            A dictionary mapping from node ID to the new size of the node.
-            If a node ID is not in the dictionary, the size of the node is not changed.
-            Must be None if `property` is provided.
-        node_radius_min_max:
-            Minimum and maximum node size radius as a tuple. To avoid tiny or huge nodes in the visualization, the
-            node sizes are scaled to fit in the given range. If None, the sizes are used as is.
-        property:
-            The property of the nodes to use for sizing. Must be None if `sizes` is provided.
-        """
+        """Resize nodes from explicit sizes or a property. See `VisualizationGraph.resize_nodes` for details."""
         if sizes is not None and property is not None:
             raise ValueError("At most one of the arguments `sizes` and `property` can be provided")
 
@@ -226,18 +153,7 @@ class GraphEntityOperations:
         widths: dict[str | int, RealNumber] | None = None,
         property: str | None = None,
     ) -> None:
-        """
-        Resize the width of relationships in the graph.
-
-        Parameters
-        ----------
-        widths:
-            A dictionary mapping from relationship ID to the new width of the relationship.
-            If a relationship ID is not in the dictionary, the width of the relationship is not changed.
-            Must be None if `property` is provided.
-        property:
-            The property of the relationships to use for sizing. Must be None if `widths` is provided.
-        """
+        """Resize relationship widths from explicit widths or a property. See `VisualizationGraph.resize_relationships` for details."""
         if widths is not None and property is not None:
             raise ValueError("At most one of the arguments `widths` and `property` can be provided")
 
@@ -305,59 +221,7 @@ class GraphEntityOperations:
         color_space: ColorSpace = ColorSpace.DISCRETE,
         override: bool = True,
     ) -> None:
-        """
-        Color the nodes in the graph based on either a node field, or a node property.
-
-        It's possible to color the nodes based on a discrete or continuous color space. In the discrete case, a new
-        color from the `colors` provided is assigned to each unique value of the node field/property.
-        In the continuous case, the `colors` should be a list of colors representing a range that are used to
-        create a gradient of colors based on the values of the node field/property.
-
-        Parameters
-        ----------
-        field:
-            The field of the nodes to base the coloring on. The type of this field must be hashable, or be a
-            list, set or dict containing only hashable types. Must be None if `property` is provided.
-        property:
-            The property of the nodes to base the coloring on. The type of this property must be hashable, or be a
-            list, set or dict containing only hashable types. Must be None if `field` is provided.
-        colors:
-            The colors to use for the nodes.
-            If `color_space` is `ColorSpace.DISCRETE`, the colors can be a dictionary mapping from field/property value
-            to color, or an iterable of colors in which case the colors are used in order.
-            If `color_space` is `ColorSpace.CONTINUOUS`, the colors must be a list of colors representing a range.
-            Allowed color values are for example “#FF0000”, “red” or (255, 0, 0) (full list: https://docs.pydantic.dev/2.0/usage/types/extra_types/color_types/).
-            The default colors are the Neo4j graph colors.
-        color_space:
-            The type of space of the provided `colors`. Either `ColorSpace.DISCRETE` or `ColorSpace.CONTINUOUS`. It determines whether
-            colors are assigned based on unique field/property values or a gradient of the values of the field/property.
-        override:
-            Whether to override existing colors of the nodes, if they have any.
-
-        Examples
-        --------
-
-        Given a VisualizationGraph `VG`:
-
-        >>> nodes = [
-        ...    Node(id="0", properties={"label": "Person", "score": 10}),
-        ...    Node(id="1", properties={"label": "Person", "score": 20}),
-        ... ]
-        >>> VG = VisualizationGraph(nodes=nodes)
-
-        Color nodes based on a discrete field such as "label":
-
-        >>> VG.color_nodes(field="label", color_space=ColorSpace.DISCRETE)
-
-        Color nodes based on a continuous field such as "score":
-
-        >>> VG.color_nodes(field="score", color_space=ColorSpace.CONTINUOUS)
-
-        Color nodes based on a custom colors such as from palettable:
-
-        >>> from palettable.wesanderson import Moonrise1_5  # type: ignore[import-untyped]
-        >>> VG.color_nodes(field="label", colors=Moonrise1_5.colors)
-        """
+        """Color nodes by a field or property (discrete or continuous). See `VisualizationGraph.color_nodes` for details."""
         if not ((field is None) ^ (property is None)):
             raise ValueError(
                 f"Exactly one of the arguments `field` (received '{field}') and `property` (received '{property}') must be provided"
@@ -413,55 +277,7 @@ class GraphEntityOperations:
         color_space: ColorSpace = ColorSpace.DISCRETE,
         override: bool = True,
     ) -> None:
-        """
-        Color the relationships in the graph based on either a relationship field, or a relationship property.
-
-        It's possible to color the relationships based on a discrete or continuous color space. In the discrete case,
-        a new color from the `colors` provided is assigned to each unique value of the relationship field/property.
-        In the continuous case, the `colors` should be a list of colors representing a range that are used to
-        create a gradient of colors based on the values of the relationship field/property.
-
-        Parameters
-        ----------
-        field:
-            The field of the relationships to base the coloring on. The type of this field must be hashable, or be a
-            list, set or dict containing only hashable types. Must be None if `property` is provided.
-        property:
-            The property of the relationships to base the coloring on. The type of this property must be hashable, or be a
-            list, set or dict containing only hashable types. Must be None if `field` is provided.
-        colors:
-            The colors to use for the relationships.
-            If `color_space` is `ColorSpace.DISCRETE`, the colors can be a dictionary mapping from field/property value
-            to color, or an iterable of colors in which case the colors are used in order.
-            If `color_space` is `ColorSpace.CONTINUOUS`, the colors must be a list of colors representing a range.
-            Allowed color values are for example “#FF0000”, “red” or (255, 0, 0) (full list: https://docs.pydantic.dev/2.0/usage/types/extra_types/color_types/).
-            The default colors are the Neo4j graph colors.
-        color_space:
-            The type of space of the provided `colors`. Either `ColorSpace.DISCRETE` or `ColorSpace.CONTINUOUS`. It determines whether
-            colors are assigned based on unique field/property values or a gradient of the values of the field/property.
-        override:
-            Whether to override existing colors of the relationships, if they have any.
-
-        Examples
-        --------
-
-        Given a VisualizationGraph `VG`:
-
-        >>> nodes = [Node(id="0"), Node(id="1")]
-        >>> relationships = [
-        ...    Relationship(source="0", target="1", caption="ACTED_IN", properties={"score": 10}),
-        ...    Relationship(source="1", target="0", caption="DIRECTED", properties={"score": 20}),
-        ... ]
-        >>> VG = VisualizationGraph(nodes=nodes, relationships=relationships)
-
-        Color relationships based on a discrete field such as "caption":
-
-        >>> VG.color_relationships(field="caption", color_space=ColorSpace.DISCRETE)
-
-        Color relationships based on a continuous field such as "score":
-
-        >>> VG.color_relationships(property="score", color_space=ColorSpace.CONTINUOUS)
-        """
+        """Color relationships by a field or property (discrete or continuous). See `VisualizationGraph.color_relationships` for details."""
         if not ((field is None) ^ (property is None)):
             raise ValueError(
                 f"Exactly one of the arguments `field` (received '{field}') and `property` (received '{property}') must be provided"
