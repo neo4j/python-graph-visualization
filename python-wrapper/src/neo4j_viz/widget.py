@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import pathlib
 from functools import cached_property
-from typing import Any, Union
+from typing import Any, Union, cast
 
 import anywidget
 import traitlets
@@ -12,7 +12,15 @@ from ._graph_entity_operations import GraphEntityOperations, delegate_doc
 from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
 from .node_size import RealNumber
-from .options import RenderOptions
+from .options import (
+    Layout,
+    LayoutOptions,
+    NvlOptionsDict,
+    Renderer,
+    RenderOptions,
+    RenderOptionsDict,
+    construct_layout_options,
+)
 from .relationship import Relationship, RelationshipIdType
 
 
@@ -46,6 +54,8 @@ def entity_to_json(entity_list: list[Node | Relationship], widget: anywidget.Any
     return [_serialize_entity(entity) for entity in entity_list]
 
 
+# Dev mode: set ANYWIDGET_HMR=1 and run ``yarn dev`` in js-applet/
+# for hot module replacement during development.
 class GraphWidget(anywidget.AnyWidget):
     """Jupyter widget for interactive graph visualization.
 
@@ -54,9 +64,6 @@ class GraphWidget(anywidget.AnyWidget):
 
     The widget exposes utility methods that mutate the graph in place and
     automatically sync the changes to the frontend.
-
-    Dev mode: set ANYWIDGET_HMR=1 and run ``yarn dev`` in js-applet/
-    for hot module replacement during development.
     """
 
     _esm = _STATIC / "widget.js"
@@ -73,13 +80,13 @@ class GraphWidget(anywidget.AnyWidget):
 
     @classmethod
     def from_graph_data(
-        cls,
-        nodes: list[Node],
-        relationships: list[Relationship],
-        width: str = "100%",
-        height: str = "600px",
-        options: RenderOptions | None = None,
-        theme: str = "auto",
+            cls,
+            nodes: list[Node],
+            relationships: list[Relationship],
+            width: str = "100%",
+            height: str = "600px",
+            options: RenderOptions | None = None,
+            theme: str = "auto",
     ) -> GraphWidget:
         """Create a GraphWidget from Node and Relationship lists."""
         return cls(
@@ -130,40 +137,40 @@ class GraphWidget(anywidget.AnyWidget):
 
     @delegate_doc(GraphEntityOperations.set_node_captions)
     def set_node_captions(
-        self,
-        *,
-        field: str | None = None,
-        property: str | None = None,
-        override: bool = True,
+            self,
+            *,
+            field: str | None = None,
+            property: str | None = None,
+            override: bool = True,
     ) -> None:
         self._entity_ops.set_node_captions(field=field, property=property, override=override)
 
     @delegate_doc(GraphEntityOperations.resize_nodes)
     def resize_nodes(
-        self,
-        sizes: dict[NodeIdType, RealNumber] | None = None,
-        node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
-        property: str | None = None,
+            self,
+            sizes: dict[NodeIdType, RealNumber] | None = None,
+            node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
+            property: str | None = None,
     ) -> None:
         self._entity_ops.resize_nodes(sizes=sizes, node_radius_min_max=node_radius_min_max, property=property)
 
     @delegate_doc(GraphEntityOperations.resize_relationships)
     def resize_relationships(
-        self,
-        widths: dict[str | int, RealNumber] | None = None,
-        property: str | None = None,
+            self,
+            widths: dict[str | int, RealNumber] | None = None,
+            property: str | None = None,
     ) -> None:
         self._entity_ops.resize_relationships(widths=widths, property=property)
 
     @delegate_doc(GraphEntityOperations.color_nodes)
     def color_nodes(
-        self,
-        *,
-        field: str | None = None,
-        property: str | None = None,
-        colors: ColorsType | None = None,
-        color_space: ColorSpace = ColorSpace.DISCRETE,
-        override: bool = True,
+            self,
+            *,
+            field: str | None = None,
+            property: str | None = None,
+            colors: ColorsType | None = None,
+            color_space: ColorSpace = ColorSpace.DISCRETE,
+            override: bool = True,
     ) -> None:
         self._entity_ops.color_nodes(
             field=field, property=property, colors=colors, color_space=color_space, override=override
@@ -171,20 +178,111 @@ class GraphWidget(anywidget.AnyWidget):
 
     @delegate_doc(GraphEntityOperations.color_relationships)
     def color_relationships(
-        self,
-        *,
-        field: str | None = None,
-        property: str | None = None,
-        colors: ColorsType | None = None,
-        color_space: ColorSpace = ColorSpace.DISCRETE,
-        override: bool = True,
+            self,
+            *,
+            field: str | None = None,
+            property: str | None = None,
+            colors: ColorsType | None = None,
+            color_space: ColorSpace = ColorSpace.DISCRETE,
+            override: bool = True,
     ) -> None:
         self._entity_ops.color_relationships(
             field=field, property=property, colors=colors, color_space=color_space, override=override
         )
 
+    def _render_options(self) -> RenderOptionsDict:
+        """Return a typed, mutable copy of the current JS-shaped render options."""
+        return cast(RenderOptionsDict, dict(self.options))
+
+    def set_layout(self, layout: Layout | str, layout_options: dict[str, Any] | LayoutOptions | None = None) -> None:
+        """
+        Change the layout algorithm used to position the graph, in place.
+
+        Parameters
+        -----------
+        layout:
+            The layout algorithm to use (e.g. `Layout.FORCE_DIRECTED`, `Layout.HIERARCHICAL`).
+        layout_options:
+            Optional layout-specific options. Either a `HierarchicalLayoutOptions`/`ForceDirectedLayoutOptions`
+            instance or a plain dict, which is validated against the chosen layout. Layout options are only
+            supported for the force-directed and hierarchical layouts.
+        """
+        if isinstance(layout, str):
+            layout = Layout(layout)
+
+        if isinstance(layout_options, dict):
+            layout_options = construct_layout_options(layout, layout_options)
+
+        js = RenderOptions(layout=layout, layout_options=layout_options).to_js_options()
+
+        new = self._render_options()
+        new["layout"] = js["layout"]
+        if "layoutOptions" in js:
+            new["layoutOptions"] = js["layoutOptions"]
+        else:
+            new.pop("layoutOptions", None)
+        self.options = dict(new)
+
+    def set_zoom(self, zoom: float) -> None:
+        """
+        Change the zoom level of the graph, in place.
+
+        Parameters
+        -----------
+        zoom:
+            The zoom level to apply.
+        """
+        new = self._render_options()
+        new["zoom"] = zoom
+        self.options = dict(new)
+
+    def set_pan(self, x: float, y: float) -> None:
+        """
+        Change the pan position of the graph, in place.
+
+        Parameters
+        -----------
+        x:
+            The pan position along the x-axis.
+        y:
+            The pan position along the y-axis.
+        """
+        new = self._render_options()
+        new["pan"] = {"x": x, "y": y}
+        self.options = dict(new)
+
+    def set_renderer(self, renderer: Renderer) -> None:
+        """
+        Change the renderer used to draw the graph, in place.
+
+        Parameters
+        -----------
+        renderer:
+            The renderer to use, either `Renderer.WEB_GL` or `Renderer.CANVAS`.
+        """
+        Renderer.check(renderer, len(self.nodes))
+
+        new = self._render_options()
+        nvl_options = cast(NvlOptionsDict, dict(new.get("nvlOptions", {})))
+        nvl_options["disableWebGL"] = renderer != Renderer.WEB_GL
+        new["nvlOptions"] = nvl_options
+        self.options = dict(new)
+
+    def set_show_layout_button(self, show: bool = True) -> None:
+        """
+        Toggle the layout selector button in the widget UI, in place.
+
+        Parameters
+        -----------
+        show:
+            Whether the layout button should be shown.
+        """
+        new = self._render_options()
+        new["showLayoutButton"] = show
+        self.options = dict(new)
+
     def add_data(
-        self, nodes: Node | list[Node] | None = None, relationships: Relationship | list[Relationship] | None = None
+            self, nodes: Node | list[Node] | None = None, relationships: Relationship | list[Relationship] | None = None
     ) -> None:
         """
         Add nodes or relationships to the graph widget.
@@ -207,9 +305,9 @@ class GraphWidget(anywidget.AnyWidget):
             self.relationships = self.relationships + relationships
 
     def remove_data(
-        self,
-        nodes: Node | list[Node | NodeIdType] | NodeIdType | None = None,
-        relationships: Relationship | list[Relationship | RelationshipIdType] | RelationshipIdType | None = None,
+            self,
+            nodes: Node | list[Node | NodeIdType] | NodeIdType | None = None,
+            relationships: Relationship | list[Relationship | RelationshipIdType] | RelationshipIdType | None = None,
     ) -> None:
         """
         Remove nodes or relationships from the graph widget.
@@ -244,9 +342,9 @@ class GraphWidget(anywidget.AnyWidget):
 
         def keep_rel(r: Relationship) -> bool:
             return (
-                r.id not in rel_ids_to_remove
-                and r.source not in node_ids_to_remove
-                and r.target not in node_ids_to_remove
+                    r.id not in rel_ids_to_remove
+                    and r.source not in node_ids_to_remove
+                    and r.target not in node_ids_to_remove
             )
 
         if rel_ids_to_remove:

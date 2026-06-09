@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any, Optional, TypedDict, Union
 
 import enum_tools.documentation
 from pydantic import BaseModel, Field, ValidationError, model_validator
@@ -144,6 +144,41 @@ _LAYOUT_TO_JS: dict[str, str] = {
 }
 
 
+class PanPosition(TypedDict):
+    """The ``{x, y}`` pan position consumed by the frontend."""
+
+    x: float
+    y: float
+
+
+class NvlOptionsDict(TypedDict, total=False):
+    """The subset of NVL instance options set from Python, nested under ``nvlOptions``.
+
+    The frontend's ``nvlOptions`` is a ``Partial<NvlOptions>`` with many more fields; this only
+    types the keys the Python wrapper writes. Other keys round-trip through unchanged at runtime.
+    """
+
+    disableWebGL: bool
+    minZoom: float
+    maxZoom: float
+    allowDynamicMinZoom: bool
+
+
+class RenderOptionsDict(TypedDict, total=False):
+    """The JS-shaped render options consumed by the ``GraphWidget`` frontend.
+
+    This mirrors the ``GraphOptions`` type in ``js-applet/src/graph-widget.tsx`` and is the
+    structure stored in :attr:`GraphWidget.options`.
+    """
+
+    layout: str
+    layoutOptions: dict[str, Any]
+    nvlOptions: NvlOptionsDict
+    zoom: float
+    pan: PanPosition
+    showLayoutButton: bool
+
+
 class RenderOptions(BaseModel, extra="allow"):
     """
     Options as documented at https://neo4j.com/docs/nvl/current/base-library/#_options
@@ -178,7 +213,7 @@ class RenderOptions(BaseModel, extra="allow"):
             raise ValueError("layout_options must be of type ForceDirectedLayoutOptions for force-directed layout")
         return self
 
-    def to_js_options(self) -> dict[str, Any]:
+    def to_js_options(self) -> RenderOptionsDict:
         """Convert render options to the JS-compatible format for the GraphVisualization component.
 
         Returns a dict with keys that map to React component props and NVL options:
@@ -188,7 +223,7 @@ class RenderOptions(BaseModel, extra="allow"):
         - ``pan``: ``{x, y}`` pan position
         - ``layoutOptions``: layout-specific options
         """
-        result: dict[str, Any] = {}
+        result: RenderOptionsDict = {}
 
         if self.layout is not None:
             match self.layout:
@@ -206,7 +241,7 @@ class RenderOptions(BaseModel, extra="allow"):
         if self.layout_options is not None:
             result["layoutOptions"] = self.layout_options.model_dump(exclude_none=True)
 
-        nvl_options: dict[str, Any] = {}
+        nvl_options: NvlOptionsDict = {}
         if self.renderer is not None:
             nvl_options["disableWebGL"] = self.renderer != Renderer.WEB_GL
         if self.min_zoom is not None:
