@@ -46,7 +46,7 @@ class NVL:
             "width": width,
             "height": height,
             "theme": theme,
-            "options": render_options.to_js_options(),
+            "options": render_options.to_widget_options().to_json(),
         }
         data_json = json.dumps(data_dict)
         container_id = f"neo4j-viz-{uuid.uuid4().hex[:12]}"

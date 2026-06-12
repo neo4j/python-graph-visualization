@@ -13,5 +13,6 @@
 
 * Support Aura Graph Analytics
 * Support `gds.v2` endpoints
+* Use typed options field in `GraphWidget`
 
 ## Other changes

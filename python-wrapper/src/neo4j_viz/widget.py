@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import pathlib
 from functools import cached_property
-from typing import Any, Union, cast
+from typing import Any, Union
 
 import anywidget
 import traitlets
@@ -15,10 +15,11 @@ from .node_size import RealNumber
 from .options import (
     Layout,
     LayoutOptions,
-    NvlOptionsDict,
+    NvlOptions,
+    PanPosition,
     Renderer,
     RenderOptions,
-    RenderOptionsDict,
+    WidgetOptions,
     construct_layout_options,
 )
 from .relationship import Relationship, RelationshipIdType
@@ -75,10 +76,23 @@ class GraphWidget(anywidget.AnyWidget):
     relationships: traitlets.List[Relationship] = traitlets.List([]).tag(sync=True, to_json=entity_to_json)
     width: traitlets.Unicode[str, str | bytes] = traitlets.Unicode("100%").tag(sync=True)
     height: traitlets.Unicode[str, str | bytes] = traitlets.Unicode("600px").tag(sync=True)
-    options: traitlets.Dict[str, Any] = traitlets.Dict({}).tag(sync=True)
+    options: traitlets.Any = traitlets.Any().tag(
+        sync=True,
+        to_json=lambda value, widget: value.to_json(),
+        from_json=lambda value, widget: WidgetOptions.model_validate(value),
+    )
     theme: traitlets.Unicode[str, str | bytes] = traitlets.Unicode(
         default_value="auto", help="Theme of the graph widget. Can be 'auto', 'light', or 'dark'."
     ).tag(sync=True)
+
+    @traitlets.default("options")
+    def _default_options(self) -> WidgetOptions:
+        return WidgetOptions()
+
+    @traitlets.validate("options")
+    def _coerce_options(self, proposal: dict[str, Any]) -> WidgetOptions:
+        value = proposal["value"]
+        return value if isinstance(value, WidgetOptions) else WidgetOptions.model_validate(value)
 
     @classmethod
     def from_graph_data(
@@ -96,7 +110,7 @@ class GraphWidget(anywidget.AnyWidget):
             relationships=relationships,
             width=width,
             height=height,
-            options=options.to_js_options() if options else {},
+            options=options.to_widget_options() if options else WidgetOptions(),
             theme=theme,
         )
 
@@ -353,9 +367,14 @@ class GraphWidget(anywidget.AnyWidget):
             field=field, property=property, colors=colors, color_space=color_space, override=override
         )
 
-    def _render_options(self) -> RenderOptionsDict:
-        """Return a typed, mutable copy of the current JS-shaped render options."""
-        return cast(RenderOptionsDict, dict(self.options))
+    def _render_options(self) -> WidgetOptions:
+        """Return a mutable copy of the current JS-shaped render options.
+
+        Mutating and then reassigning the returned model to :attr:`options` triggers the
+        traitlets change notification that syncs the new options to the frontend.
+        """
+        current: WidgetOptions = self.options
+        return current.model_copy(deep=True)
 
     def set_layout(self, layout: Layout | str, layout_options: dict[str, Any] | LayoutOptions | None = None) -> None:
         """
@@ -376,15 +395,12 @@ class GraphWidget(anywidget.AnyWidget):
         if isinstance(layout_options, dict):
             layout_options = construct_layout_options(layout, layout_options)
 
-        js = RenderOptions(layout=layout, layout_options=layout_options).to_js_options()
+        js = RenderOptions(layout=layout, layout_options=layout_options).to_widget_options()
 
         new = self._render_options()
-        new["layout"] = js["layout"]
-        if "layoutOptions" in js:
-            new["layoutOptions"] = js["layoutOptions"]
-        else:
-            new.pop("layoutOptions", None)
-        self.options = dict(new)
+        new.layout = js.layout
+        new.layout_options = js.layout_options
+        self.options = new
 
     def set_zoom(self, zoom: float) -> None:
         """
@@ -396,8 +412,8 @@ class GraphWidget(anywidget.AnyWidget):
             The zoom level to apply.
         """
         new = self._render_options()
-        new["zoom"] = zoom
-        self.options = dict(new)
+        new.zoom = zoom
+        self.options = new
 
     def set_pan(self, x: float, y: float) -> None:
         """
@@ -411,8 +427,8 @@ class GraphWidget(anywidget.AnyWidget):
             The pan position along the y-axis.
         """
         new = self._render_options()
-        new["pan"] = {"x": x, "y": y}
-        self.options = dict(new)
+        new.pan = PanPosition(x=x, y=y)
+        self.options = new
 
     def set_renderer(self, renderer: Renderer) -> None:
         """
@@ -426,10 +442,10 @@ class GraphWidget(anywidget.AnyWidget):
         Renderer.check(renderer, len(self.nodes))
 
         new = self._render_options()
-        nvl_options = cast(NvlOptionsDict, dict(new.get("nvlOptions", {})))
-        nvl_options["disableWebGL"] = renderer != Renderer.WEB_GL
-        new["nvlOptions"] = nvl_options
-        self.options = dict(new)
+        nvl_options = new.nvl_options or NvlOptions()
+        nvl_options.disable_web_gl = renderer != Renderer.WEB_GL
+        new.nvl_options = nvl_options
+        self.options = new
 
     def set_show_layout_button(self, show: bool = True) -> None:
         """
@@ -441,8 +457,8 @@ class GraphWidget(anywidget.AnyWidget):
             Whether the layout button should be shown.
         """
         new = self._render_options()
-        new["showLayoutButton"] = show
-        self.options = dict(new)
+        new.show_layout_button = show
+        self.options = new
 
     def add_data(
         self, nodes: Node | list[Node] | None = None, relationships: Relationship | list[Relationship] | None = None

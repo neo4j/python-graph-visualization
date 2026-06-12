@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 
 from neo4j_viz import GraphWidget, Node, Relationship, VisualizationGraph
-from neo4j_viz.options import Layout, Renderer, RenderOptions
+from neo4j_viz.options import Layout, Renderer, RenderOptions, WidgetOptions
 from neo4j_viz.widget import _serialize_entity
 
 
@@ -67,7 +67,7 @@ class TestGraphWidget:
         assert len(widget.relationships) == 1
         assert widget.width == "100%"
         assert widget.height == "600px"
-        assert widget.options == {}
+        assert widget.options == WidgetOptions()
 
     def test_from_graph_data_with_options(self) -> None:
         nodes = [Node(id="n1")]
@@ -83,7 +83,7 @@ class TestGraphWidget:
 
         assert widget.width == "800px"
         assert widget.height == "400px"
-        assert widget.options == {"layout": "d3Force", "showLayoutButton": False}
+        assert widget.options == WidgetOptions(layout="d3Force", show_layout_button=False)
 
     def test_widget_trait_defaults(self) -> None:
         widget = GraphWidget()
@@ -92,7 +92,7 @@ class TestGraphWidget:
         assert widget.relationships == []
         assert widget.width == "100%"
         assert widget.height == "600px"
-        assert widget.options == {}
+        assert widget.options == WidgetOptions()
 
 
 class TestWidgetDataBinding:
@@ -122,9 +122,9 @@ class TestWidgetDataBinding:
     def test_update_options(self) -> None:
         widget = GraphWidget(options={"layout": "d3Force"})
 
-        widget.options = {"layout": "hierarchical", "zoom": 2.0}
-        assert widget.options["layout"] == "hierarchical"
-        assert widget.options["zoom"] == 2.0
+        new_options: Any = {"layout": "hierarchical", "zoom": 2.0}
+        widget.options = new_options
+        assert widget.options == WidgetOptions(layout="hierarchical", zoom=2.0)
 
     def test_update_dimensions(self) -> None:
         widget = GraphWidget()
@@ -361,10 +361,10 @@ class TestRenderWidget:
             max_zoom=5.0,
         )
 
-        assert widget.options["layout"] == "hierarchical"
-        assert widget.options["zoom"] == 2.0
-        assert widget.options["nvlOptions"]["minZoom"] == 0.1
-        assert widget.options["nvlOptions"]["maxZoom"] == 5.0
+        assert widget.options.layout == "hierarchical"
+        assert widget.options.zoom == 2.0
+        assert widget.options.nvl_options.min_zoom == 0.1
+        assert widget.options.nvl_options.max_zoom == 5.0
 
 
 class TestRenderOptionSetters:
@@ -373,23 +373,23 @@ class TestRenderOptionSetters:
 
         widget.set_layout(Layout.HIERARCHICAL)
 
-        assert widget.options["layout"] == "hierarchical"
+        assert widget.options.layout == "hierarchical"
 
     def test_set_layout_with_options(self) -> None:
         widget = GraphWidget()
 
         widget.set_layout(Layout.FORCE_DIRECTED, {"gravity": 0.1})
 
-        assert widget.options["layout"] == "d3Force"
-        assert widget.options["layoutOptions"] == {"gravity": 0.1}
+        assert widget.options.layout == "d3Force"
+        assert widget.options.layout_options == {"gravity": 0.1}
 
     def test_set_layout_clears_stale_layout_options(self) -> None:
         widget = GraphWidget(options={"layoutOptions": {"gravity": 0.1}})
 
         widget.set_layout(Layout.GRID)
 
-        assert widget.options["layout"] == "grid"
-        assert "layoutOptions" not in widget.options
+        assert widget.options.layout == "grid"
+        assert widget.options.layout_options is None
 
     def test_set_layout_with_mismatched_options_raises(self) -> None:
         widget = GraphWidget()
@@ -402,21 +402,22 @@ class TestRenderOptionSetters:
 
         widget.set_zoom(2.0)
 
-        assert widget.options["zoom"] == 2.0
+        assert widget.options.zoom == 2.0
 
     def test_set_pan(self) -> None:
         widget = GraphWidget()
 
         widget.set_pan(100, 50)
 
-        assert widget.options["pan"] == {"x": 100, "y": 50}
+        assert widget.options.pan.x == 100
+        assert widget.options.pan.y == 50
 
     def test_set_renderer_canvas(self) -> None:
         widget = GraphWidget()
 
         widget.set_renderer(Renderer.CANVAS)
 
-        assert widget.options["nvlOptions"]["disableWebGL"] is True
+        assert widget.options.nvl_options.disable_web_gl is True
 
     def test_set_renderer_webgl(self) -> None:
         widget = GraphWidget()
@@ -424,32 +425,32 @@ class TestRenderOptionSetters:
         with pytest.warns(UserWarning):
             widget.set_renderer(Renderer.WEB_GL)
 
-        assert widget.options["nvlOptions"]["disableWebGL"] is False
+        assert widget.options.nvl_options.disable_web_gl is False
 
     def test_set_renderer_preserves_other_nvl_options(self) -> None:
         widget = GraphWidget(options={"nvlOptions": {"minZoom": 0.1}})
 
         widget.set_renderer(Renderer.CANVAS)
 
-        assert widget.options["nvlOptions"]["minZoom"] == 0.1
-        assert widget.options["nvlOptions"]["disableWebGL"] is True
+        assert widget.options.nvl_options.min_zoom == 0.1
+        assert widget.options.nvl_options.disable_web_gl is True
 
     def test_set_show_layout_button(self) -> None:
         widget = GraphWidget()
 
         widget.set_show_layout_button()
-        assert widget.options["showLayoutButton"] is True
+        assert widget.options.show_layout_button is True
 
         widget.set_show_layout_button(False)
-        assert widget.options["showLayoutButton"] is False
+        assert widget.options.show_layout_button is False
 
     def test_setter_preserves_unrelated_options(self) -> None:
         widget = GraphWidget(options={"layout": "hierarchical"})
 
         widget.set_zoom(3.0)
 
-        assert widget.options["zoom"] == 3.0
-        assert widget.options["layout"] == "hierarchical"
+        assert widget.options.zoom == 3.0
+        assert widget.options.layout == "hierarchical"
 
     def test_setter_triggers_sync(self) -> None:
         widget = GraphWidget()

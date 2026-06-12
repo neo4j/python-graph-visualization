@@ -8,82 +8,82 @@ from neo4j_viz.options import (
 )
 
 
-def test_js_options_empty() -> None:
+def test_widget_options_empty() -> None:
     options = RenderOptions()
-    assert options.to_js_options() == {"showLayoutButton": False}
+    assert options.to_widget_options().to_json() == {"showLayoutButton": False}
 
 
-def test_js_options_layout_force_directed() -> None:
+def test_widget_options_layout_force_directed() -> None:
     options = RenderOptions(layout=Layout.FORCE_DIRECTED)
-    js = options.to_js_options()
-    assert js["layout"] == "d3Force"
+    widget_options = options.to_widget_options().to_json()
+    assert widget_options["layout"] == "d3Force"
 
 
-def test_js_options_layout_hierarchical() -> None:
+def test_widget_options_layout_hierarchical() -> None:
     options = RenderOptions(layout=Layout.HIERARCHICAL)
-    js = options.to_js_options()
-    assert js["layout"] == "hierarchical"
+    widget_options = options.to_widget_options().to_json()
+    assert widget_options["layout"] == "hierarchical"
 
 
-def test_js_options_layout_coordinate() -> None:
+def test_widget_options_layout_coordinate() -> None:
     options = RenderOptions(layout=Layout.COORDINATE)
-    js = options.to_js_options()
+    js = options.to_widget_options().to_json()
     assert js["layout"] == "free"
 
 
-def test_js_options_renderer_canvas() -> None:
+def test_widget_options_renderer_canvas() -> None:
     options = RenderOptions(renderer=Renderer.CANVAS)
-    js = options.to_js_options()
+    js = options.to_widget_options().to_json()
     assert js["nvlOptions"]["disableWebGL"] is True
 
 
-def test_js_options_renderer_webgl() -> None:
+def test_widget_options_renderer_webgl() -> None:
     options = RenderOptions(renderer=Renderer.WEB_GL)
-    js = options.to_js_options()
+    js = options.to_widget_options().to_json()
     assert js["nvlOptions"]["disableWebGL"] is False
 
 
-def test_js_options_zoom_and_pan() -> None:
+def test_widget_options_zoom_and_pan() -> None:
     options = RenderOptions(initial_zoom=2.0, pan_X=100.0, pan_Y=200.0)
-    js = options.to_js_options()
+    js = options.to_widget_options().to_json()
     assert js["zoom"] == 2.0
     assert js["pan"] == {"x": 100.0, "y": 200.0}
 
 
-def test_js_options_min_max_zoom() -> None:
+def test_widget_options_min_max_zoom() -> None:
     options = RenderOptions(min_zoom=0.1, max_zoom=5.0)
-    js = options.to_js_options()
+    js = options.to_widget_options().to_json()
     assert js["nvlOptions"]["minZoom"] == 0.1
     assert js["nvlOptions"]["maxZoom"] == 5.0
 
 
-def test_js_options_allow_dynamic_min_zoom() -> None:
+def test_widget_options_allow_dynamic_min_zoom() -> None:
     options = RenderOptions(allow_dynamic_min_zoom=False)
-    js = options.to_js_options()
+    js = options.to_widget_options().to_json()
     assert js["nvlOptions"]["allowDynamicMinZoom"] is False
 
 
-def test_js_options_with_layout_options() -> None:
+def test_widget_options_with_layout_options() -> None:
     options = RenderOptions(
         layout=Layout.HIERARCHICAL,
         layout_options=HierarchicalLayoutOptions(direction=Direction.LEFT),
     )
-    js = options.to_js_options()
+    js = options.to_widget_options().to_json()
     assert js["layout"] == "hierarchical"
     assert js["layoutOptions"] == {"direction": "left"}
 
 
-def test_js_options_with_force_directed_layout_options() -> None:
+def test_widget_options_with_force_directed_layout_options() -> None:
     options = RenderOptions(
         layout=Layout.FORCE_DIRECTED,
         layout_options=ForceDirectedLayoutOptions(gravity=0.5),
     )
-    js = options.to_js_options()
-    assert js["layout"] == "d3Force"
-    assert js["layoutOptions"] == {"gravity": 0.5}
+    widget_options = options.to_widget_options().to_json()
+    assert widget_options["layout"] == "d3Force"
+    assert widget_options["layoutOptions"] == {"gravity": 0.5}
 
 
-def test_js_options_full() -> None:
+def test_widget_options_full() -> None:
     options = RenderOptions(
         layout=Layout.HIERARCHICAL,
         layout_options=HierarchicalLayoutOptions(direction=Direction.DOWN),
@@ -96,7 +96,7 @@ def test_js_options_full() -> None:
         pan_Y=-30.0,
         show_layout_button=True,
     )
-    js = options.to_js_options()
+    js = options.to_widget_options().to_json()
     assert js == {
         "layout": "hierarchical",
         "layoutOptions": {"direction": "down"},

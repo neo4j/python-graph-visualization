@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import warnings
 from enum import Enum
-from typing import Any, Optional, TypedDict, Union
+from typing import Any, Optional, Union
 
 import enum_tools.documentation
 from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic.alias_generators import to_camel
 
 
 @enum_tools.documentation.document_enum
@@ -144,39 +145,54 @@ _LAYOUT_TO_JS: dict[str, str] = {
 }
 
 
-class PanPosition(TypedDict):
-    """The ``{x, y}`` pan position consumed by the frontend."""
+class PanPosition(BaseModel):
+    """The ``{x, y}`` pan position."""
 
     x: float
     y: float
 
 
-class NvlOptionsDict(TypedDict, total=False):
-    """The subset of NVL instance options set from Python, nested under ``nvlOptions``.
+# Fields are snake_case in Python; pydantic serializes them to the camelCase keys the
+# frontend's Partial<NvlOptions> expects (and accepts either casing on input). The frontend
+# has many more fields, so extra="allow" lets other keys round-trip unchanged.
+class NvlOptions(
+    BaseModel,
+    extra="allow",
+    alias_generator=to_camel,
+    populate_by_name=True,
+    serialize_by_alias=True,
+):
+    """The subset of NVL instance options set from Python, nested under ``nvl_options``."""
 
-    The frontend's ``nvlOptions`` is a ``Partial<NvlOptions>`` with many more fields; this only
-    types the keys the Python wrapper writes. Other keys round-trip through unchanged at runtime.
-    """
-
-    disableWebGL: bool
-    minZoom: float
-    maxZoom: float
-    allowDynamicMinZoom: bool
+    # ``to_camel("disable_web_gl")`` would yield ``disableWebGl``; NVL expects ``disableWebGL``.
+    disable_web_gl: Optional[bool] = Field(None, alias="disableWebGL")
+    min_zoom: Optional[float] = None
+    max_zoom: Optional[float] = None
+    allow_dynamic_min_zoom: Optional[bool] = None
 
 
-class RenderOptionsDict(TypedDict, total=False):
-    """The JS-shaped render options consumed by the ``GraphWidget`` frontend.
+# Mirrors the GraphOptions type in js-applet/src/graph-widget.tsx and is the structure stored
+# in GraphWidget.options. Fields are snake_case in Python; pydantic serializes them to the
+# camelCase wire format the frontend expects (and accepts either casing on input).
+class WidgetOptions(
+    BaseModel,
+    extra="allow",
+    alias_generator=to_camel,
+    populate_by_name=True,
+    serialize_by_alias=True,
+):
+    """The render options consumed by the ``GraphWidget``."""
 
-    This mirrors the ``GraphOptions`` type in ``js-applet/src/graph-widget.tsx`` and is the
-    structure stored in :attr:`GraphWidget.options`.
-    """
+    layout: Optional[str] = None
+    layout_options: Optional[dict[str, Any]] = None
+    nvl_options: Optional[NvlOptions] = None
+    zoom: Optional[float] = None
+    pan: Optional[PanPosition] = None
+    show_layout_button: Optional[bool] = None
 
-    layout: str
-    layoutOptions: dict[str, Any]
-    nvlOptions: NvlOptionsDict
-    zoom: float
-    pan: PanPosition
-    showLayoutButton: bool
+    def to_json(self) -> dict[str, Any]:
+        """Serialize to the camelCase dict the frontend consumes, dropping unset fields."""
+        return self.model_dump(exclude_none=True)
 
 
 class RenderOptions(BaseModel, extra="allow"):
@@ -213,53 +229,46 @@ class RenderOptions(BaseModel, extra="allow"):
             raise ValueError("layout_options must be of type ForceDirectedLayoutOptions for force-directed layout")
         return self
 
-    def to_js_options(self) -> RenderOptionsDict:
-        """Convert render options to the JS-compatible format for the GraphVisualization component.
-
-        Returns a dict with keys that map to React component props and NVL options:
-        - ``layout``: NVL layout name (e.g. ``"d3Force"``, ``"hierarchical"``)
-        - ``nvlOptions``: dict of NVL instance options (``minZoom``, ``maxZoom``, etc.)
-        - ``zoom``: initial zoom level
-        - ``pan``: ``{x, y}`` pan position
-        - ``layoutOptions``: layout-specific options
-        """
-        result: RenderOptionsDict = {}
+    def to_widget_options(self) -> WidgetOptions:
+        result = WidgetOptions()
 
         if self.layout is not None:
             match self.layout:
                 case Layout.FORCE_DIRECTED:
-                    result["layout"] = "d3Force"
+                    result.layout = "d3Force"
                 case Layout.HIERARCHICAL:
-                    result["layout"] = "hierarchical"
+                    result.layout = "hierarchical"
                 case Layout.COORDINATE:
-                    result["layout"] = "free"
+                    result.layout = "free"
                 case Layout.GRID:
-                    result["layout"] = "grid"
+                    result.layout = "grid"
                 case Layout.CIRCULAR:
-                    result["layout"] = "circular"
+                    result.layout = "circular"
 
         if self.layout_options is not None:
-            result["layoutOptions"] = self.layout_options.model_dump(exclude_none=True)
+            result.layout_options = self.layout_options.model_dump(exclude_none=True)
 
-        nvl_options: NvlOptionsDict = {}
+        nvl_options = NvlOptions()
         if self.renderer is not None:
-            nvl_options["disableWebGL"] = self.renderer != Renderer.WEB_GL
+            nvl_options.disable_web_gl = self.renderer != Renderer.WEB_GL
         if self.min_zoom is not None:
-            nvl_options["minZoom"] = self.min_zoom
+            nvl_options.min_zoom = self.min_zoom
         if self.max_zoom is not None:
-            nvl_options["maxZoom"] = self.max_zoom
+            nvl_options.max_zoom = self.max_zoom
         if self.allow_dynamic_min_zoom is not None:
-            nvl_options["allowDynamicMinZoom"] = self.allow_dynamic_min_zoom
-        if nvl_options:
-            result["nvlOptions"] = nvl_options
+            nvl_options.allow_dynamic_min_zoom = self.allow_dynamic_min_zoom
+
+        # check if any nvl options are set
+        if nvl_options.model_dump(exclude_none=True):
+            result.nvl_options = nvl_options
 
         if self.initial_zoom is not None:
-            result["zoom"] = self.initial_zoom
+            result.zoom = self.initial_zoom
 
         if self.pan_X is not None or self.pan_Y is not None:
-            result["pan"] = {"x": self.pan_X or 0, "y": self.pan_Y or 0}
+            result.pan = PanPosition(x=self.pan_X or 0, y=self.pan_Y or 0)
 
-        result["showLayoutButton"] = self.show_layout_button
+        result.show_layout_button = self.show_layout_button
 
         return result
 
