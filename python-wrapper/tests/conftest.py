@@ -1,9 +1,7 @@
-from typing import Any
-
 import pytest
 
 
-def pytest_addoption(parser: Any) -> None:
+def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--include-neo4j-and-gds",
         action="store_true",
@@ -16,7 +14,7 @@ def pytest_addoption(parser: Any) -> None:
     )
 
 
-def pytest_collection_modifyitems(config: Any, items: Any) -> None:
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     if not config.getoption("--include-neo4j-and-gds"):
         skip = pytest.mark.skip(reason="skipping since requiring Neo4j instance with GDS running")
         for item in items:
