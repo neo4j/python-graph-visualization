@@ -1,17 +1,21 @@
-# Changes in 1.4.0
+# Changes in 1.5.0
 
 ## Breaking changes
 
 ## New features
 
+* Add `GraphWidget` methods to change render options in place without re-rendering: `set_layout`, `set_zoom`, `set_pan`, `set_renderer`, and `set_show_layout_button`
+* Add `GraphWidget` methods to change styling in place without re-rendering such as `color_relationships`
+
 ## Bug fixes
 
-- Fixed a bug in displaying the `Download`, `Selection` and `Layout` buttons, which was introduced in 1.2.0. 
+* Warn when relationships reference node ids that are not in the graph. It is configurable via the `on_dangling` parameter (`"warn"` (default), `"error"`, or `"none"`) on `render`, `render_widget`, and `GraphWidget.add_data`
 
 ## Improvements
 
-- Support `neo4j.EagerResult` in the `from_neo4j` integration which is the default return type by `neo4j.Driver.execute_query()`.
-- Detect light/dark theme changes and adapt rendering unless theme was explicitly set. Before the theme would only be checked on the first render.
-
+* Support Python 3.14
+* Support Aura Graph Analytics
+* Support `gds.v2` endpoints
+* Use typed options field in `GraphWidget`
 
 ## Other changes

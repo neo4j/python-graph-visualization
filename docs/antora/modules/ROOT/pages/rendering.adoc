@@ -38,6 +38,12 @@ It defaults to 10.000, because rendering a large number of nodes can be slow and
 However, you can increase this value if you are confident that your environment can handle the scale.
 In this case you might also want to pass `Renderer.WEB_GL` as the `renderer` to improve performance.
 
+Relationships whose `source` or `target` is not part of the graph's nodes ("dangling" relationships) cannot be
+drawn, and a graph containing them may appear empty.
+By default `render` emits a warning that lists the offending relationships so the problem is not silent.
+You can change this with the `on_dangling` parameter: pass `"error"` to raise a `ValueError` instead, or `"none"`
+to skip the check entirely.
+
 By default a tooltip showing IDs and properties will be shown when mouse hovering over a node or relationship.
 But you can disable this by passing `show_hover_tooltip=False`.
 

@@ -33,11 +33,11 @@ jobs:
         with:
           python-version: "3.11"
           enable-cache: true
-      - run: uv sync --group dev --extra pandas --extra neo4j --extra gds --extra snowflake
+      - run: uv sync --group dev --extra pandas --extra neo4j --extra gds
 
       - name: Run tests
         env:
           AURA_API_CLIENT_ID: 4V1HYCYEeoU4dSxThKnBeLvE2U4hSphx
           AURA_API_CLIENT_SECRET: ${{ secrets.AURA_API_CLIENT_SECRET }}
-          AURA_API_TENANT_ID: eee7ec28-6b1a-5286-8e3a-3362cc1c4c78
+          AURA_API_PROJECT_ID: 3f8df5e7-4800-4d4f-ad1d-2d044dfd587c
         run: uv run pytest tests/ --include-neo4j-and-gds
