@@ -11,6 +11,7 @@
 
 ## Improvements
 
+* Support Python 3.14
 * Support Aura Graph Analytics
 * Support `gds.v2` endpoints
 * Use typed options field in `GraphWidget`
