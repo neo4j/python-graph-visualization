@@ -9,6 +9,7 @@ py-style:
     ./scripts/makestyle.sh && ./scripts/checkstyle.sh
 
 py-test:
+    cd python-wrapper && uv sync --all-extras --group dev
     cd python-wrapper && uv run --group dev pytest
 
 py-test-gds:
