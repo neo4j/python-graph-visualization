@@ -9,6 +9,8 @@
 
 ## Bug fixes
 
+* Warn when relationships reference node ids that are not in the graph. It is configurable via the `on_dangling` parameter (`"warn"` (default), `"error"`, or `"none"`) on `render`, `render_widget`, and `GraphWidget.add_data`
+
 ## Improvements
 
 * Support Python 3.14

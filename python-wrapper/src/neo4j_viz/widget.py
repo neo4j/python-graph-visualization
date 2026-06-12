@@ -9,6 +9,7 @@ import anywidget
 import traitlets
 
 from ._graph_entity_operations import GraphEntityOperations
+from ._validation import OnDangling, check_dangling_relationships
 from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
 from .node_size import RealNumber
@@ -461,7 +462,10 @@ class GraphWidget(anywidget.AnyWidget):
         self.options = new
 
     def add_data(
-        self, nodes: Node | list[Node] | None = None, relationships: Relationship | list[Relationship] | None = None
+        self,
+        nodes: Node | list[Node] | None = None,
+        relationships: Relationship | list[Relationship] | None = None,
+        on_dangling: OnDangling = "warn",
     ) -> None:
         """
         Add nodes or relationships to the graph widget.
@@ -472,6 +476,10 @@ class GraphWidget(anywidget.AnyWidget):
             Nodes to add to the graph widget.
         relationships:
             Relationships to add to the graph widget.
+        on_dangling:
+            What to do when a resulting relationship references a node id that is not in the graph
+            (which the frontend would silently render as empty). One of "warn" (default), "error",
+            or "none".
         """
         if isinstance(nodes, Node):
             nodes = [nodes]
@@ -482,6 +490,8 @@ class GraphWidget(anywidget.AnyWidget):
             self.nodes = self.nodes + nodes
         if relationships:
             self.relationships = self.relationships + relationships
+
+        check_dangling_relationships(self.nodes, self.relationships, on_dangling)
 
     def remove_data(
         self,

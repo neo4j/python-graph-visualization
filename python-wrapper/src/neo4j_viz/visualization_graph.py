@@ -6,6 +6,7 @@ from typing import Any, Literal
 from IPython.display import HTML
 
 from ._graph_entity_operations import GraphEntityOperations
+from ._validation import OnDangling, check_dangling_relationships
 from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
 from .node_size import RealNumber
@@ -324,6 +325,7 @@ class VisualizationGraph:
         allow_dynamic_min_zoom: bool,
         max_allowed_nodes: int,
         show_layout_button: bool,
+        on_dangling: OnDangling,
     ) -> RenderOptions:
         """Shared validation + option building for render / render_widget."""
         num_nodes = len(self.nodes)
@@ -333,6 +335,8 @@ class VisualizationGraph:
                 f"to {max_allowed_nodes} for performance reasons. It can be increased by "
                 "overriding `max_allowed_nodes`, but rendering could then take a long time"
             )
+
+        check_dangling_relationships(self.nodes, self.relationships, on_dangling)
 
         if isinstance(renderer, str):
             renderer = Renderer(renderer)
@@ -378,6 +382,7 @@ class VisualizationGraph:
         allow_dynamic_min_zoom: bool = True,
         max_allowed_nodes: int = 10_000,
         theme: Literal["auto"] | Literal["light"] | Literal["dark"] = "auto",
+        on_dangling: OnDangling = "warn",
     ) -> HTML:
         """
         Render the graph as an HTML object.
@@ -411,6 +416,8 @@ class VisualizationGraph:
             The maximum allowed number of nodes to render.
         theme:
             The theme of the rendered graph. Can be 'auto', 'light', or 'dark'
+        on_dangling:
+            What to do when a relationship references a node id that is not in the graph . One of "warn" (default), "error", or "none".
 
         Example
         -------
@@ -428,6 +435,7 @@ class VisualizationGraph:
             allow_dynamic_min_zoom,
             max_allowed_nodes,
             show_layout_button=False,  # The button only works with the widget
+            on_dangling=on_dangling,
         )
 
         return NVL().render(
@@ -453,6 +461,7 @@ class VisualizationGraph:
         allow_dynamic_min_zoom: bool = True,
         max_allowed_nodes: int = 10_000,
         theme: Literal["auto"] | Literal["light"] | Literal["dark"] = "auto",
+        on_dangling: OnDangling = "warn",
     ) -> GraphWidget:
         """
         Render the graph as an interactive Jupyter widget (anywidget).
@@ -486,6 +495,8 @@ class VisualizationGraph:
             The maximum allowed number of nodes to render.
         theme:
             The theme to use for the rendered graph.
+        on_dangling:
+            What to do when a relationship references a node id that is not in the graph. One of "warn" (default), "error", or "none".
         """
         render_options = self._build_render_options(
             layout,
@@ -498,6 +509,7 @@ class VisualizationGraph:
             allow_dynamic_min_zoom,
             max_allowed_nodes,
             show_layout_button=True,
+            on_dangling=on_dangling,
         )
 
         return GraphWidget.from_graph_data(

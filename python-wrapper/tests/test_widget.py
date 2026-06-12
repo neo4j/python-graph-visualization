@@ -1,4 +1,5 @@
 import datetime
+import re
 from typing import Any
 
 import pytest
@@ -191,9 +192,9 @@ class TestWidgetDataBinding:
         rels = [Relationship(source="n1", target="n2")]
         widget = GraphWidget.from_graph_data(nodes, rels)
 
-        widget.add_data(Node(id="x1"), Relationship(source="x1", target="x2"))
+        widget.add_data([Node(id="x1"), Node(id="x2")], Relationship(source="x1", target="x2"))
 
-        assert len(widget.nodes) == 3
+        assert len(widget.nodes) == 4
         assert len(widget.relationships) == 2
 
     def test_remove_data(self) -> None:
@@ -211,6 +212,22 @@ class TestWidgetDataBinding:
         widget.remove_data(nodes=[node_1, "n2"], relationships=[rels[0], "42"])
         assert {n.id for n in widget.nodes} == {"n3"}
         assert {r.id for r in widget.relationships} == {43}
+
+    def test_add_data_dangling_warns_by_default(self) -> None:
+        widget = GraphWidget.from_graph_data([Node(id="n1")], [])
+        with pytest.warns(UserWarning, match=re.escape("reference node ids that are not in the graph")):
+            widget.add_data(relationships=Relationship(source="n1", target="missing"))
+
+    def test_add_data_dangling_error(self) -> None:
+        widget = GraphWidget.from_graph_data([Node(id="n1")], [])
+        with pytest.raises(ValueError, match=re.escape("reference node ids that are not in the graph")):
+            widget.add_data(relationships=Relationship(source="n1", target="missing"), on_dangling="error")
+
+    def test_add_data_node_and_relationship_together_ok(self) -> None:
+        widget = GraphWidget.from_graph_data([Node(id="n1")], [])
+        # adding the endpoint node together with the relationship must not be flagged
+        widget.add_data(Node(id="n2"), Relationship(source="n1", target="n2"))
+        assert len(widget.relationships) == 1
 
 
 class TestWidgetUtilityMethods:
