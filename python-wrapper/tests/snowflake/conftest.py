@@ -1,9 +1,9 @@
 import pytest
+
+pytest.importorskip("snowflake.snowpark")
+
 from snowflake.snowpark import Session
 from snowflake.snowpark.types import LongType, StructField, StructType
-
-from neo4j_viz.node import Node
-from neo4j_viz.snowflake import from_snowflake
 
 
 @pytest.fixture
@@ -43,30 +43,3 @@ def session_with_minimal_graph(session: Session) -> Session:
     rel_df.write.save_as_table("RELS")
 
     return session
-
-
-def test_from_snowflake(session_with_minimal_graph: Session) -> None:
-    VG = from_snowflake(
-        session_with_minimal_graph,
-        {
-            "nodeTables": ["NODES"],
-            "relationshipTables": {
-                "RELS": {
-                    "sourceTable": "NODES",
-                    "targetTable": "NODES",
-                },
-            },
-        },
-    )
-
-    assert VG.nodes == [
-        Node(id=0, caption="NODES", color="#ffdf81", properties={"SNOWFLAKEID": 6}),
-        Node(id=1, caption="NODES", color="#ffdf81", properties={"SNOWFLAKEID": 7}),
-    ]
-
-    assert len(VG.relationships) == 1
-
-    assert VG.relationships[0].source == 0
-    assert VG.relationships[0].target == 1
-    assert VG.relationships[0].caption == "RELS"
-    assert VG.relationships[0].properties == {}

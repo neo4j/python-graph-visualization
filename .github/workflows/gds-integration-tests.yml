@@ -39,5 +39,5 @@ jobs:
         env:
           AURA_API_CLIENT_ID: 4V1HYCYEeoU4dSxThKnBeLvE2U4hSphx
           AURA_API_CLIENT_SECRET: ${{ secrets.AURA_API_CLIENT_SECRET }}
-          AURA_API_TENANT_ID: 3f8df5e7-4800-4d4f-ad1d-2d044dfd587c
+          AURA_API_PROJECT_ID: 3f8df5e7-4800-4d4f-ad1d-2d044dfd587c
         run: uv run pytest tests/ --include-neo4j-and-gds

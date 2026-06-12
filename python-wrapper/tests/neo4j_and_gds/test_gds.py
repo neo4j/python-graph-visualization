@@ -1,14 +1,19 @@
 import re
-from typing import Any, Generator
+from contextlib import AbstractContextManager
+from typing import Generator
 
 import pandas as pd
 import pytest
+from graphdatascience import GraphDataScience
+from graphdatascience.graph.v2 import GraphV2
+from graphdatascience.session import AuraGraphDataScience
 
 from neo4j_viz import Node
+from neo4j_viz.gds import from_gds
 
 
 @pytest.fixture(scope="class")
-def db_setup(gds: Any) -> Generator[None, None, None]:
+def db_setup(gds: GraphDataScience | AuraGraphDataScience) -> Generator[None, None, None]:
     gds.run_cypher(
         "CREATE "
         "  (a:_CI_A {name:'Alice', height:20, id:42, _id: 1337, caption: 'hello'})"
@@ -20,10 +25,7 @@ def db_setup(gds: Any) -> Generator[None, None, None]:
     gds.run_cypher("MATCH (n:_CI_A|_CI_B) DETACH DELETE n")
 
 
-def project_graph(gds: Any) -> Any:
-    from graphdatascience import GraphDataScience
-    from graphdatascience.session import AuraGraphDataScience
-
+def project_graph(gds: GraphDataScience | AuraGraphDataScience) -> AbstractContextManager[GraphV2]:
     if isinstance(gds, GraphDataScience):
         return gds.v2.graph.project("g2", "*", "*")
     elif isinstance(gds, AuraGraphDataScience):
@@ -33,9 +35,7 @@ def project_graph(gds: Any) -> Any:
 
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")
 @pytest.mark.requires_neo4j_and_gds
-def test_from_gds_integration_all_db_properties(gds: Any, db_setup: None) -> None:
-    from neo4j_viz.gds import from_gds
-
+def test_from_gds_integration_all_db_properties(gds: GraphDataScience | AuraGraphDataScience, db_setup: None) -> None:
     with project_graph(gds) as G:
         VG = from_gds(gds, G, db_node_properties=["name"])
 
@@ -44,9 +44,7 @@ def test_from_gds_integration_all_db_properties(gds: Any, db_setup: None) -> Non
 
 
 @pytest.mark.requires_neo4j_and_gds
-def test_from_gds_integration_all_properties(gds: Any) -> None:
-    from neo4j_viz.gds import from_gds
-
+def test_from_gds_integration_all_properties(gds: GraphDataScience | AuraGraphDataScience) -> None:
     nodes = pd.DataFrame(
         {
             "nodeId": [0, 1, 2],
@@ -114,9 +112,7 @@ def test_from_gds_integration_all_properties(gds: Any) -> None:
 
 
 @pytest.mark.requires_neo4j_and_gds
-def test_from_gds_sample(gds: Any) -> None:
-    from neo4j_viz.gds import from_gds
-
+def test_from_gds_sample(gds: GraphDataScience | AuraGraphDataScience) -> None:
     with gds.v2.graph.generate("hello", node_count=11_000, average_degree=1) as G:
         with pytest.warns(
             UserWarning,
@@ -136,9 +132,7 @@ def test_from_gds_sample(gds: Any) -> None:
 
 
 @pytest.mark.requires_neo4j_and_gds
-def test_from_gds_hetero(gds: Any) -> None:
-    from neo4j_viz.gds import from_gds
-
+def test_from_gds_hetero(gds: GraphDataScience | AuraGraphDataScience) -> None:
     A_nodes = pd.DataFrame(
         {
             "nodeId": [0, 1],

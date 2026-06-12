@@ -116,8 +116,10 @@ filterwarnings = [
     "error",
     "ignore:Jupyter is migrating its paths to use standard platformdirs:DeprecationWarning",
     # snowflake vendors an older `requests` whose dependency check rejects the chardet
-    # version pulled in transitively by the notebook group. Harmless; ignore it.
-    "ignore:.*doesn't match a supported version:snowflake.connector.vendored.requests.exceptions.RequestsDependencyWarning"
+    # version (pulled in transitively via `encutils`). Harmless; ignore it.
+    # Matched by message only: naming the category here would make pytest import
+    # `snowflake.connector` to resolve it, and that import is exactly what fails.
+    "ignore:.*doesn't match a supported version"
 ]
 
 [tool.ruff]
