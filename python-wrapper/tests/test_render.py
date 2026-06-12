@@ -89,6 +89,46 @@ def test_render_warnings() -> None:
     ):
         VG.render(max_allowed_nodes=20_000, renderer=Renderer.CANVAS)
 
+
+_DANGLING_MATCH = re.escape("reference node ids that are not in the graph")
+
+
+def _dangling_graph() -> VisualizationGraph:
+    nodes = [Node(id="a"), Node(id="b")]
+    relationships = [
+        Relationship(source="a", target="b"),
+        Relationship(source="a", target="missing"),  # `missing` is not a node
+    ]
+    return VisualizationGraph(nodes=nodes, relationships=relationships)
+
+
+def test_dangling_relationship_warns_by_default() -> None:
+    with pytest.warns(UserWarning, match=_DANGLING_MATCH):
+        _dangling_graph().render()
+
+
+def test_dangling_relationship_error() -> None:
+    with pytest.raises(ValueError, match=_DANGLING_MATCH):
+        _dangling_graph().render(on_dangling="error")
+
+
+def test_dangling_relationship_none_is_silent() -> None:
+    # `filterwarnings = error` (pyproject) would surface any warning; none should be emitted
+    _dangling_graph().render(on_dangling="none")
+
+
+def test_dangling_relationship_render_widget_warns() -> None:
+    with pytest.warns(UserWarning, match=_DANGLING_MATCH):
+        _dangling_graph().render_widget()
+
+
+def test_no_dangling_with_mixed_id_types() -> None:
+    # Node(id=1) (int) and Relationship(source="1") (str) must be treated as the same node
+    nodes = [Node(id=1), Node(id=2)]
+    relationships = [Relationship(source="1", target=2)]
+    VG = VisualizationGraph(nodes=nodes, relationships=relationships)
+    VG.render(on_dangling="error")  # must not raise
+
     with pytest.warns(
         UserWarning,
         match="Although better for performance, the WebGL renderer cannot render text, icons and arrowheads on "
