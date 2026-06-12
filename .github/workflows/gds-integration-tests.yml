@@ -33,7 +33,7 @@ jobs:
         with:
           python-version: "3.11"
           enable-cache: true
-      - run: uv sync --group dev --extra pandas --extra neo4j --extra gds --extra snowflake
+      - run: uv sync --group dev --extra pandas --extra neo4j --extra gds
 
       - name: Run tests
         env:
