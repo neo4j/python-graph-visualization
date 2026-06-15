@@ -33,7 +33,9 @@ def is_on_pypi(version: str) -> bool:
         if exc.code == 404:
             return False
         raise SystemExit(
-            red(f"ERROR: Unexpected response from PyPI (HTTP {exc.code}) for {PACKAGE} {version}.")
+            red(
+                f"ERROR: Unexpected response from PyPI (HTTP {exc.code}) for {PACKAGE} {version}."
+            )
         )
     except urllib.error.URLError as exc:
         raise SystemExit(red(f"ERROR: Could not reach PyPI: {exc.reason}"))
@@ -46,7 +48,9 @@ def _gh_api(endpoint: str, *, paginate: bool = False) -> str:
     try:
         out = subprocess.run(cmd, check=True, capture_output=True, text=True)
     except FileNotFoundError:
-        raise SystemExit(red("ERROR: 'gh' CLI not found. Install it and run 'gh auth login'."))
+        raise SystemExit(
+            red("ERROR: 'gh' CLI not found. Install it and run 'gh auth login'.")
+        )
     except subprocess.CalledProcessError as exc:
         raise SystemExit(red(f"ERROR: gh api {endpoint} failed:\n{exc.stderr.strip()}"))
     return out.stdout
@@ -112,9 +116,15 @@ def main() -> int:
             print(green(f"  ✓ {name}: {conclusion}"))
 
     if failed:
-        print(red(f"ERROR: Not all GitHub Actions checks passed on {MAIN_BRANCH} ({short_sha})."))
+        print(
+            red(
+                f"ERROR: Not all GitHub Actions checks passed on {MAIN_BRANCH} ({short_sha})."
+            )
+        )
         return 1
-    print(green(f"OK: All GitHub Actions checks passed on {MAIN_BRANCH} ({short_sha})."))
+    print(
+        green(f"OK: All GitHub Actions checks passed on {MAIN_BRANCH} ({short_sha}).")
+    )
 
     print(bold(f"Pre-release checks passed for {PACKAGE} {version}."))
     return 0

@@ -41,7 +41,9 @@ CHANGELOG_TEMPLATE = """# Changes
 def parse_version(version: str) -> tuple[int, int, int]:
     match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", version)
     if not match:
-        raise SystemExit(f"ERROR: cannot parse version '{version}' as MAJOR.MINOR.PATCH")
+        raise SystemExit(
+            f"ERROR: cannot parse version '{version}' as MAJOR.MINOR.PATCH"
+        )
     major, minor, patch = (int(g) for g in match.groups())
     return major, minor, patch
 
@@ -67,7 +69,9 @@ def write_version(pyproject: Path, old: str, new: str) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Post-release version bump and changelog reset.")
+    parser = argparse.ArgumentParser(
+        description="Post-release version bump and changelog reset."
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "--part",
