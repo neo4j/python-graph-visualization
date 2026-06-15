@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 
-try:
-    import tomllib  # Python 3.11+
-except ModuleNotFoundError:  # pragma: no cover
-    import tomli as tomllib  # type: ignore[no-redef]
+if sys.version_info < (3, 11):
+    raise SystemExit("The release scripts require Python 3.11+ (for tomllib).")
+
+import tomllib  # Python 3.11+
+
 
 PACKAGE = "neo4j-viz"
 MAIN_BRANCH = "main"
@@ -47,4 +49,5 @@ def pyproject_path(root: Path | None = None) -> Path:
 def read_version(root: Path | None = None) -> str:
     with pyproject_path(root).open("rb") as f:
         data = tomllib.load(f)
-    return data["project"]["version"]
+    version: str = data["project"]["version"]
+    return version

@@ -16,6 +16,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from typing import Any
 
 from _common import MAIN_BRANCH, PACKAGE, bold, green, read_version, red
 
@@ -28,7 +29,7 @@ def is_on_pypi(version: str) -> bool:
     url = f"https://pypi.org/pypi/{PACKAGE}/{version}/json"
     try:
         with urllib.request.urlopen(url, timeout=30) as resp:
-            return resp.status == 200
+            return bool(resp.status == 200)
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
             return False
@@ -58,13 +59,14 @@ def _gh_api(endpoint: str, *, paginate: bool = False) -> str:
 
 def latest_main_sha() -> str:
     out = _gh_api(f"repos/{{owner}}/{{repo}}/commits/{MAIN_BRANCH}")
-    return json.loads(out)["sha"]
+    sha: str = json.loads(out)["sha"]
+    return sha
 
 
-def check_runs(sha: str) -> list[dict]:
+def check_runs(sha: str) -> list[dict[str, Any]]:
     # --paginate concatenates one JSON object per page; collect every check_run.
     raw = _gh_api(f"repos/{{owner}}/{{repo}}/commits/{sha}/check-runs", paginate=True)
-    runs: list[dict] = []
+    runs: list[dict[str, Any]] = []
     decoder = json.JSONDecoder()
     idx = 0
     text = raw.strip()
