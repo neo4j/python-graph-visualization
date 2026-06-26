@@ -1,14 +1,13 @@
 import re
-from contextlib import AbstractContextManager
-from typing import Generator
+from typing import Any, Generator
 
 import pandas as pd
 import pytest
 from graphdatascience import GraphDataScience
-from graphdatascience.graph.v2 import GraphV2
 from graphdatascience.session import AuraGraphDataScience
 
 from neo4j_viz import Node
+from neo4j_viz._gds_compat import _catalog
 from neo4j_viz.gds import from_gds
 
 
@@ -25,11 +24,11 @@ def db_setup(gds: GraphDataScience | AuraGraphDataScience) -> Generator[None, No
     gds.run_cypher("MATCH (n:_CI_A|_CI_B) DETACH DELETE n")
 
 
-def project_graph(gds: GraphDataScience | AuraGraphDataScience) -> AbstractContextManager[GraphV2]:
+def project_graph(gds: GraphDataScience | AuraGraphDataScience) -> Any:
     if isinstance(gds, GraphDataScience):
-        return gds.v2.graph.project("g2", "*", "*")
+        return _catalog(gds).project("g2", "*", "*")
     elif isinstance(gds, AuraGraphDataScience):
-        return gds.v2.graph.project("g2", "MATCH (n)–->(m) RETURN gds.graph.project.remote(n, m)")
+        return _catalog(gds).project("g2", "MATCH (n)–->(m) RETURN gds.graph.project.remote(n, m)")
     raise Exception(f"Unsupported GDS type {type(gds)}")
 
 
@@ -64,7 +63,7 @@ def test_from_gds_integration_all_properties(gds: GraphDataScience | AuraGraphDa
         }
     )
 
-    with gds.v2.graph.construct("flo", nodes, rels) as G:
+    with _catalog(gds).construct("flo", nodes, rels) as G:
         VG = from_gds(gds, G)
 
         assert len(VG.nodes) == 3
@@ -113,7 +112,7 @@ def test_from_gds_integration_all_properties(gds: GraphDataScience | AuraGraphDa
 
 @pytest.mark.requires_neo4j_and_gds
 def test_from_gds_sample(gds: GraphDataScience | AuraGraphDataScience) -> None:
-    with gds.v2.graph.generate("hello", node_count=11_000, average_degree=1) as G:
+    with _catalog(gds).generate("hello", node_count=11_000, average_degree=1) as G:
         with pytest.warns(
             UserWarning,
             match=re.escape(
@@ -164,7 +163,7 @@ def test_from_gds_hetero(gds: GraphDataScience | AuraGraphDataScience) -> None:
         }
     )
 
-    with gds.v2.graph.construct("flo", [A_nodes, B_nodes], [X_rels, Y_rels]) as G:
+    with _catalog(gds).construct("flo", [A_nodes, B_nodes], [X_rels, Y_rels]) as G:
         VG = from_gds(
             gds,
             G,
