@@ -25,6 +25,7 @@ export type GraphOptions = {
   pan?: { x: number; y: number };
   layoutOptions?: Record<string, unknown>;
   showLayoutButton: boolean;
+  selectionMode?: Gesture;
 };
 
 export type WidgetData = {
@@ -167,9 +168,14 @@ function GraphWidget() {
   const [height] = useModelState<WidgetData["height"]>("height");
   const [width] = useModelState<WidgetData["width"]>("width");
   const [theme] = useModelState<WidgetData["theme"]>("theme");
-  const [gesture, setGesture] = useState<Gesture>("single");
-  const { layout, nvlOptions, zoom, pan, layoutOptions, showLayoutButton } =
+  const { layout, nvlOptions, zoom, pan, layoutOptions, showLayoutButton, selectionMode } =
     options ?? {};
+  // `gesture` is locally controlled so the GestureSelectButton stays interactive, but it is
+  // seeded from (and re-synced to) the Python-provided `selectionMode` when that changes.
+  const [gesture, setGesture] = useState<Gesture>(selectionMode ?? "single");
+  useEffect(() => {
+    if (selectionMode) setGesture(selectionMode);
+  }, [selectionMode]);
   const setLayout = (layout: Layout) => {
     setOptions({ ...options, layout });
   };
