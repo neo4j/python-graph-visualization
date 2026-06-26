@@ -1,6 +1,6 @@
 import { createRender, useModelState } from "@anywidget/react";
 import ndlCssText from "@neo4j-ndl/base/lib/neo4j-ds-styles.css?inline";
-import { Gesture, GraphVisualization } from "@neo4j-ndl/react-graph";
+import { Gesture, GraphSelection, GraphVisualization } from "@neo4j-ndl/react-graph";
 import type { Layout, NvlOptions } from "@neo4j-nvl/base";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -35,7 +35,10 @@ export type WidgetData = {
   height: string;
   width: string;
   theme: Theme;
+  selected: GraphSelection;
 };
+
+const EMPTY_SELECTION: GraphSelection = { nodeIds: [], relationshipIds: [] };
 
 function detectTheme(): "light" | "dark" {
   if (document.body.classList.contains("vscode-light") || document.body.classList.contains("light-theme")) {
@@ -168,6 +171,8 @@ function GraphWidget() {
   const [height] = useModelState<WidgetData["height"]>("height");
   const [width] = useModelState<WidgetData["width"]>("width");
   const [theme] = useModelState<WidgetData["theme"]>("theme");
+  const [selected, setSelected] =
+    useModelState<WidgetData["selected"]>("selected");
   const { layout, nvlOptions, zoom, pan, layoutOptions, showLayoutButton, selectionMode } =
     options ?? {};
   // `gesture` is locally controlled so the GestureSelectButton stays interactive, but it is
@@ -222,6 +227,8 @@ function GraphWidget() {
           rels={neoRelationships}
           gesture={gesture}
           setGesture={setGesture}
+          selected={selected ?? EMPTY_SELECTION}
+          setSelected={setSelected}
           layout={layout}
           setLayout={setLayout}
           nvlOptions={nvlOptionsWithoutWorkers}
