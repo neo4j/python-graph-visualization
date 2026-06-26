@@ -5,6 +5,9 @@ from neo4j_viz.options import (
     Layout,
     Renderer,
     RenderOptions,
+    SelectionMode,
+    WidgetLayout,
+    WidgetOptions,
 )
 
 
@@ -83,6 +86,29 @@ def test_widget_options_with_force_directed_layout_options() -> None:
     assert widget_options["layoutOptions"] == {"gravity": 0.5}
 
 
+def test_widget_options_selection_mode() -> None:
+    options = RenderOptions(selection_mode=SelectionMode.BOX)
+    js = options.to_widget_options().to_json()
+    assert js["selectionMode"] == "box"
+
+
+def test_widget_options_no_selection_mode_by_default() -> None:
+    js = RenderOptions().to_widget_options().to_json()
+    assert "selectionMode" not in js
+
+
+def test_widget_options_layout_is_enum() -> None:
+    widget_options = RenderOptions(layout=Layout.GRID).to_widget_options()
+    assert widget_options.layout is WidgetLayout.GRID
+    # str enum serializes to the JS wire value
+    assert widget_options.to_json()["layout"] == "grid"
+
+
+def test_widget_options_coerces_layout_string_to_enum() -> None:
+    widget_options = WidgetOptions.model_validate({"layout": "d3Force"})
+    assert widget_options.layout is WidgetLayout.D3_FORCE
+
+
 def test_widget_options_full() -> None:
     options = RenderOptions(
         layout=Layout.HIERARCHICAL,
@@ -95,6 +121,7 @@ def test_widget_options_full() -> None:
         pan_X=50.0,
         pan_Y=-30.0,
         show_layout_button=True,
+        selection_mode=SelectionMode.LASSO,
     )
     js = options.to_widget_options().to_json()
     assert js == {
@@ -109,4 +136,5 @@ def test_widget_options_full() -> None:
         "zoom": 1.5,
         "pan": {"x": 50.0, "y": -30.0},
         "showLayoutButton": True,
+        "selectionMode": "lasso",
     }

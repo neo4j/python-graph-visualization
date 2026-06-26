@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import pathlib
 from functools import cached_property
-from typing import Any, Union
+from typing import Any, Callable, Union
 
 import anywidget
 import traitlets
@@ -14,12 +14,14 @@ from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
 from .node_size import RealNumber
 from .options import (
+    GraphSelection,
     Layout,
     LayoutOptions,
     NvlOptions,
     PanPosition,
     Renderer,
     RenderOptions,
+    SelectionMode,
     WidgetOptions,
     construct_layout_options,
 )
@@ -85,6 +87,14 @@ class GraphWidget(anywidget.AnyWidget):
     theme: traitlets.Unicode[str, str | bytes] = traitlets.Unicode(
         default_value="auto", help="Theme of the graph widget. Can be 'auto', 'light', or 'dark'."
     ).tag(sync=True)
+    selected: traitlets.Any = traitlets.Any(
+        help="The nodes and relationships currently selected in the widget UI, as a "
+        "`GraphSelection` with `nodeIds` and `relationshipIds`. Synced two-way with the frontend.",
+    ).tag(
+        sync=True,
+        to_json=lambda value, widget: value.to_json(),
+        from_json=lambda value, widget: GraphSelection.model_validate(value),
+    )
 
     @traitlets.default("options")
     def _default_options(self) -> WidgetOptions:
@@ -94,6 +104,53 @@ class GraphWidget(anywidget.AnyWidget):
     def _coerce_options(self, proposal: dict[str, Any]) -> WidgetOptions:
         value = proposal["value"]
         return value if isinstance(value, WidgetOptions) else WidgetOptions.model_validate(value)
+
+    @traitlets.default("selected")
+    def _default_selected(self) -> GraphSelection:
+        return GraphSelection()
+
+    @traitlets.validate("selected")
+    def _coerce_selected(self, proposal: dict[str, Any]) -> GraphSelection:
+        value = proposal["value"]
+        return value if isinstance(value, GraphSelection) else GraphSelection.model_validate(value)
+
+    def on_selection_change(self, callback: Callable[[GraphSelection], None]) -> Callable[[dict[str, Any]], None]:
+        """
+        Register a callback that fires whenever the widget's `selected` trait changes.
+
+        A convenience wrapper around `observe(..., names=["selected"])`: the callback receives the
+        new `GraphSelection` directly, rather than a raw change dict. The selection holds the
+        `nodeIds` and `relationshipIds` currently selected in the widget UI; the IDs are strings, so
+        match them against `str(node.id)` / `str(relationship.id)` to recover the
+        `Node`/`Relationship` objects.
+
+        Parameters
+        ----------
+        callback:
+            A function called with the new `GraphSelection` each time the selection changes.
+
+        Returns
+        -------
+        The registered handler. Pass it to `unobserve(handler, names=["selected"])` to stop observing.
+
+        Examples
+        --------
+        Given a GraphWidget `widget`:
+
+        >>> def show(selection):
+        ...     print(selection.nodeIds, selection.relationshipIds)
+        >>> handler = widget.on_selection_change(show)
+
+        Stop reacting to selection changes:
+
+        >>> widget.unobserve(handler, names=["selected"])
+        """
+
+        def handler(change: dict[str, Any]) -> None:
+            callback(change["new"])
+
+        self.observe(handler, names=["selected"])
+        return handler
 
     @classmethod
     def from_graph_data(
@@ -446,6 +503,25 @@ class GraphWidget(anywidget.AnyWidget):
         nvl_options = new.nvl_options or NvlOptions()
         nvl_options.disable_web_gl = renderer != Renderer.WEB_GL
         new.nvl_options = nvl_options
+        self.options = new
+
+    def set_selection_mode(self, mode: SelectionMode | str) -> None:
+        """
+        Change the selection mode (gesture) that determines how dragging on the canvas behaves, in place.
+
+        Parameters
+        -----------
+        mode:
+            The selection mode to use. One of `SelectionMode.PAN` (the default, drag to pan and click to
+            select individual entities), `SelectionMode.BOX` (drag a rectangle to select), or
+            `SelectionMode.LASSO` (drag a freehand region to select). A string such as `"single"`, `"box"`,
+            or `"lasso"` is also accepted.
+        """
+        if isinstance(mode, str):
+            mode = SelectionMode(mode)
+
+        new = self._render_options()
+        new.selection_mode = mode
         self.options = new
 
     def set_show_layout_button(self, show: bool = True) -> None:

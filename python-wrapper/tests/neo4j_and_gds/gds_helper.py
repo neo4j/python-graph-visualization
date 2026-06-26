@@ -45,18 +45,11 @@ def connect_to_local_gds_session(session_uri: str, db_uri: str, db_auth: tuple[s
 
 
 def aura_api() -> AuraApi:
-    if GDS_VERSION >= SemanticVersion(1, 15, 0):
-        return AuraApi(
-            client_id=os.environ["AURA_API_CLIENT_ID"],
-            client_secret=os.environ["AURA_API_CLIENT_SECRET"],
-            project_id=os.environ.get("AURA_API_PROJECT_ID"),
-        )
-    else:
-        return AuraApi(
-            client_id=os.environ["AURA_API_CLIENT_ID"],
-            client_secret=os.environ["AURA_API_CLIENT_SECRET"],
-            tenant_id=os.environ.get("AURA_API_PROJECT_ID"),  # type: ignore
-        )
+    return AuraApi(
+        client_id=os.environ["AURA_API_CLIENT_ID"],
+        client_secret=os.environ["AURA_API_CLIENT_SECRET"],
+        project_id=os.environ.get("AURA_API_PROJECT_ID"),
+    )
 
 
 def gds_sessions() -> GdsSessions:

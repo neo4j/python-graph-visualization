@@ -34,6 +34,7 @@ type WidgetState = {
   height: string;
   width: string;
   theme: "light" | "dark" | "auto";
+  selected: { nodeIds: string[]; relationshipIds: string[] };
 };
 
 class FakeModel {
@@ -65,6 +66,7 @@ class FakeModel {
 
 type RenderedWidget = {
   el: HTMLDivElement;
+  model: FakeModel;
   teardown: void | (() => void | Promise<void>) | (() => Promise<void>);
 };
 
@@ -90,6 +92,7 @@ async function renderWidget(
     height: overrides.height ?? "400px",
     width: overrides.width ?? "600px",
     theme: overrides.theme ?? "light",
+    selected: overrides.selected ?? { nodeIds: [], relationshipIds: [] },
   });
 
   let teardown: RenderedWidget["teardown"] = undefined;
@@ -101,7 +104,7 @@ async function renderWidget(
     });
   });
 
-  return { el, teardown };
+  return { el, model, teardown };
 }
 
 async function renderWidgetInShadowRoot(
@@ -124,6 +127,7 @@ async function renderWidgetInShadowRoot(
     height: "400px",
     width: "600px",
     theme: "light",
+    selected: { nodeIds: [], relationshipIds: [] },
   });
 
   let teardown: RenderedWidget["teardown"] = undefined;
@@ -135,7 +139,7 @@ async function renderWidgetInShadowRoot(
     });
   });
 
-  return { el, host, shadowRoot, teardown };
+  return { el, host, shadowRoot, model, teardown };
 }
 
 afterEach(() => {
@@ -176,6 +180,28 @@ describe("graph-widget button testing", () => {
       });
 
       expect(await screen.findByText("Download as PNG")).toBeTruthy();
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("renders with an initial selection sourced from the model", async () => {
+    const { el, model, teardown } = await renderWidget({
+      selected: { nodeIds: ["n1"], relationshipIds: [] },
+    });
+
+    try {
+      await waitFor(() => {
+        expect(within(el).getByRole("button", { name: /download/i })).toBeTruthy();
+      });
+
+      // The selection is controlled by the model and left untouched on initial render.
+      expect(model.get("selected")).toEqual({
+        nodeIds: ["n1"],
+        relationshipIds: [],
+      });
     } finally {
       if (typeof teardown === "function") {
         await teardown();

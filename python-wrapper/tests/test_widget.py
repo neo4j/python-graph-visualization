@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from neo4j_viz import GraphWidget, Node, Relationship, VisualizationGraph
-from neo4j_viz.options import Layout, Renderer, RenderOptions, WidgetOptions
+from neo4j_viz import GraphSelection, GraphWidget, Node, Relationship, VisualizationGraph
+from neo4j_viz.options import Layout, Renderer, RenderOptions, SelectionMode, WidgetOptions
 from neo4j_viz.widget import _serialize_entity
 
 
@@ -311,6 +311,86 @@ class TestWidgetUtilityMethods:
         assert synced == ["nodes"]
 
 
+class TestWidgetSelection:
+    def test_selection_defaults_to_empty(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1")])
+
+        assert widget.selected == GraphSelection()
+        assert widget.selected.nodeIds == []
+        assert widget.selected.relationshipIds == []
+
+    def test_selection_holds_selected_ids(self) -> None:
+        widget = GraphWidget(
+            nodes=[Node(id="n1"), Node(id="n2")],
+            relationships=[Relationship(id="r1", source="n1", target="n2")],
+        )
+
+        widget.selected = GraphSelection(nodeIds=["n1"], relationshipIds=["r1"])
+
+        assert widget.selected.nodeIds == ["n1"]
+        assert widget.selected.relationshipIds == ["r1"]
+
+    def test_selection_coerces_dict_from_frontend(self) -> None:
+        """The frontend syncs a plain dict, which is coerced to a typed GraphSelection."""
+        widget = GraphWidget(nodes=[Node(id="n1"), Node(id="n2")])
+
+        widget.selected = {"nodeIds": ["n2"], "relationshipIds": []}
+
+        assert isinstance(widget.selected, GraphSelection)
+        assert widget.selected.nodeIds == ["n2"]
+
+    def test_selection_serializes_for_frontend(self) -> None:
+        selection = GraphSelection(nodeIds=["n1"], relationshipIds=["r1"])
+
+        assert selection.to_json() == {"nodeIds": ["n1"], "relationshipIds": ["r1"]}
+
+    def test_selection_syncs_from_frontend(self) -> None:
+        """The `selected` trait is two-way synced, so observers fire when the frontend updates it."""
+        widget = GraphWidget(nodes=[Node(id="n1")])
+        changes: list[dict[str, Any]] = []
+        widget.observe(lambda change: changes.append(change), names=["selected"])
+
+        widget.selected = GraphSelection(nodeIds=["n1"])
+
+        assert len(changes) == 1
+        assert changes[0]["name"] == "selected"
+
+    def test_on_selection_change_receives_graph_selection(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1")])
+        received: list[GraphSelection] = []
+        widget.on_selection_change(received.append)
+
+        widget.selected = GraphSelection(nodeIds=["n1"])
+
+        assert len(received) == 1
+        assert isinstance(received[0], GraphSelection)
+        assert received[0].nodeIds == ["n1"]
+
+    def test_on_selection_change_fires_on_dict_from_frontend(self) -> None:
+        """A raw dict from the frontend is coerced before the callback sees it."""
+        widget = GraphWidget(nodes=[Node(id="n1"), Node(id="n2")])
+        received: list[GraphSelection] = []
+        widget.on_selection_change(received.append)
+
+        widget.selected = {"nodeIds": ["n2"], "relationshipIds": []}
+
+        assert len(received) == 1
+        assert isinstance(received[0], GraphSelection)
+        assert received[0].nodeIds == ["n2"]
+
+    def test_on_selection_change_returns_handler_for_unobserve(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1")])
+        received: list[GraphSelection] = []
+        handler = widget.on_selection_change(received.append)
+
+        widget.selected = GraphSelection(nodeIds=["n1"])
+        assert len(received) == 1
+
+        widget.unobserve(handler, names=["selected"])
+        widget.selected = GraphSelection(relationshipIds=["r1"])
+        assert len(received) == 1
+
+
 render_widget_cases = {
     "default": {},
     "force layout": {"layout": Layout.FORCE_DIRECTED},
@@ -460,6 +540,26 @@ class TestRenderOptionSetters:
 
         widget.set_show_layout_button(False)
         assert widget.options.show_layout_button is False
+
+    def test_set_selection_mode_enum(self) -> None:
+        widget = GraphWidget()
+
+        widget.set_selection_mode(SelectionMode.BOX)
+
+        assert widget.options.selection_mode == SelectionMode.BOX
+
+    def test_set_selection_mode_string(self) -> None:
+        widget = GraphWidget()
+
+        widget.set_selection_mode("lasso")
+
+        assert widget.options.selection_mode == SelectionMode.LASSO
+
+    def test_set_selection_mode_invalid_raises(self) -> None:
+        widget = GraphWidget()
+
+        with pytest.raises(ValueError):
+            widget.set_selection_mode("nonsense")
 
     def test_setter_preserves_unrelated_options(self) -> None:
         widget = GraphWidget(options={"layout": "hierarchical"})

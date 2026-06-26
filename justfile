@@ -4,6 +4,19 @@ py_dir := root_dir / 'python-wrapper'
 py-sync:
     cd python-wrapper && uv sync --group dev --group docs --group notebook --extra pandas --extra neo4j --extra gds --extra snowflake
 
+# check the release version is unpublished and main's CI is green
+# example: just prerelease
+prerelease:
+    python scripts/release/prerelease.py
+
+# bump the version and reset the changelog after a release (default: minor bump)
+# examples:
+#   just postrelease          # 1.5.0 -> 1.6.0
+#   just postrelease patch    # 1.5.0 -> 1.5.1
+#   just postrelease major    # 1.5.0 -> 2.0.0
+postrelease part="minor":
+    python scripts/release/postrelease.py --part {{part}}
+
 py-style:
     just py-sync
     ./scripts/makestyle.sh && ./scripts/checkstyle.sh
@@ -11,6 +24,16 @@ py-style:
 py-test:
     cd python-wrapper && uv sync --all-extras --group dev
     cd python-wrapper && uv run --group dev pytest
+
+# install a specific GDS client version and run the GDS integration tests (used by CI)
+# example: just py-ci-test-gds 2.0.0a1
+py-ci-test-gds gds_version:
+    #!/usr/bin/env bash
+    set -e
+    cd {{py_dir}}
+    uv sync --group dev --extra pandas --extra neo4j --extra gds
+    uv pip install "graphdatascience=={{gds_version}}"
+    uv run pytest tests/ --include-neo4j-and-gds
 
 py-test-gds:
     #!/usr/bin/env bash

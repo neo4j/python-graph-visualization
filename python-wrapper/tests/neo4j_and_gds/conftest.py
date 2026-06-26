@@ -11,6 +11,7 @@ pytest.importorskip("graphdatascience")
 import neo4j
 from graphdatascience import GraphDataScience
 from graphdatascience.session import AuraGraphDataScience, DbmsConnectionInfo, SessionMemory
+from graphdatascience.version import __version__
 
 from tests.neo4j_and_gds.gds_helper import (
     aura_api,
@@ -63,8 +64,9 @@ def gds(aura_db_instance: DbmsConnectionInfo | None) -> Generator[GraphDataScien
     if aura_db_instance:
         sessions = gds_sessions()
 
+        run_id = os.environ.get("GITHUB_RUN_ID", random.randint(0, 10**6))
         gds = sessions.get_or_create(
-            f"neo4j-viz-ci-{os.environ.get('GITHUB_RUN_ID', random.randint(0, 10**6))}",
+            f"neo4j-viz-ci-{run_id}-{__version__}",
             memory=SessionMemory.m_2GB,
             db_connection=aura_db_instance,
         )

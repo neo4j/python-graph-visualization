@@ -2,29 +2,29 @@ from __future__ import annotations
 
 import warnings
 from itertools import chain
-from typing import Collection, Optional
+from typing import Any, Collection, Optional
 from uuid import uuid4
 
 import pandas as pd
-from graphdatascience import Graph, GraphDataScience
-from graphdatascience.graph.v2 import GraphV2
+from graphdatascience import GraphDataScience
 from graphdatascience.session import AuraGraphDataScience
 
 from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace
 
+from ._gds_compat import IS_GDS_2, GdsGraph, _catalog, _check_graph_type, _degree_centrality
 from .pandas import _from_dfs
 from .visualization_graph import VisualizationGraph
 
 
 def _fetch_node_dfs(
     gds: GraphDataScience | AuraGraphDataScience,
-    G: GraphV2,
+    G: Any,
     node_properties_by_label: dict[str, list[str]],
     node_labels: Collection[str],
     additional_db_node_properties: list[str],
 ) -> dict[str, pd.DataFrame]:
     return {
-        lbl: gds.v2.graph.node_properties.stream(
+        lbl: _catalog(gds).node_properties.stream(
             G,
             node_properties=node_properties_by_label[lbl],
             node_labels=[lbl],
@@ -34,14 +34,14 @@ def _fetch_node_dfs(
     }
 
 
-def _fetch_rel_dfs(gds: GraphDataScience | AuraGraphDataScience, G: GraphV2) -> list[pd.DataFrame]:
+def _fetch_rel_dfs(gds: GraphDataScience | AuraGraphDataScience, G: Any) -> list[pd.DataFrame]:
     rel_props = G.relationship_properties()
 
     rel_dfs: list[pd.DataFrame] = []
 
     # Have to call per stream per relationship type as there was a bug in GDS < 2.21
     for rel_type, props in rel_props.items():
-        rel_df = gds.v2.graph.relationships.stream(
+        rel_df = _catalog(gds).relationships.stream(
             G, relationship_types=[rel_type], relationship_properties=list(props)
         )
 
@@ -62,7 +62,7 @@ def _fetch_rel_dfs(gds: GraphDataScience | AuraGraphDataScience, G: GraphV2) -> 
 
 def from_gds(
     gds: GraphDataScience | AuraGraphDataScience,
-    G: Graph | GraphV2,
+    G: Any,
     node_properties: Optional[list[str]] = None,
     db_node_properties: Optional[list[str]] = None,
     max_node_count: int = 10_000,
@@ -97,8 +97,9 @@ def from_gds(
     """
     if db_node_properties is None:
         db_node_properties = []
-    if isinstance(G, Graph):
-        G_v2 = gds.v2.graph.get(G.name())
+    _check_graph_type(G)
+    if not IS_GDS_2 and not isinstance(G, GdsGraph):
+        G_v2 = _catalog(gds).get(G.name())
     else:
         G_v2 = G
 
@@ -127,7 +128,7 @@ def from_gds(
         )
         sampling_ratio = float(max_node_count) / node_count
         sample_name = f"neo4j-viz_sample_{uuid4()}"
-        G_fetched, _ = gds.v2.graph.sample.rwr(
+        G_fetched, _ = _catalog(gds).sample.rwr(
             G_v2, sample_name, sampling_ratio=sampling_ratio, node_label_stratification=True
         )
     else:
@@ -139,7 +140,7 @@ def from_gds(
         # as a temporary property to ensure that we have at least one property for each label to fetch
         if sum([len(props) == 0 for props in node_properties_by_label.values()]) > 0:
             property_name = f"neo4j-viz_property_{uuid4()}"
-            gds.v2.degree_centrality.mutate(G_fetched, mutate_property=property_name)
+            _degree_centrality(gds).mutate(G_fetched, mutate_property=property_name)
             for props in node_properties_by_label.values():
                 props.append(property_name)
 
@@ -155,7 +156,7 @@ def from_gds(
         if G_fetched.name() != G.name():
             G_fetched.drop()
         elif property_name is not None:
-            gds.v2.graph.node_properties.drop(G_fetched, node_properties=[property_name])
+            _catalog(gds).node_properties.drop(G_fetched, node_properties=[property_name])
 
     for df in node_dfs.values():
         if property_name is not None and property_name in df.columns:

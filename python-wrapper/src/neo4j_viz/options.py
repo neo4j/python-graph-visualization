@@ -137,11 +137,45 @@ class Renderer(str, Enum):
             )
 
 
-_LAYOUT_TO_JS: dict[str, str] = {
-    Layout.FORCE_DIRECTED.value: "d3Force",
-    Layout.HIERARCHICAL.value: "hierarchical",
-    Layout.COORDINATE.value: "free",
-    Layout.GRID.value: "grid",
+@enum_tools.documentation.document_enum
+class SelectionMode(str, Enum):
+    """
+    The selection mode (a.k.a. gesture) that determines how dragging on the canvas behaves.
+    """
+
+    PAN = "single"
+    """
+    Drag the canvas to pan around the graph; click to select individual nodes and relationships.
+    This is the default. (Shown as "Individual" in the widget UI.)
+    """
+    BOX = "box"
+    """
+    Drag to draw a rectangular region that selects all nodes and relationships within it.
+    """
+    LASSO = "lasso"
+    """
+    Drag to draw a freehand region that selects all nodes and relationships within it.
+    """
+
+
+@enum_tools.documentation.document_enum
+class WidgetLayout(str, Enum):
+    """The layout values in the JS/NVL wire format, as stored in :class:`WidgetOptions`."""
+
+    D3_FORCE = "d3Force"
+    HIERARCHICAL = "hierarchical"
+    FREE = "free"
+    GRID = "grid"
+    CIRCULAR = "circular"
+
+
+# Maps the Python-facing `Layout` to the JS/NVL wire format stored in `WidgetOptions`.
+_LAYOUT_TO_JS: dict[Layout, WidgetLayout] = {
+    Layout.FORCE_DIRECTED: WidgetLayout.D3_FORCE,
+    Layout.HIERARCHICAL: WidgetLayout.HIERARCHICAL,
+    Layout.COORDINATE: WidgetLayout.FREE,
+    Layout.GRID: WidgetLayout.GRID,
+    Layout.CIRCULAR: WidgetLayout.CIRCULAR,
 }
 
 
@@ -150,6 +184,19 @@ class PanPosition(BaseModel):
 
     x: float
     y: float
+
+
+# Mirrors the GraphSelection type in js-applet/src/graph-widget.tsx. Field names match the
+# frontend wire format (`nodeIds`, `relationshipIds`) verbatim.
+class GraphSelection(BaseModel):
+    """The IDs of the nodes and relationships currently selected in the ``GraphWidget`` UI."""
+
+    nodeIds: list[str] = Field(default_factory=list)
+    relationshipIds: list[str] = Field(default_factory=list)
+
+    def to_json(self) -> dict[str, Any]:
+        """Serialize to the dict the frontend consumes."""
+        return self.model_dump(mode="json")
 
 
 # Fields are snake_case in Python; pydantic serializes them to the camelCase keys the
@@ -183,16 +230,18 @@ class WidgetOptions(
 ):
     """The render options consumed by the ``GraphWidget``."""
 
-    layout: Optional[str] = None
+    layout: Optional[WidgetLayout] = None
     layout_options: Optional[dict[str, Any]] = None
     nvl_options: Optional[NvlOptions] = None
     zoom: Optional[float] = None
     pan: Optional[PanPosition] = None
     show_layout_button: Optional[bool] = None
+    selection_mode: Optional[SelectionMode] = None
 
     def to_json(self) -> dict[str, Any]:
         """Serialize to the camelCase dict the frontend consumes, dropping unset fields."""
-        return self.model_dump(exclude_none=True)
+        # mode="json" renders the `WidgetLayout`/`SelectionMode` enums as their string values.
+        return self.model_dump(mode="json", exclude_none=True)
 
 
 class RenderOptions(BaseModel, extra="allow"):
@@ -216,6 +265,8 @@ class RenderOptions(BaseModel, extra="allow"):
     min_zoom: Optional[float] = Field(None, serialization_alias="minZoom", description="The minimum zoom level allowed")
     allow_dynamic_min_zoom: Optional[bool] = Field(None, serialization_alias="allowDynamicMinZoom")
 
+    selection_mode: Optional[SelectionMode] = Field(None, serialization_alias="selectionMode")
+
     show_layout_button: bool = False
 
     @model_validator(mode="after")
@@ -233,17 +284,10 @@ class RenderOptions(BaseModel, extra="allow"):
         result = WidgetOptions()
 
         if self.layout is not None:
-            match self.layout:
-                case Layout.FORCE_DIRECTED:
-                    result.layout = "d3Force"
-                case Layout.HIERARCHICAL:
-                    result.layout = "hierarchical"
-                case Layout.COORDINATE:
-                    result.layout = "free"
-                case Layout.GRID:
-                    result.layout = "grid"
-                case Layout.CIRCULAR:
-                    result.layout = "circular"
+            result.layout = _LAYOUT_TO_JS[self.layout]
+
+        if self.selection_mode is not None:
+            result.selection_mode = self.selection_mode
 
         if self.layout_options is not None:
             result.layout_options = self.layout_options.model_dump(exclude_none=True)
