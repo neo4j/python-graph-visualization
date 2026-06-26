@@ -2606,7 +2606,7 @@ notebook = [
 requires-dist = [
     { name = "anywidget", specifier = ">=0.9,<1" },
     { name = "enum-tools", specifier = "==0.13.0" },
-    { name = "graphdatascience", marker = "extra == 'gds'", specifier = ">=1.22,<2" },
+    { name = "graphdatascience", marker = "extra == 'gds'", specifier = ">=1.22,<3" },
     { name = "ipython", specifier = ">=7,<10" },
     { name = "neo4j", marker = "extra == 'neo4j'" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2,<3" },

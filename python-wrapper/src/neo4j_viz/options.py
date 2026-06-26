@@ -186,6 +186,19 @@ class PanPosition(BaseModel):
     y: float
 
 
+# Mirrors the GraphSelection type in js-applet/src/graph-widget.tsx. Field names match the
+# frontend wire format (`nodeIds`, `relationshipIds`) verbatim.
+class GraphSelection(BaseModel):
+    """The IDs of the nodes and relationships currently selected in the ``GraphWidget`` UI."""
+
+    nodeIds: list[str] = Field(default_factory=list)
+    relationshipIds: list[str] = Field(default_factory=list)
+
+    def to_json(self) -> dict[str, Any]:
+        """Serialize to the dict the frontend consumes."""
+        return self.model_dump(mode="json")
+
+
 # Fields are snake_case in Python; pydantic serializes them to the camelCase keys the
 # frontend's Partial<NvlOptions> expects (and accepts either casing on input). The frontend
 # has many more fields, so extra="allow" lets other keys round-trip unchanged.

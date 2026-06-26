@@ -233,6 +233,38 @@ In the following example, we pin the node with ID 1337 and unpin the node with I
 VG.toggle_nodes_pinned(1337: True, 42: False)})
 ----
 
+== Reading the selection
+
+When a graph is rendered as an interactive widget via
+link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.render_widget[`neo4j_viz.VisualizationGraph.render_widget()`],
+you can read back which nodes and relationships the user has selected in the UI (using single, box, or lasso selection).
+
+The widget exposes the `selected` attribute, a typed link:{api-docs-uri}/widget[`GraphSelection`] with `nodeIds` and
+`relationshipIds` fields holding the IDs of the currently selected nodes and relationships.
+Note that the IDs are strings, so match them against `str(node.id)` / `str(relationship.id)` to recover the
+link:{api-docs-uri}/node[Node] and link:{api-docs-uri}/relationship[Relationship] objects.
+
+To react to selection changes interactively, register a callback with `widget.on_selection_change(...)`. This is a
+convenience wrapper around `widget.observe(..., names=["selected"])`: the callback runs every time the user selects
+nodes or relationships in the widget, and receives the new `GraphSelection` directly.
+
+[source, python]
+----
+# VG is a VisualizationGraph object
+widget = VG.render_widget()
+
+
+def on_selection_change(selection):
+    selected_nodes = [node for node in widget.nodes if str(node.id) in set(selection.nodeIds)]
+    # ... act on the selected nodes, e.g. add data or update other widgets
+
+
+widget.on_selection_change(on_selection_change)
+----
+
+`on_selection_change` returns the registered handler, which you can pass to `widget.unobserve(handler, names=["selected"])`
+to stop reacting. You can also read `widget.selected` directly at any point for the current selection.
+
 == Direct modification of nodes and relationships
 
 Nodes and relationships can also be modified directly by accessing the `nodes` and `relationships` fields of an
