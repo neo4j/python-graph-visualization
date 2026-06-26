@@ -1,15 +1,3 @@
-"""Compatibility shims for the Neo4j GDS Python client.
-
-Supports both the GDS 1.22 transitional API (graph operations exposed under the
-``gds.v2.*`` namespace, graph objects of type ``GraphV2``) and the GDS 2.0 API
-(the v2 endpoints became the default, so they live directly under ``gds.*`` and
-the graph class was renamed from ``GraphV2`` to ``Graph``).
-
-The two APIs are selected by the installed client's major version, exposed via
-``graphdatascience.version.__version__``: major ``>= 2`` means the v2 endpoints
-are the default.
-"""
-
 from __future__ import annotations
 
 import importlib
@@ -24,14 +12,8 @@ def _parse_major(version: str) -> int:
     return int(match.group(1)) if match else 0
 
 
-# In GDS 2.0 the (formerly ``v2``) endpoints became the default: graph operations moved
-# from ``gds.v2.*`` to ``gds.*`` and ``GraphV2`` was renamed to ``Graph``.
 IS_GDS_2: bool = _parse_major(_gds_version) >= 2
 
-# The native graph class for the installed client version. Resolved dynamically (typed
-# ``Any``) because its import path differs between versions and only one path exists at a time.
-# ``_GRAPH_TYPES`` is the full set of graph objects accepted as input to ``from_gds``: on the
-# 1.22 transitional client we also accept the legacy v1 ``Graph`` (which is then converted).
 if IS_GDS_2:
     GdsGraph: Any = importlib.import_module("graphdatascience.graph").Graph
     _GRAPH_TYPES: tuple[type, ...] = (GdsGraph,)
