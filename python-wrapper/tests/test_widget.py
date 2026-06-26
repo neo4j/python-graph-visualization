@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 from neo4j_viz import GraphWidget, Node, Relationship, VisualizationGraph
-from neo4j_viz.options import Layout, Renderer, RenderOptions, WidgetOptions
+from neo4j_viz.options import Layout, Renderer, RenderOptions, SelectionMode, WidgetOptions
 from neo4j_viz.widget import _serialize_entity
 
 
@@ -460,6 +460,26 @@ class TestRenderOptionSetters:
 
         widget.set_show_layout_button(False)
         assert widget.options.show_layout_button is False
+
+    def test_set_selection_mode_enum(self) -> None:
+        widget = GraphWidget()
+
+        widget.set_selection_mode(SelectionMode.BOX)
+
+        assert widget.options.selection_mode == SelectionMode.BOX
+
+    def test_set_selection_mode_string(self) -> None:
+        widget = GraphWidget()
+
+        widget.set_selection_mode("lasso")
+
+        assert widget.options.selection_mode == SelectionMode.LASSO
+
+    def test_set_selection_mode_invalid_raises(self) -> None:
+        widget = GraphWidget()
+
+        with pytest.raises(ValueError):
+            widget.set_selection_mode("nonsense")
 
     def test_setter_preserves_unrelated_options(self) -> None:
         widget = GraphWidget(options={"layout": "hierarchical"})

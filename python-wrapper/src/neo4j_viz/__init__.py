@@ -9,6 +9,7 @@ from .options import (
     Packing,
     PanPosition,
     Renderer,
+    SelectionMode,
     WidgetOptions,
 )
 from .relationship import Relationship
@@ -26,6 +27,7 @@ __all__ = [
     "CaptionAlignment",
     "Layout",
     "Renderer",
+    "SelectionMode",
     "ForceDirectedLayoutOptions",
     "HierarchicalLayoutOptions",
     "Direction",

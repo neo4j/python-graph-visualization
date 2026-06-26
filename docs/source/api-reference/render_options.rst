@@ -20,3 +20,6 @@
 
 .. autoenum:: neo4j_viz.Renderer
     :members:
+
+.. autoenum:: neo4j_viz.SelectionMode
+    :members:

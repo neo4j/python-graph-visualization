@@ -20,6 +20,7 @@ from .options import (
     PanPosition,
     Renderer,
     RenderOptions,
+    SelectionMode,
     WidgetOptions,
     construct_layout_options,
 )
@@ -446,6 +447,25 @@ class GraphWidget(anywidget.AnyWidget):
         nvl_options = new.nvl_options or NvlOptions()
         nvl_options.disable_web_gl = renderer != Renderer.WEB_GL
         new.nvl_options = nvl_options
+        self.options = new
+
+    def set_selection_mode(self, mode: SelectionMode | str) -> None:
+        """
+        Change the selection mode (gesture) that determines how dragging on the canvas behaves, in place.
+
+        Parameters
+        -----------
+        mode:
+            The selection mode to use. One of `SelectionMode.PAN` (the default, drag to pan and click to
+            select individual entities), `SelectionMode.BOX` (drag a rectangle to select), or
+            `SelectionMode.LASSO` (drag a freehand region to select). A string such as `"single"`, `"box"`,
+            or `"lasso"` is also accepted.
+        """
+        if isinstance(mode, str):
+            mode = SelectionMode(mode)
+
+        new = self._render_options()
+        new.selection_mode = mode
         self.options = new
 
     def set_show_layout_button(self, show: bool = True) -> None:
