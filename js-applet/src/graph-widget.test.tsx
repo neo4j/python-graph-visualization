@@ -23,6 +23,7 @@ vi.mock("@neo4j-ndl/react", async () => {
 });
 
 import widget from "./graph-widget";
+import { createLocalModel } from "./local-model";
 
 type WidgetState = {
   nodes: Array<{ id: string; caption?: string; properties: Record<string, unknown> }>;
@@ -37,32 +38,10 @@ type WidgetState = {
   selected: { nodeIds: string[]; relationshipIds: string[] };
 };
 
-class FakeModel {
-  private readonly listeners = new Map<string, Set<() => void>>();
-
-  constructor(private readonly state: WidgetState) {}
-
-  get<K extends keyof WidgetState>(key: K): WidgetState[K] {
-    return this.state[key];
-  }
-
-  set<K extends keyof WidgetState>(key: K, value: WidgetState[K]): void {
-    this.state[key] = value;
-    this.listeners.get(`change:${String(key)}`)?.forEach((listener) => listener());
-  }
-
-  on(event: string, listener: () => void): void {
-    const listeners = this.listeners.get(event) ?? new Set<() => void>();
-    listeners.add(listener);
-    this.listeners.set(event, listeners);
-  }
-
-  off(event: string, listener: () => void): void {
-    this.listeners.get(event)?.delete(listener);
-  }
-
-  save_changes(): void {}
-}
+// The static HTML render path uses the real `createLocalModel` shim, so tests
+// exercise it directly rather than a hand-rolled fake — this keeps the shim's
+// contract (notably `set` emitting change events, see GDS-286) under test.
+type FakeModel = ReturnType<typeof createLocalModel<WidgetState>>;
 
 type RenderedWidget = {
   el: HTMLDivElement;
@@ -81,7 +60,7 @@ async function renderWidget(
     { id: "r1", from: "n1", to: "n1", properties: {} },
   ];
 
-  const model = new FakeModel({
+  const model = createLocalModel<WidgetState>({
     nodes: overrides.nodes ?? defaultNodes,
     relationships: overrides.relationships ?? defaultRelationships,
     options: {
@@ -116,7 +95,7 @@ async function renderWidgetInShadowRoot(
   const el = document.createElement("div");
   shadowRoot.appendChild(el);
 
-  const model = new FakeModel({
+  const model = createLocalModel<WidgetState>({
     nodes: [{ id: "n1", caption: "Node 1", properties: {} }],
     relationships: [{ id: "r1", from: "n1", to: "n1", properties: {} }],
     options: {
