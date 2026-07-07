@@ -219,6 +219,41 @@ describe("graph-widget button testing", () => {
     }
   });
 
+  it("toggles the legend overlay via its island button", async () => {
+    const { el, teardown } = await renderWidget({
+      legend: {
+        nodes: {
+          colorSpace: "discrete",
+          entries: [{ label: "Movies", color: "#569480" }],
+        },
+        relationships: null,
+        visible: true,
+      },
+    });
+
+    try {
+      // Auto-shown when a legend is available.
+      await waitFor(() => {
+        expect(within(el).getByText("Movies")).toBeTruthy();
+      });
+
+      const toggle = within(el).getByRole("button", { name: "Toggle legend" });
+      await act(async () => {
+        fireEvent.click(toggle);
+      });
+      expect(within(el).queryByText("Movies")).toBeNull();
+
+      await act(async () => {
+        fireEvent.click(toggle);
+      });
+      expect(within(el).getByText("Movies")).toBeTruthy();
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
   it("renders no legend panel when the legend is empty", async () => {
     const { el, teardown } = await renderWidget();
 

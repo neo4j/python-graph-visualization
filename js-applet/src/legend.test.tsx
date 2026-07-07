@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { Legend, LegendData } from "./legend";
 
@@ -144,7 +144,7 @@ describe("Legend", () => {
     expect(screen.getByText("Movies")).toBeTruthy();
   });
 
-  it("styles chrome from Needle theme tokens so it tracks light/dark", () => {
+  it("styles theme-dependent parts from Needle tokens so they track light/dark", () => {
     const legend: LegendData = {
       nodes: {
         colorSpace: "discrete",
@@ -153,12 +153,11 @@ describe("Legend", () => {
     };
 
     const { container } = render(<Legend legend={legend} />);
-    const panel = container.querySelector<HTMLElement>(".nvl-legend");
-    expect(panel).toBeTruthy();
-    // Chrome is driven by the theme-aware NDL tokens, not a hardcoded palette.
-    expect(panel!.style.background).toContain("--theme-color-neutral-bg-default");
-    expect(panel!.style.color).toContain("--theme-color-neutral-text-default");
-    // the color-box label is reachable within the panel
-    expect(within(panel!).getByText("Movies")).toBeTruthy();
+    const box = container.querySelector<HTMLElement>(".nvl-legend-color-box");
+    expect(box).toBeTruthy();
+    // The color-box fill stays the literal entry color, but its border adapts to the theme via an
+    // NDL token. (Panel background/text are inherited from the surrounding side panel.)
+    expect(box!.style.backgroundColor).toBe("rgb(0, 0, 255)");
+    expect(box!.style.border).toContain("--theme-color-neutral-border-weak");
   });
 });

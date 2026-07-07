@@ -46,6 +46,12 @@ function hasContent(section?: LegendSection | null): section is LegendSection {
   return (section.entries?.length ?? 0) > 0;
 }
 
+/** Whether the legend would render anything (used to decide whether to open the side panel). */
+export function hasLegendContent(legend: LegendData): boolean {
+  if (legend.visible === false) return false;
+  return hasContent(legend.nodes) || hasContent(legend.relationships);
+}
+
 function GradientBar({ section }: { section: ContinuousLegendSection }) {
   const stops = section.gradient ?? [];
   return (
@@ -170,6 +176,7 @@ export function Legend({ legend }: { legend: LegendData }) {
   }
 
   return (
+    // A floating overlay in the graph's bottom-left corner, toggled by its own island button.
     <div
       className="nvl-legend"
       style={{
@@ -177,8 +184,8 @@ export function Legend({ legend }: { legend: LegendData }) {
         bottom: "12px",
         left: "12px",
         zIndex: 10,
-        maxHeight: "40%",
-        maxWidth: "220px",
+        maxHeight: "calc(100% - 24px)",
+        maxWidth: "240px",
         overflowY: "auto",
         padding: "8px 10px",
         borderRadius: "6px",
