@@ -8,6 +8,8 @@ import enum_tools.documentation
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from pydantic.alias_generators import to_camel
 
+from .colors import ColorSpace
+
 
 @enum_tools.documentation.document_enum
 class CaptionAlignment(str, Enum):
@@ -197,6 +199,53 @@ class GraphSelection(BaseModel):
     def to_json(self) -> dict[str, Any]:
         """Serialize to the dict the frontend consumes."""
         return self.model_dump(mode="json")
+
+
+# Mirrors the LegendEntry/LegendSection/LegendData types in js-applet/src/legend.tsx
+class LegendEntry(
+    BaseModel,
+    alias_generator=to_camel,
+    populate_by_name=True,
+    serialize_by_alias=True,
+):
+    """A single discrete legend swatch: a label and the (long-form hex) color it maps to."""
+
+    label: str
+    color: str
+
+
+class LegendSection(
+    BaseModel,
+    alias_generator=to_camel,
+    populate_by_name=True,
+    serialize_by_alias=True,
+):
+    """The legend to display for nodes or relationships."""
+
+    title: Optional[str] = None
+    color_space: ColorSpace = ColorSpace.DISCRETE
+    # populated by discrete space
+    entries: list[LegendEntry] = Field(default_factory=list)
+    # populated by continuous space
+    gradient: Optional[list[str]] = None
+    min_value: Optional[str] = None
+    max_value: Optional[str] = None
+
+
+class Legend(
+    BaseModel,
+    alias_generator=to_camel,
+    populate_by_name=True,
+    serialize_by_alias=True,
+):
+    """The node and relationship color legend shown as an overlay in the visualization."""
+
+    nodes: Optional[LegendSection] = None
+    relationships: Optional[LegendSection] = None
+    visible: bool = True
+
+    def to_json(self) -> dict[str, Any]:
+        return self.model_dump(mode="json", exclude_none=True)
 
 
 # Fields are snake_case in Python; pydantic serializes them to the camelCase keys the

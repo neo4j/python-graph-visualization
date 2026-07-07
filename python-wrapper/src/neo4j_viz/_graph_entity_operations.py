@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Hashable, Iterable
-from typing import Any, Callable, Protocol
+from typing import Any, Callable, Protocol, Union
 
 from pydantic.alias_generators import to_snake
 from pydantic_extra_types.color import Color, ColorType
@@ -10,7 +10,16 @@ from pydantic_extra_types.color import Color, ColorType
 from .colors import NEO4J_COLORS_CONTINUOUS, NEO4J_COLORS_DISCRETE, ColorSpace, ColorsType
 from .node import Node, NodeIdType
 from .node_size import RealNumber, verify_radii
+from .options import Legend, LegendEntry, LegendSection
 from .relationship import Relationship
+
+# What `set_legend` accepts for a section: a ready `LegendSection`, a `{label: color}` mapping,
+# or an iterable of `LegendEntry` / `(label, color)` pairs.
+LegendSectionInput = Union[
+    LegendSection,
+    dict[Any, ColorType],
+    Iterable[Union[LegendEntry, tuple[Any, ColorType]]],
+]
 
 
 class EntityHost(Protocol):
@@ -18,6 +27,7 @@ class EntityHost(Protocol):
 
     nodes: list[Node]
     relationships: list[Relationship]
+    legend: Legend
 
     def _sync_entities(self, *, nodes: bool = ..., relationships: bool = ...) -> None: ...
 
@@ -241,6 +251,9 @@ class GraphEntityOperations:
             def node_to_attr(node: Node) -> Any:
                 return getattr(node, attribute)
 
+        gradient: list[ColorType] | None = None
+        legend_min: Any = None
+        legend_max: Any = None
         if color_space == ColorSpace.DISCRETE:
             if colors is None:
                 colors = NEO4J_COLORS_DISCRETE
@@ -254,6 +267,11 @@ class GraphEntityOperations:
             if not isinstance(colors, list):
                 raise ValueError("For continuous properties, `colors` must be a list of colors representing a range")
 
+            gradient = list(colors)
+            if node_map:
+                values = list(node_map.values())
+                legend_min, legend_max = min(values), max(values)
+
             num_colors = len(colors)
             colors = {
                 node_to_attr(node): colors[round(normalized_map[node.id] * (num_colors - 1))]
@@ -262,9 +280,14 @@ class GraphEntityOperations:
             }
 
         if isinstance(colors, dict):
-            self._color_items_dict(self.nodes, colors, override, node_to_attr)
+            applied = self._color_items_dict(self.nodes, colors, override, node_to_attr)
         else:
-            self._color_items_iter(self.nodes, attribute, colors, override, node_to_attr)
+            applied = self._color_items_iter(self.nodes, attribute, colors, override, node_to_attr)
+
+        section = self._build_legend_section(
+            attribute, color_space, applied, gradient=gradient, min_value=legend_min, max_value=legend_max
+        )
+        self._set_legend_section(nodes=section)
 
         self._host._sync_entities(nodes=True)
 
@@ -297,6 +320,9 @@ class GraphEntityOperations:
             def rel_to_attr(rel: Relationship) -> Any:
                 return getattr(rel, attribute)
 
+        gradient: list[ColorType] | None = None
+        legend_min: Any = None
+        legend_max: Any = None
         if color_space == ColorSpace.DISCRETE:
             if colors is None:
                 colors = NEO4J_COLORS_DISCRETE
@@ -310,6 +336,11 @@ class GraphEntityOperations:
             if not isinstance(colors, list):
                 raise ValueError("For continuous properties, `colors` must be a list of colors representing a range")
 
+            gradient = list(colors)
+            if rel_map:
+                values = list(rel_map.values())
+                legend_min, legend_max = min(values), max(values)
+
             num_colors = len(colors)
             colors = {
                 rel_to_attr(rel): colors[round(normalized_map[rel.id] * (num_colors - 1))]
@@ -318,9 +349,14 @@ class GraphEntityOperations:
             }
 
         if isinstance(colors, dict):
-            self._color_items_dict(self.relationships, colors, override, rel_to_attr)
+            applied = self._color_items_dict(self.relationships, colors, override, rel_to_attr)
         else:
-            self._color_items_iter(self.relationships, attribute, colors, override, rel_to_attr)
+            applied = self._color_items_iter(self.relationships, attribute, colors, override, rel_to_attr)
+
+        section = self._build_legend_section(
+            attribute, color_space, applied, gradient=gradient, min_value=legend_min, max_value=legend_max
+        )
+        self._set_legend_section(relationships=section)
 
         self._host._sync_entities(relationships=True)
 
@@ -330,20 +366,24 @@ class GraphEntityOperations:
         colors: dict[Hashable, ColorType],
         override: bool,
         item_to_attr: Callable[[Any], Any],
-    ) -> None:
+    ) -> dict[Hashable, Color]:
+        applied: dict[Hashable, Color] = {}
         for item in items:
-            color = colors.get(item_to_attr(item))
+            attr = item_to_attr(item)
+            color = colors.get(attr)
 
             if color is None:
                 continue
 
+            resolved = color if isinstance(color, Color) else Color(color)
+            applied[attr] = resolved
+
             if item.color is not None and not override:
                 continue
 
-            if not isinstance(color, Color):
-                item.color = Color(color)
-            else:
-                item.color = color
+            item.color = resolved
+
+        return applied
 
     def _color_items_iter(
         self,
@@ -352,9 +392,9 @@ class GraphEntityOperations:
         colors: Iterable[ColorType],
         override: bool,
         item_to_attr: Callable[[Any], Any],
-    ) -> None:
+    ) -> dict[Hashable, Color]:
         exhausted_colors = False
-        prop_to_color = {}
+        prop_to_color: dict[Hashable, Color] = {}
         colors_iter = iter(colors)
         for item in items:
             raw_prop = item_to_attr(item)
@@ -370,23 +410,22 @@ class GraphEntityOperations:
                     exhausted_colors = True
                     colors_iter = iter(colors)
                     next_color = next(colors_iter)
-                prop_to_color[prop] = next_color
+                prop_to_color[prop] = next_color if isinstance(next_color, Color) else Color(next_color)
 
             color = prop_to_color[prop]
 
             if item.color is not None and not override:
                 continue
 
-            if not isinstance(color, Color):
-                item.color = Color(color)
-            else:
-                item.color = color
+            item.color = color
 
         if exhausted_colors:
             warnings.warn(
                 f"Ran out of colors for property '{attribute}'. {len(prop_to_color)} colors were needed, but only "
                 f"{len(set(prop_to_color.values()))} were given, so reused colors"
             )
+
+        return prop_to_color
 
     @staticmethod
     def _make_hashable(raw_prop: Any) -> Hashable:
@@ -406,3 +445,95 @@ class GraphEntityOperations:
         assert isinstance(prop, Hashable)
 
         return prop
+
+    def set_legend(
+        self,
+        *,
+        nodes: LegendSectionInput | None = None,
+        relationships: LegendSectionInput | None = None,
+        visible: bool = True,
+    ) -> None:
+        """Set the legend explicitly. See `VisualizationGraph.set_legend` for details."""
+        new = self._host.legend.model_copy(deep=True)
+        if nodes is not None:
+            new.nodes = self._coerce_section(nodes)
+        if relationships is not None:
+            new.relationships = self._coerce_section(relationships)
+        new.visible = visible
+        self._host.legend = new
+
+    def show_legend(self, visible: bool = True) -> None:
+        """Show or hide the legend overlay. See `VisualizationGraph.show_legend` for details."""
+        new = self._host.legend.model_copy(deep=True)
+        new.visible = visible
+        self._host.legend = new
+
+    def _set_legend_section(
+        self,
+        *,
+        nodes: LegendSection | None = None,
+        relationships: LegendSection | None = None,
+    ) -> None:
+        """Replace a single legend section (node or relationship) and push the update to the host.
+
+        Reassigns `self._host.legend` rather than mutating in place, so the widget's traitlet
+        observer fires and syncs the legend to the frontend (mirroring the `options` trait).
+        """
+        new = self._host.legend.model_copy(deep=True)
+        if nodes is not None:
+            new.nodes = nodes
+        if relationships is not None:
+            new.relationships = relationships
+        self._host.legend = new
+
+    @classmethod
+    def _build_legend_section(
+        cls,
+        title: str,
+        color_space: ColorSpace,
+        applied: dict[Hashable, Color],
+        *,
+        gradient: Iterable[ColorType] | None = None,
+        min_value: Any = None,
+        max_value: Any = None,
+    ) -> LegendSection:
+        if color_space == ColorSpace.CONTINUOUS:
+            return LegendSection(
+                title=title,
+                color_space=color_space,
+                gradient=[cls._to_hex(color) for color in (gradient or [])],
+                min_value=None if min_value is None else str(min_value),
+                max_value=None if max_value is None else str(max_value),
+            )
+
+        entries = [LegendEntry(label=cls._label_of(prop), color=cls._to_hex(color)) for prop, color in applied.items()]
+        return LegendSection(title=title, color_space=color_space, entries=entries)
+
+    @classmethod
+    def _coerce_section(cls, value: LegendSectionInput) -> LegendSection:
+        if isinstance(value, LegendSection):
+            return value
+
+        if isinstance(value, dict):
+            entries = [LegendEntry(label=str(label), color=cls._to_hex(color)) for label, color in value.items()]
+            return LegendSection(color_space=ColorSpace.DISCRETE, entries=entries)
+
+        entries = []
+        for item in value:
+            if isinstance(item, LegendEntry):
+                entries.append(item)
+            else:
+                label, color = item
+                entries.append(LegendEntry(label=str(label), color=cls._to_hex(color)))
+        return LegendSection(color_space=ColorSpace.DISCRETE, entries=entries)
+
+    @staticmethod
+    def _to_hex(color: ColorType) -> str:
+        resolved = color if isinstance(color, Color) else Color(color)
+        return resolved.as_hex(format="long")
+
+    @staticmethod
+    def _label_of(prop: Hashable) -> str:
+        if isinstance(prop, (tuple, frozenset)):
+            return ", ".join(str(p) for p in prop)
+        return str(prop)

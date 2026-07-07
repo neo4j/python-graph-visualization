@@ -9,6 +9,7 @@ import {
   transformNodes,
   transformRelationships,
 } from "./data-transforms";
+import { Legend, LegendData } from "./legend";
 import { GraphErrorBoundary } from "./graph-error-boundary";
 import {
   Divider,
@@ -36,9 +37,15 @@ export type WidgetData = {
   width: string;
   theme: Theme;
   selected: GraphSelection;
+  legend: LegendData;
 };
 
 const EMPTY_SELECTION: GraphSelection = { nodeIds: [], relationshipIds: [] };
+const EMPTY_LEGEND: LegendData = {
+  nodes: null,
+  relationships: null,
+  visible: true,
+};
 
 function detectTheme(): "light" | "dark" {
   if (document.body.classList.contains("vscode-light") || document.body.classList.contains("light-theme")) {
@@ -173,6 +180,7 @@ function GraphWidget() {
   const [theme] = useModelState<WidgetData["theme"]>("theme");
   const [selected, setSelected] =
     useModelState<WidgetData["selected"]>("selected");
+  const [legend] = useModelState<WidgetData["legend"]>("legend");
   const { layout, nvlOptions, zoom, pan, layoutOptions, showLayoutButton, selectionMode } =
     options ?? {};
   // `gesture` is locally controlled so the GestureSelectButton stays interactive, but it is
@@ -220,7 +228,11 @@ function GraphWidget() {
     >
       <div
         ref={wrapperRef}
-        style={{ height: height ?? "600px", width: width ?? "100%" }}
+        style={{
+          position: "relative",
+          height: height ?? "600px",
+          width: width ?? "100%",
+        }}
       >
         <GraphVisualization
           nodes={neoNodes}
@@ -270,6 +282,7 @@ function GraphWidget() {
             </IconButtonArray>
           }
         />
+        <Legend legend={legend ?? EMPTY_LEGEND} />
       </div>
     </NeedleThemeProvider>
   );
