@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import enum_tools.documentation
 from pydantic import BaseModel, Field, ValidationError, model_validator
@@ -208,7 +208,7 @@ class LegendEntry(
     populate_by_name=True,
     serialize_by_alias=True,
 ):
-    """A single discrete legend swatch: a label and the (long-form hex) color it maps to."""
+    """A single discrete legend color box: a label and the (long-form hex) color it maps to."""
 
     label: str
     color: str
@@ -220,14 +220,21 @@ class LegendSection(
     populate_by_name=True,
     serialize_by_alias=True,
 ):
-    """The legend to display for nodes or relationships."""
-
     title: Optional[str] = None
-    color_space: ColorSpace = ColorSpace.DISCRETE
-    # populated by discrete space
+
+
+class DiscreteLegendSection(LegendSection):
+    """Legend for a discrete coloring: one color box per unique field/property value."""
+
+    color_space: Literal[ColorSpace.DISCRETE] = ColorSpace.DISCRETE
     entries: list[LegendEntry] = Field(default_factory=list)
-    # populated by continuous space
-    gradient: Optional[list[str]] = None
+
+
+class ContinuousLegendSection(LegendSection):
+    """Legend for a continuous coloring: a color gradient spanning the value range."""
+
+    color_space: Literal[ColorSpace.CONTINUOUS] = ColorSpace.CONTINUOUS
+    gradient: list[str] = Field(default_factory=list)
     min_value: Optional[str] = None
     max_value: Optional[str] = None
 
@@ -240,8 +247,12 @@ class Legend(
 ):
     """The node and relationship color legend shown as an overlay in the visualization."""
 
-    nodes: Optional[LegendSection] = None
-    relationships: Optional[LegendSection] = None
+    nodes: Optional[Union[DiscreteLegendSection, ContinuousLegendSection]] = Field(
+        default=None, discriminator="color_space"
+    )
+    relationships: Optional[Union[DiscreteLegendSection, ContinuousLegendSection]] = Field(
+        default=None, discriminator="color_space"
+    )
     visible: bool = True
 
     def to_json(self) -> dict[str, Any]:

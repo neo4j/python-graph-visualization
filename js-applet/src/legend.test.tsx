@@ -7,7 +7,7 @@ afterEach(() => {
 });
 
 describe("Legend", () => {
-  it("renders discrete swatch rows with labels and colors", () => {
+  it("renders discrete color-box rows with labels and colors", () => {
     const legend: LegendData = {
       nodes: {
         title: "label",
@@ -25,11 +25,11 @@ describe("Legend", () => {
     expect(screen.getByText("Movies")).toBeTruthy();
     expect(screen.getByText("Directors")).toBeTruthy();
 
-    const swatches = container.querySelectorAll<HTMLElement>(".nvl-legend-swatch");
-    expect(swatches.length).toBe(2);
+    const colorBoxes = container.querySelectorAll<HTMLElement>(".nvl-legend-color-box");
+    expect(colorBoxes.length).toBe(2);
     // jsdom normalizes hex to rgb.
-    expect(swatches[0]!.style.backgroundColor).toBe("rgb(0, 0, 255)");
-    expect(swatches[1]!.style.backgroundColor).toBe("rgb(255, 0, 0)");
+    expect(colorBoxes[0]!.style.backgroundColor).toBe("rgb(0, 0, 255)");
+    expect(colorBoxes[1]!.style.backgroundColor).toBe("rgb(255, 0, 0)");
   });
 
   it("renders a gradient bar with min/max labels for continuous colorings", () => {
@@ -68,6 +68,9 @@ describe("Legend", () => {
 
     render(<Legend legend={legend} />);
 
+    // Both the entity-kind labels and the colored-by field names are shown.
+    expect(screen.getByText("Nodes")).toBeTruthy();
+    expect(screen.getByText("Relationships")).toBeTruthy();
     expect(screen.getByText("Node label")).toBeTruthy();
     expect(screen.getByText("Rel type")).toBeTruthy();
     expect(screen.getByText("Movies")).toBeTruthy();
@@ -116,6 +119,31 @@ describe("Legend", () => {
     expect(screen.getByText("Movies")).toBeTruthy();
   });
 
+  it("collapses each section independently", () => {
+    const legend: LegendData = {
+      nodes: {
+        colorSpace: "discrete",
+        entries: [{ label: "Movies", color: "#0000ff" }],
+      },
+      relationships: {
+        colorSpace: "discrete",
+        entries: [{ label: "DIRECTED", color: "#00ff00" }],
+      },
+    };
+
+    render(<Legend legend={legend} />);
+    expect(screen.getByText("Movies")).toBeTruthy();
+    expect(screen.getByText("DIRECTED")).toBeTruthy();
+
+    // Collapsing the Nodes section hides only its entries; Relationships stays expanded.
+    fireEvent.click(screen.getByRole("button", { name: /nodes/i }));
+    expect(screen.queryByText("Movies")).toBeNull();
+    expect(screen.getByText("DIRECTED")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /nodes/i }));
+    expect(screen.getByText("Movies")).toBeTruthy();
+  });
+
   it("styles chrome from Needle theme tokens so it tracks light/dark", () => {
     const legend: LegendData = {
       nodes: {
@@ -130,7 +158,7 @@ describe("Legend", () => {
     // Chrome is driven by the theme-aware NDL tokens, not a hardcoded palette.
     expect(panel!.style.background).toContain("--theme-color-neutral-bg-default");
     expect(panel!.style.color).toContain("--theme-color-neutral-text-default");
-    // the swatch label is reachable within the panel
+    // the color-box label is reachable within the panel
     expect(within(panel!).getByText("Movies")).toBeTruthy();
   });
 });

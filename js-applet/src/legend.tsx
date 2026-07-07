@@ -1,17 +1,25 @@
 import { useState } from "react";
 
 // Mirrors the Legend/LegendSection/LegendEntry pydantic models in
-// python-wrapper/src/neo4j_viz/options.py. Field names match the wire format verbatim.
+// python-wrapper/src/neo4j_viz/options.py. Field names match the wire format verbatim, and a
+// section is a discriminated union on `colorSpace` (discrete color boxes vs. a continuous gradient).
 export type LegendEntry = { label: string; color: string };
 
-export type LegendSection = {
+export type DiscreteLegendSection = {
   title?: string;
-  colorSpace?: "discrete" | "continuous";
+  colorSpace: "discrete";
   entries?: LegendEntry[];
+};
+
+export type ContinuousLegendSection = {
+  title?: string;
+  colorSpace: "continuous";
   gradient?: string[];
   minValue?: string;
   maxValue?: string;
 };
+
+export type LegendSection = DiscreteLegendSection | ContinuousLegendSection;
 
 export type LegendData = {
   nodes?: LegendSection | null;
@@ -31,13 +39,14 @@ const TOKENS = {
 };
 
 function hasContent(section?: LegendSection | null): section is LegendSection {
-  return (
-    !!section &&
-    ((section.entries?.length ?? 0) > 0 || (section.gradient?.length ?? 0) > 0)
-  );
+  if (!section) return false;
+  if (section.colorSpace === "continuous") {
+    return (section.gradient?.length ?? 0) > 0;
+  }
+  return (section.entries?.length ?? 0) > 0;
 }
 
-function GradientBar({ section }: { section: LegendSection }) {
+function GradientBar({ section }: { section: ContinuousLegendSection }) {
   const stops = section.gradient ?? [];
   return (
     <div>
@@ -73,52 +82,77 @@ function Section({
   heading: string;
   section: LegendSection;
 }) {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
     <div style={{ marginTop: "6px" }}>
-      <div
+      <button
+        type="button"
+        onClick={() => setCollapsed((value) => !value)}
+        aria-expanded={!collapsed}
         style={{
-          fontSize: "11px",
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.04em",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "6px",
+          width: "100%",
+          padding: 0,
+          background: "transparent",
+          border: "none",
           color: TOKENS.mutedText,
+          font: "inherit",
+          fontSize: "11px",
+          letterSpacing: "0.04em",
           marginBottom: "4px",
+          cursor: "pointer",
         }}
       >
-        {section.title ?? heading}
-      </div>
-      {section.colorSpace === "continuous" ? (
-        <GradientBar section={section} />
-      ) : (
-        (section.entries ?? []).map((entry, index) => (
-          <div
-            key={`${entry.label}-${index}`}
-            className="nvl-legend-row"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "1px 0",
-            }}
-          >
-            <span
-              className="nvl-legend-swatch"
+        <span>
+          {/* Always show whether this section is for nodes or relationships; the field/property
+              it was colored by is shown as a secondary qualifier. */}
+          <span style={{ fontWeight: 700, textTransform: "uppercase" }}>{heading}</span>
+          {section.title ? (
+            <>
+              <span aria-hidden> · </span>
+              <span>{section.title}</span>
+            </>
+          ) : null}
+        </span>
+        <span aria-hidden>{collapsed ? "▸" : "▾"}</span>
+      </button>
+      {!collapsed &&
+        (section.colorSpace === "continuous" ? (
+          <GradientBar section={section} />
+        ) : (
+          (section.entries ?? []).map((entry, index) => (
+            <div
+              key={`${entry.label}-${index}`}
+              className="nvl-legend-row"
               style={{
-                display: "inline-block",
-                width: "12px",
-                height: "12px",
-                borderRadius: "3px",
-                flex: "0 0 auto",
-                backgroundColor: entry.color,
-                border: `1px solid ${TOKENS.border}`,
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "1px 0",
               }}
-            />
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {entry.label}
-            </span>
-          </div>
-        ))
-      )}
+            >
+              <span
+                className="nvl-legend-color-box"
+                style={{
+                  display: "inline-block",
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "3px",
+                  flex: "0 0 auto",
+                  backgroundColor: entry.color,
+                  border: `1px solid ${TOKENS.border}`,
+                }}
+              />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {entry.label}
+              </span>
+            </div>
+          ))
+        ))}
     </div>
   );
 }

@@ -2,7 +2,9 @@ from .colors import ColorSpace
 from .node import Node
 from .options import (
     CaptionAlignment,
+    ContinuousLegendSection,
     Direction,
+    DiscreteLegendSection,
     ForceDirectedLayoutOptions,
     GraphSelection,
     HierarchicalLayoutOptions,
@@ -32,6 +34,8 @@ __all__ = [
     "Legend",
     "LegendEntry",
     "LegendSection",
+    "DiscreteLegendSection",
+    "ContinuousLegendSection",
     "Node",
     "Relationship",
     "CaptionAlignment",

@@ -10,13 +10,16 @@ from pydantic_extra_types.color import Color, ColorType
 from .colors import NEO4J_COLORS_CONTINUOUS, NEO4J_COLORS_DISCRETE, ColorSpace, ColorsType
 from .node import Node, NodeIdType
 from .node_size import RealNumber, verify_radii
-from .options import Legend, LegendEntry, LegendSection
+from .options import ContinuousLegendSection, DiscreteLegendSection, Legend, LegendEntry
 from .relationship import Relationship
 
-# What `set_legend` accepts for a section: a ready `LegendSection`, a `{label: color}` mapping,
+# A concrete legend section, i.e. one of the `LegendSection` subclasses.
+LegendSectionValue = Union[DiscreteLegendSection, ContinuousLegendSection]
+
+# What `set_legend` accepts for a section: a ready section, a `{label: color}` mapping,
 # or an iterable of `LegendEntry` / `(label, color)` pairs.
 LegendSectionInput = Union[
-    LegendSection,
+    LegendSectionValue,
     dict[Any, ColorType],
     Iterable[Union[LegendEntry, tuple[Any, ColorType]]],
 ]
@@ -471,8 +474,8 @@ class GraphEntityOperations:
     def _set_legend_section(
         self,
         *,
-        nodes: LegendSection | None = None,
-        relationships: LegendSection | None = None,
+        nodes: LegendSectionValue | None = None,
+        relationships: LegendSectionValue | None = None,
     ) -> None:
         """Replace a single legend section (node or relationship) and push the update to the host.
 
@@ -496,27 +499,26 @@ class GraphEntityOperations:
         gradient: Iterable[ColorType] | None = None,
         min_value: Any = None,
         max_value: Any = None,
-    ) -> LegendSection:
+    ) -> LegendSectionValue:
         if color_space == ColorSpace.CONTINUOUS:
-            return LegendSection(
+            return ContinuousLegendSection(
                 title=title,
-                color_space=color_space,
                 gradient=[cls._to_hex(color) for color in (gradient or [])],
                 min_value=None if min_value is None else str(min_value),
                 max_value=None if max_value is None else str(max_value),
             )
 
         entries = [LegendEntry(label=cls._label_of(prop), color=cls._to_hex(color)) for prop, color in applied.items()]
-        return LegendSection(title=title, color_space=color_space, entries=entries)
+        return DiscreteLegendSection(title=title, entries=entries)
 
     @classmethod
-    def _coerce_section(cls, value: LegendSectionInput) -> LegendSection:
-        if isinstance(value, LegendSection):
+    def _coerce_section(cls, value: LegendSectionInput) -> LegendSectionValue:
+        if isinstance(value, (DiscreteLegendSection, ContinuousLegendSection)):
             return value
 
         if isinstance(value, dict):
             entries = [LegendEntry(label=str(label), color=cls._to_hex(color)) for label, color in value.items()]
-            return LegendSection(color_space=ColorSpace.DISCRETE, entries=entries)
+            return DiscreteLegendSection(entries=entries)
 
         entries = []
         for item in value:
@@ -525,7 +527,7 @@ class GraphEntityOperations:
             else:
                 label, color = item
                 entries.append(LegendEntry(label=str(label), color=cls._to_hex(color)))
-        return LegendSection(color_space=ColorSpace.DISCRETE, entries=entries)
+        return DiscreteLegendSection(entries=entries)
 
     @staticmethod
     def _to_hex(color: ColorType) -> str:

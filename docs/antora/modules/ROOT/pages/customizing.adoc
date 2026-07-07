@@ -146,7 +146,7 @@ Since we only provided five colors in the range, the granularity of the gradient
 === The color legend
 
 Whenever you call `color_nodes` or `color_relationships`, a color legend is captured automatically and shown as an overlay in the bottom-left corner of the visualization, so it always reflects the colors currently drawn.
-For a discrete coloring it lists one swatch per value; for a continuous coloring it shows the color gradient together with the minimum and maximum values.
+For a discrete coloring it lists one color box per value; for a continuous coloring it shows the color gradient together with the minimum and maximum values.
 The legend works in both `render()` and `render_widget()`.
 
 You can set the legend explicitly, overriding whatever was captured, using `set_legend`.

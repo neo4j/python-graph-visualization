@@ -3,7 +3,17 @@ from typing import Any
 
 from pydantic_extra_types.color import Color
 
-from neo4j_viz import GraphWidget, Legend, LegendEntry, LegendSection, Node, Relationship, VisualizationGraph
+from neo4j_viz import (
+    ContinuousLegendSection,
+    DiscreteLegendSection,
+    GraphWidget,
+    Legend,
+    LegendEntry,
+    LegendSection,
+    Node,
+    Relationship,
+    VisualizationGraph,
+)
 from neo4j_viz.colors import ColorSpace
 
 
@@ -32,7 +42,8 @@ def test_color_nodes_populates_discrete_legend() -> None:
     VG.color_nodes(property="label", colors=["#000000", "#00FF00"])
 
     section = VG.legend.nodes
-    assert section is not None
+    assert isinstance(section, DiscreteLegendSection)
+    assert isinstance(section, LegendSection)
     assert section.title == "label"
     assert section.color_space == ColorSpace.DISCRETE
     assert section.entries == [
@@ -55,13 +66,13 @@ def test_color_nodes_continuous_legend_is_gradient() -> None:
     VG.color_nodes(property="score", color_space=ColorSpace.CONTINUOUS, colors=["#000000", "#FFFFFF"])
 
     section = VG.legend.nodes
-    assert section is not None
+    assert isinstance(section, ContinuousLegendSection)
     assert section.color_space == ColorSpace.CONTINUOUS
     assert section.gradient == [_hex("#000000"), _hex("#FFFFFF")]
     assert section.min_value == "10"
     assert section.max_value == "30"
-    # No per-value swatch explosion for continuous colorings.
-    assert section.entries == []
+    # A continuous section carries no discrete color-box entries at all.
+    assert not hasattr(section, "entries")
 
 
 def test_to_json_uses_camel_case_wire_format() -> None:
@@ -118,9 +129,7 @@ def test_set_legend_accepts_entry_pairs_and_section() -> None:
 
     VG.set_legend(
         nodes=[("A", "red"), LegendEntry(label="B", color=_hex("green"))],
-        relationships=LegendSection(
-            color_space=ColorSpace.DISCRETE, entries=[LegendEntry(label="R", color=_hex("blue"))]
-        ),
+        relationships=DiscreteLegendSection(entries=[LegendEntry(label="R", color=_hex("blue"))]),
     )
 
     assert VG.legend.nodes is not None
@@ -209,9 +218,7 @@ class TestWidgetLegend:
         assert Legend.model_validate(as_json) == widget.legend
 
     def test_from_graph_data_carries_legend(self) -> None:
-        legend = Legend(
-            nodes=LegendSection(color_space=ColorSpace.DISCRETE, entries=[LegendEntry(label="A", color=_hex("red"))])
-        )
+        legend = Legend(nodes=DiscreteLegendSection(entries=[LegendEntry(label="A", color=_hex("red"))]))
 
         widget = GraphWidget.from_graph_data([Node(id="0")], [], legend=legend)
 
