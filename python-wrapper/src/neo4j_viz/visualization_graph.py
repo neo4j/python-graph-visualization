@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 from IPython.display import HTML
 
-from ._graph_entity_operations import GraphEntityOperations
+from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
 from ._validation import OnDangling, check_dangling_relationships
 from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
@@ -14,6 +14,7 @@ from .nvl import NVL
 from .options import (
     Layout,
     LayoutOptions,
+    Legend,
     Renderer,
     RenderOptions,
     construct_layout_options,
@@ -35,6 +36,8 @@ class VisualizationGraph:
     nodes: list[Node]
     #: "The relationships in the graph"
     relationships: list[Relationship]
+    #: "The node and relationship color legend shown as an overlay in the visualization"
+    legend: Legend
 
     def __init__(self, nodes: list[Node], relationships: list[Relationship]) -> None:
         """
@@ -82,6 +85,7 @@ class VisualizationGraph:
         """
         self.nodes = nodes
         self.relationships = relationships
+        self.legend = Legend()
 
     def __str__(self) -> str:
         return f"VisualizationGraph(nodes={len(self.nodes)}, relationships={len(self.relationships)})"
@@ -248,7 +252,11 @@ class VisualizationGraph:
         >>> VG.color_nodes(field="label", colors=Moonrise1_5.colors)
         """
         self._entity_ops.color_nodes(
-            field=field, property=property, colors=colors, color_space=color_space, override=override
+            field=field,
+            property=property,
+            colors=colors,
+            color_space=color_space,
+            override=override,
         )
 
     def color_relationships(
@@ -310,8 +318,51 @@ class VisualizationGraph:
         >>> VG.color_relationships(property="score", color_space=ColorSpace.CONTINUOUS)
         """
         self._entity_ops.color_relationships(
-            field=field, property=property, colors=colors, color_space=color_space, override=override
+            field=field,
+            property=property,
+            colors=colors,
+            color_space=color_space,
+            override=override,
         )
+
+    def set_legend(
+        self,
+        *,
+        nodes: LegendSectionInput | None = None,
+        relationships: LegendSectionInput | None = None,
+        visible: bool = True,
+    ) -> None:
+        """
+        Set the color legend explicitly, overriding any legend captured from `color_nodes`/`color_relationships`.
+
+        Parameters
+        ----------
+        nodes:
+            The node legend. Either a `LegendSection`, a `{label: color}` mapping, or an iterable of
+            `LegendEntry` / `(label, color)` pairs. Left unchanged if None.
+        relationships:
+            The relationship legend, in the same accepted forms as `nodes`. Left unchanged if None.
+        visible:
+            Whether the legend overlay is shown.
+
+        Examples
+        --------
+        Given a VisualizationGraph `VG`:
+
+        >>> VG.set_legend(nodes={"Movies": "blue", "Directors": "red"})
+        """
+        self._entity_ops.set_legend(nodes=nodes, relationships=relationships, visible=visible)
+
+    def show_legend(self, visible: bool = True) -> None:
+        """
+        Show or hide the color legend overlay.
+
+        Parameters
+        ----------
+        visible:
+            Whether the legend overlay is shown.
+        """
+        self._entity_ops.show_legend(visible)
 
     def _build_render_options(
         self,
@@ -445,6 +496,7 @@ class VisualizationGraph:
             width,
             height,
             theme,
+            legend=self.legend,
         )
 
     def render_widget(
@@ -519,4 +571,5 @@ class VisualizationGraph:
             height=height,
             options=render_options,
             theme=theme,
+            legend=self.legend,
         )

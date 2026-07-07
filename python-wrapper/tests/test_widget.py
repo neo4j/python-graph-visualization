@@ -245,8 +245,9 @@ class TestWidgetUtilityMethods:
         assert widget.nodes[0].color is not None
         assert widget.nodes[1].color is not None
         assert widget.nodes[0].color != widget.nodes[1].color
-        # Mutating in place must still push the updated nodes to the frontend.
-        assert synced == ["nodes"]
+        # Mutating in place must still push the updated nodes to the frontend, and coloring also
+        # updates (and syncs) the captured legend.
+        assert synced == ["legend", "nodes"]
 
     def test_color_relationships(self) -> None:
         widget = GraphWidget(
@@ -262,7 +263,8 @@ class TestWidgetUtilityMethods:
 
         assert widget.relationships[0].color is not None
         assert widget.relationships[0].color != widget.relationships[1].color
-        assert synced == ["relationships"]
+        # Coloring also updates (and syncs) the captured legend.
+        assert synced == ["legend", "relationships"]
 
     def test_resize_nodes(self) -> None:
         widget = GraphWidget(

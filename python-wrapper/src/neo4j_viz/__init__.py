@@ -1,11 +1,17 @@
+from .colors import ColorSpace
 from .node import Node
 from .options import (
     CaptionAlignment,
+    ContinuousLegendSection,
     Direction,
+    DiscreteLegendSection,
     ForceDirectedLayoutOptions,
     GraphSelection,
     HierarchicalLayoutOptions,
     Layout,
+    Legend,
+    LegendEntry,
+    LegendSection,
     NvlOptions,
     Packing,
     PanPosition,
@@ -19,11 +25,17 @@ from .widget import GraphWidget
 
 __all__ = [
     "VisualizationGraph",
+    "ColorSpace",
     "GraphWidget",
     "WidgetOptions",
     "NvlOptions",
     "PanPosition",
     "GraphSelection",
+    "Legend",
+    "LegendEntry",
+    "LegendSection",
+    "DiscreteLegendSection",
+    "ContinuousLegendSection",
     "Node",
     "Relationship",
     "CaptionAlignment",

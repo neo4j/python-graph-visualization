@@ -7,7 +7,7 @@ from importlib.resources import files
 from IPython.display import HTML
 
 from .node import Node
-from .options import RenderOptions
+from .options import Legend, RenderOptions
 from .relationship import Relationship
 from .widget import _serialize_entity
 
@@ -39,6 +39,7 @@ class NVL:
         width: str,
         height: str,
         theme: str,
+        legend: Legend | None = None,
     ) -> HTML:
         data_dict: dict[str, object] = {
             "nodes": [_serialize_entity(node) for node in nodes],
@@ -47,6 +48,7 @@ class NVL:
             "height": height,
             "theme": theme,
             "options": render_options.to_widget_options().to_json(),
+            "legend": (legend or Legend()).to_json(),
         }
         data_json = json.dumps(data_dict)
         container_id = f"neo4j-viz-{uuid.uuid4().hex[:12]}"

@@ -9,12 +9,15 @@ import {
   transformNodes,
   transformRelationships,
 } from "./data-transforms";
+import { hasLegendContent, Legend, LegendData } from "./legend";
 import { GraphErrorBoundary } from "./graph-error-boundary";
 import {
   Divider,
+  IconButton,
   IconButtonArray,
   NeedleThemeProvider,
 } from "@neo4j-ndl/react";
+import { SwatchIconOutline } from "@neo4j-ndl/react/icons";
 
 export type Theme = "dark" | "light" | "auto";
 
@@ -36,9 +39,15 @@ export type WidgetData = {
   width: string;
   theme: Theme;
   selected: GraphSelection;
+  legend: LegendData;
 };
 
 const EMPTY_SELECTION: GraphSelection = { nodeIds: [], relationshipIds: [] };
+const EMPTY_LEGEND: LegendData = {
+  nodes: null,
+  relationships: null,
+  visible: true,
+};
 
 function detectTheme(): "light" | "dark" {
   if (document.body.classList.contains("vscode-light") || document.body.classList.contains("light-theme")) {
@@ -173,6 +182,7 @@ function GraphWidget() {
   const [theme] = useModelState<WidgetData["theme"]>("theme");
   const [selected, setSelected] =
     useModelState<WidgetData["selected"]>("selected");
+  const [legend] = useModelState<WidgetData["legend"]>("legend");
   const { layout, nvlOptions, zoom, pan, layoutOptions, showLayoutButton, selectionMode } =
     options ?? {};
   // `gesture` is locally controlled so the GestureSelectButton stays interactive, but it is
@@ -213,6 +223,18 @@ function GraphWidget() {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [sidePanelWidth, setSidePanelWidth] = useState(300);
 
+  // The legend is a floating overlay toggled by its own island button, independent of the side
+  // panel (which holds the results overview / selection details). Show it automatically whenever a
+  // legend becomes available so it is discoverable without a click. Runs only when the `legend`
+  // trait changes, so it won't fight a user who has closed it.
+  const [isLegendOpen, setIsLegendOpen] = useState(false);
+  useEffect(() => {
+    if (hasLegendContent(legend ?? EMPTY_LEGEND)) {
+      setIsLegendOpen(true);
+    }
+  }, [legend]);
+  const legendAvailable = hasLegendContent(legend ?? EMPTY_LEGEND);
+
   return (
     <NeedleThemeProvider
       theme={resolvedTheme}
@@ -220,7 +242,11 @@ function GraphWidget() {
     >
       <div
         ref={wrapperRef}
-        style={{ height: height ?? "600px", width: width ?? "100%" }}
+        style={{
+          position: "relative",
+          height: height ?? "600px",
+          width: width ?? "100%",
+        }}
       >
         <GraphVisualization
           nodes={neoNodes}
@@ -246,7 +272,22 @@ function GraphWidget() {
             <GraphVisualization.DownloadButton tooltipPlacement="right" />
           }
           topRightIsland={
-            <GraphVisualization.ToggleSidePanelButton tooltipPlacement="left" />
+            <IconButtonArray size="small" orientation="horizontal">
+              {legendAvailable && (
+                <IconButton
+                  size="small"
+                  isFloating
+                  isActive={isLegendOpen}
+                  description={isLegendOpen ? "Hide legend" : "Show legend"}
+                  onClick={() => setIsLegendOpen((open) => !open)}
+                  htmlAttributes={{ "aria-label": "Toggle legend" }}
+                  tooltipProps={{ root: { placement: "bottom", isPortaled: false } }}
+                >
+                  <SwatchIconOutline />
+                </IconButton>
+              )}
+              <GraphVisualization.ToggleSidePanelButton tooltipPlacement="bottom" />
+            </IconButtonArray>
           }
           bottomRightIsland={
             <IconButtonArray size="medium" orientation="horizontal">
@@ -270,6 +311,7 @@ function GraphWidget() {
             </IconButtonArray>
           }
         />
+        {isLegendOpen && <Legend legend={legend ?? EMPTY_LEGEND} />}
       </div>
     </NeedleThemeProvider>
   );

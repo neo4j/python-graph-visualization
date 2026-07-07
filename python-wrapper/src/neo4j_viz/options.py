@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import warnings
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import enum_tools.documentation
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from pydantic.alias_generators import to_camel
+
+from .colors import ColorSpace
 
 
 @enum_tools.documentation.document_enum
@@ -197,6 +199,64 @@ class GraphSelection(BaseModel):
     def to_json(self) -> dict[str, Any]:
         """Serialize to the dict the frontend consumes."""
         return self.model_dump(mode="json")
+
+
+# Mirrors the LegendEntry/LegendSection/LegendData types in js-applet/src/legend.tsx
+class LegendEntry(
+    BaseModel,
+    alias_generator=to_camel,
+    populate_by_name=True,
+    serialize_by_alias=True,
+):
+    """A single discrete legend color box: a label and the (long-form hex) color it maps to."""
+
+    label: str
+    color: str
+
+
+class LegendSection(
+    BaseModel,
+    alias_generator=to_camel,
+    populate_by_name=True,
+    serialize_by_alias=True,
+):
+    title: Optional[str] = None
+
+
+class DiscreteLegendSection(LegendSection):
+    """Legend for a discrete coloring: one color box per unique field/property value."""
+
+    color_space: Literal[ColorSpace.DISCRETE] = ColorSpace.DISCRETE
+    entries: list[LegendEntry] = Field(default_factory=list)
+
+
+class ContinuousLegendSection(LegendSection):
+    """Legend for a continuous coloring: a color gradient spanning the value range."""
+
+    color_space: Literal[ColorSpace.CONTINUOUS] = ColorSpace.CONTINUOUS
+    gradient: list[str] = Field(default_factory=list)
+    min_value: Optional[str] = None
+    max_value: Optional[str] = None
+
+
+class Legend(
+    BaseModel,
+    alias_generator=to_camel,
+    populate_by_name=True,
+    serialize_by_alias=True,
+):
+    """The node and relationship color legend shown as an overlay in the visualization."""
+
+    nodes: Optional[Union[DiscreteLegendSection, ContinuousLegendSection]] = Field(
+        default=None, discriminator="color_space"
+    )
+    relationships: Optional[Union[DiscreteLegendSection, ContinuousLegendSection]] = Field(
+        default=None, discriminator="color_space"
+    )
+    visible: bool = True
+
+    def to_json(self) -> dict[str, Any]:
+        return self.model_dump(mode="json", exclude_none=True)
 
 
 # Fields are snake_case in Python; pydantic serializes them to the camelCase keys the
