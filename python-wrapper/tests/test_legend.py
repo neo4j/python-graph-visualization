@@ -107,18 +107,19 @@ def test_color_relationships_populates_legend_independently() -> None:
     rel_section = VG.legend.relationships
     assert rel_section is not None
     assert rel_section.title == "caption"
-    assert [entry.label for entry in rel_section.entries] == ["ACTED_IN", "DIRECTED"]
+    assert [entry.label for entry in rel_section.entries] == ["ACTED_IN", "DIRECTED"]  # type:ignore
 
 
 def test_set_legend_overrides_captured_legend() -> None:
     VG = VisualizationGraph(nodes=[Node(id="0", properties={"label": "Movie"})], relationships=[])
     VG.color_nodes(property="label")
 
-    VG.set_legend(nodes={"Movies": "blue", "Directors": "red"})
+    legend: dict[Any, str] = {"Movies": "blue", "Directors": "red"}
+    VG.set_legend(nodes=legend)
 
     section = VG.legend.nodes
     assert section is not None
-    assert section.entries == [
+    assert section.entries == [  # type:ignore
         LegendEntry(label="Movies", color=_hex("blue")),
         LegendEntry(label="Directors", color=_hex("red")),
     ]
@@ -133,9 +134,9 @@ def test_set_legend_accepts_entry_pairs_and_section() -> None:
     )
 
     assert VG.legend.nodes is not None
-    assert [e.label for e in VG.legend.nodes.entries] == ["A", "B"]
+    assert [e.label for e in VG.legend.nodes.entries] == ["A", "B"]  # type:ignore
     assert VG.legend.relationships is not None
-    assert VG.legend.relationships.entries[0].label == "R"
+    assert VG.legend.relationships.entries[0].label == "R"  # type:ignore
 
 
 def test_recoloring_refreshes_legend_to_match() -> None:
@@ -144,12 +145,13 @@ def test_recoloring_refreshes_legend_to_match() -> None:
     nodes = [Node(id="0", properties={"label": "Movie"}), Node(id="1", properties={"label": "Director"})]
     VG = VisualizationGraph(nodes=nodes, relationships=[])
 
-    VG.set_legend(nodes={"Custom": "blue"})
+    legend: dict[Any, str] = {"Custom": "blue"}
+    VG.set_legend(nodes=legend)
     VG.color_nodes(property="label")
 
     section = VG.legend.nodes
     assert section is not None
-    assert [entry.label for entry in section.entries] == ["Movie", "Director"]
+    assert [entry.label for entry in section.entries] == ["Movie", "Director"]  # type:ignore
 
 
 def test_show_legend_toggles_visibility() -> None:
@@ -171,11 +173,11 @@ def test_non_string_labels_are_stringified() -> None:
 
     VG.color_nodes(property="score")
     assert VG.legend.nodes is not None
-    assert VG.legend.nodes.entries[0].label == "1"
+    assert VG.legend.nodes.entries[0].label == "1"  # type:ignore
 
     # list-valued properties are normalized to a hashable and rendered as a readable string.
     VG.color_nodes(property="tags")
-    labels = [entry.label for entry in VG.legend.nodes.entries]
+    labels = [entry.label for entry in VG.legend.nodes.entries]  # type:ignore
     assert "a, b" in labels
 
 
