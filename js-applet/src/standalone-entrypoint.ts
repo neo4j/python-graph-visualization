@@ -1,5 +1,5 @@
-import type { AnyModel } from "@anywidget/types";
 import widget, { type WidgetData } from "./graph-widget";
+import { createLocalModel } from "./local-model";
 
 /**
  * Standalone entrypoint for static HTML rendering (non-Jupyter).
@@ -25,22 +25,10 @@ if (!data) {
   throw new Error("window.__NEO4J_VIZ_DATA__ is not defined");
 }
 
-/**
- * Read-only model shim for static HTML rendering.
- * Mutations (set/save_changes) are no-ops since there's no kernel to sync with.
- */
-const model: Pick<
-  AnyModel<WidgetData>,
-  "get" | "on" | "off" | "set" | "save_changes"
-> = {
-  get<K extends keyof WidgetData>(key: K): WidgetData[K] {
-    return data[key] as WidgetData[K];
-  },
-  on() {},
-  off() {},
-  set() {},
-  save_changes() {},
-};
+// Kernel-less model for the static HTML page: `set` updates local state and
+// notifies listeners so controlled props (e.g. `selected`) stay interactive;
+// nothing is synced back to Python. See createLocalModel for details.
+const model = createLocalModel<WidgetData>(data);
 
 const el = document.getElementById("neo4j-viz-container");
 if (!el) {
