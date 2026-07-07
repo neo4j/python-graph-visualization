@@ -8,6 +8,8 @@
 
 ## Bug fixes
 
+* Fixed a bug where nodes and relationships could not be selected on using `VG.render()`.
+
 ## Improvements
 
 ## Other changes
