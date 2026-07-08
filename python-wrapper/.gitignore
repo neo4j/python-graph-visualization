@@ -3,10 +3,6 @@ __pycache__
 build
 dist
 
-# Should we ignore the following?
-src/neo4j_viz/resources/nvl_entrypoint/*
-!src/neo4j_viz/resources/nvl_entrypoint/widget.js
-!src/neo4j_viz/resources/nvl_entrypoint/style.css
-!src/neo4j_viz/resources/nvl_entrypoint/index.html
-!src/neo4j_viz/resources/nvl_entrypoint/__init__.py
+src/neo4j_viz/resources/*/assets
+srce/neo4j_viz/resources/*Layout.worker*
 out/*

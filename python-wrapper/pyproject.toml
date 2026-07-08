@@ -46,6 +46,9 @@ pandas = ["pandas>=2, <3", "pandas-stubs>=2, <3"]
 gds = ["graphdatascience>=1.22, <3"]
 neo4j = ["neo4j"]
 snowflake = ["snowflake-snowpark-python>=1, <2"]
+# The Streamlit integration (neo4j_viz.streamlit) uses the Components v2 API,
+# available from streamlit 1.58.
+streamlit = ["streamlit>=1.58, <2"]
 
 
 [dependency-groups]
@@ -107,6 +110,8 @@ neo4j_viz = [
     "resources/nvl_entrypoint/widget.js",
     "resources/nvl_entrypoint/style.css",
     "resources/nvl_entrypoint/index.html",
+    "resources/streamlit_v2/graph.js",
+    "resources/streamlit_v2/style.css",
     "py.typed"
 ]
 

@@ -52,6 +52,68 @@ But you can disable this by passing `show_hover_tooltip=False`.
 Refer to the xref:getting-started.adoc[] and the link:{tutorials-docs-uri}[tutorials] for
 examples of `render` method usage.
 
+== Using with Streamlit
+
+There are two ways to display a graph in a https://streamlit.io/[Streamlit] app.
+
+=== Static rendering
+
+The HTML object returned by `render` can be embedded directly. Pass its `data`
+attribute to `st.iframe`:
+
+[source, python]
+----
+import streamlit as st
+from neo4j_viz import VisualizationGraph
+
+st.iframe(VG.render(height="600px").data, height=600)
+----
+
+This is the simplest option and fully supports the in-canvas interactions
+(pan, zoom, selection, layout switching), but nothing is communicated back to
+Python.
+
+=== Interactive widget with two-way sync
+
+To read interactions such as the current selection back in Python, use
+`neo4j_viz.streamlit.render_widget`. It renders the same interactive widget as
+`render_widget` does in a notebook and syncs the `selected` and `options` state
+back into the returned `GraphWidget` on each rerun.
+
+This requires the `streamlit` optional dependency (Streamlit 1.58 or newer):
+
+[source, bash]
+----
+pip install neo4j-viz[streamlit]
+----
+
+[source, python]
+----
+import streamlit as st
+from neo4j_viz.streamlit import render_widget
+
+widget = render_widget(VG.render_widget(), key="my-graph")
+
+selection = widget.selected
+st.write("Selected node IDs:", selection.nodeIds)
+----
+
+`render_widget` takes a `GraphWidget` (as returned by
+`VisualizationGraph.render_widget()`), so you can configure the widget with all
+the usual options (`layout`, `initial_zoom`, `height`, ...) when building it.
+When displaying more than one graph in an app, give each a unique `key`.
+
+[NOTE]
+====
+Streamlit does not support the Jupyter/anywidget comm protocol, so a
+`GraphWidget` cannot be embedded directly (nor via the unmaintained
+`streamlit-anywidget` bridge, which ignores the widget's custom traitlets
+serializers). `render_widget` bridges the widget as a Streamlit
+`Components v2` component instead. The graph follows the Streamlit light/dark
+theme automatically; pass `theme="light"` or `theme="dark"` to
+`VisualizationGraph.render_widget()` to pin it.
+====
+
 == Exporting to HTML
 
 The object returned by the `render` method is a `IPython.display.HTML` object.

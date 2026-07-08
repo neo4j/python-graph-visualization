@@ -7,9 +7,10 @@
     "dev:widget": "vite build --watch",
     "dev:html": "vite build --watch --config vite.config.html.ts",
     "dev:jupyter": "cd ../python-wrapper && ANYWIDGET_HMR=1 uv run jupyter lab ../examples/",
-    "build": "tsc && vite build && vite build --config vite.config.html.ts",
+    "build": "tsc && vite build && vite build --config vite.config.html.ts && npm run build:streamlit",
     "build:widget": "vite build",
     "build:html": "vite build --config vite.config.html.ts",
+    "build:streamlit": "vite build --config vite.config.streamlit.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
