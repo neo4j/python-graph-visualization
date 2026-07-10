@@ -4,7 +4,7 @@ import random
 import streamlit as st
 
 from neo4j_viz import Node, Relationship, VisualizationGraph
-from neo4j_viz.streamlit import render_widget
+from neo4j_viz.streamlit import display_widget
 
 # Path to this file
 script_path = pathlib.Path(__file__).resolve()
@@ -80,9 +80,9 @@ if st.session_state.added_nodes:
         st.session_state.added_nodes, st.session_state.added_relationships
     )
 
-widget = render_widget(graph_widget, key="small-graph-widget")
+display_widget(graph_widget, key="small-graph-widget")
 
-selection = widget.selected
+selection = graph_widget.selected
 st.write(
     f"Selected {len(selection.nodeIds)} node(s) and {len(selection.relationshipIds)} relationship(s)."
 )
