@@ -2566,6 +2566,9 @@ pandas = [
 snowflake = [
     { name = "snowflake-snowpark-python" },
 ]
+streamlit = [
+    { name = "streamlit" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -2614,9 +2617,10 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "pydantic-extra-types", specifier = ">=2,<3" },
     { name = "snowflake-snowpark-python", marker = "extra == 'snowflake'", specifier = ">=1,<2" },
+    { name = "streamlit", marker = "extra == 'streamlit'", specifier = ">=1.58,<2" },
     { name = "traitlets", specifier = ">=5,<6" },
 ]
-provides-extras = ["pandas", "gds", "neo4j", "snowflake"]
+provides-extras = ["pandas", "gds", "neo4j", "snowflake", "streamlit"]
 
 [package.metadata.requires-dev]
 dev = [

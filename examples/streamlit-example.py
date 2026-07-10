@@ -1,69 +1,93 @@
-import streamlit as st
-from IPython.display import HTML
-import streamlit.components.v1 as components
-from pandas import read_parquet
 import pathlib
+import random
 
-from neo4j_viz.pandas import from_dfs
-from neo4j_viz import VisualizationGraph
+import streamlit as st
+
+from neo4j_viz import Node, Relationship, VisualizationGraph
+from neo4j_viz.streamlit import display_widget
 
 # Path to this file
 script_path = pathlib.Path(__file__).resolve()
-script_dir_path = pathlib.Path(__file__).parent.resolve()
 
-
-@st.cache_data
-def create_visualization_graph() -> VisualizationGraph:
-    cora_nodes_path = f"{script_dir_path}/datasets/cora/cora_nodes.parquet.gzip"
-    cora_rels_path = f"{script_dir_path}/datasets/cora/cora_rels.parquet.gzip"
-
-    nodes_df = read_parquet(cora_nodes_path)
-    nodes_df = nodes_df.rename(columns={"nodeId": "id"})
-
-    rels_df = read_parquet(cora_rels_path)
-    rels_df = rels_df.rename(
-        columns={"sourceNodeId": "source", "targetNodeId": "target"}
-    )
-
-    # Drop the features column since it's not needed for visualization
-    # Also numpy arrays are not supported by the visualization library
-    nodes_df.drop(columns="features", inplace=True)
-
-    VG = from_dfs(nodes_df, rels_df)
-    VG.color_nodes(property="subject")
-
-    return VG
-
-
-@st.cache_data
-def render_graph(
-    _VG: VisualizationGraph, height: int, initial_zoom: float = 0.1
-) -> HTML:
-    return VG.render(initial_zoom=initial_zoom, height=f"{height}px")
-
-
-VG = create_visualization_graph()
 
 st.title("Neo4j Viz Streamlit Example")
 st.text(
-    "This is an example of how to use Streamlit with the Graph "
-    "Visualization for Python library by Neo4j."
+    "This is an example of how to use Streamlit with the Graph Visualization for Python library by Neo4j."
 )
+
+
+def create_small_graph() -> VisualizationGraph:
+    people = [
+        ("Alice", "Engineer"),
+        ("Bob", "Designer"),
+        ("Carol", "Engineer"),
+        ("Dan", "Manager"),
+    ]
+    nodes = [
+        Node(id=str(i), caption=name, properties={"role": role})
+        for i, (name, role) in enumerate(people)
+    ]
+    relationships = [
+        Relationship(source="0", target="1", caption="KNOWS"),
+        Relationship(source="1", target="2", caption="KNOWS"),
+        Relationship(source="2", target="3", caption="KNOWS"),
+    ]
+    vg = VisualizationGraph(nodes=nodes, relationships=relationships)
+    # Coloring by a property populates the legend overlay shown in the widget.
+    vg.color_nodes(property="role")
+    return vg
+
+
+small_graph = create_small_graph()
+
+# Nodes/relationships added at runtime, kept in session state so they survive reruns.
+if "added_nodes" not in st.session_state:
+    st.session_state.added_nodes = []
+    st.session_state.added_relationships = []
 
 with st.sidebar:
     height = st.slider("Height in pixels", 100, 2000, 600, 50)
+    if st.button("Add random node"):
+        existing_ids = [n.id for n in small_graph.nodes] + [
+            n.id for n in st.session_state.added_nodes
+        ]
+        new_node = Node(
+            id=f"added-{len(st.session_state.added_nodes)}", caption="New", size=20
+        )
+        st.session_state.added_nodes.append(new_node)
+        # Link the new node to a random existing one.
+        st.session_state.added_relationships.append(
+            Relationship(
+                source=new_node.id,
+                target=random.choice(existing_ids),
+                caption="LINKS_TO",
+            )
+        )
     show_code = st.checkbox("Show code")
 
-st.header("Visualization")
+st.header("Interactive widget")
 st.text(
-    "A visualization of the famous Cora citation network. Each of its "
-    "seven scientific subjects is represented by a different color."
+    "A small graph rendered as an interactive widget, colored by role (see the "
+    "legend overlay). Selecting nodes or relationships in the graph syncs the "
+    "selection back to Python, and Python can push data changes back to the graph "
+    "— use the sidebar button to watch a new node appear and link into the graph."
 )
 
-components.html(
-    render_graph(VG, height=height).data,
-    height=height,
+# Build the widget from the small graph plus any runtime additions.
+graph_widget = small_graph.render_widget(height=f"{height}px")
+if st.session_state.added_nodes:
+    graph_widget.add_data(
+        st.session_state.added_nodes, st.session_state.added_relationships
+    )
+
+display_widget(graph_widget, key="small-graph-widget")
+
+selection = graph_widget.selected
+st.write(
+    f"Selected {len(selection.nodeIds)} node(s) and {len(selection.relationshipIds)} relationship(s)."
 )
+if selection.nodeIds:
+    st.write("Selected node IDs:", selection.nodeIds)
 
 if show_code:
     st.header("Code")

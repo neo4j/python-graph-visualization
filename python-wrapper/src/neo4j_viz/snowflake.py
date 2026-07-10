@@ -10,7 +10,14 @@ from pydantic import (
     BeforeValidator,
 )
 from pydantic_core.core_schema import ValidationInfo
-from snowflake.snowpark import Session
+
+try:
+    from snowflake.snowpark import Session
+except ImportError as exc:
+    raise ImportError(
+        "neo4j_viz.snowflake requires the optional 'snowflake' dependency. "
+        "Install it with: pip install 'neo4j-viz[snowflake]'"
+    ) from exc
 from snowflake.snowpark.exceptions import SnowparkSQLException
 from snowflake.snowpark.types import (
     ArrayType,
