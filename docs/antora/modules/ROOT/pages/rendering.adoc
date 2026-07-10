@@ -104,17 +104,6 @@ st.write("Selected node IDs:", selection.nodeIds)
 the usual options (`layout`, `initial_zoom`, `height`, ...) when building it.
 When displaying more than one graph in an app, give each a unique `key`.
 
-[NOTE]
-====
-Streamlit does not support the Jupyter/anywidget comm protocol, so a
-`GraphWidget` cannot be embedded directly (nor via the unmaintained
-`streamlit-anywidget` bridge, which ignores the widget's custom traitlets
-serializers). `display_widget` bridges the widget as a Streamlit
-`Components v2` component instead. The graph follows the Streamlit light/dark
-theme automatically; pass `theme="light"` or `theme="dark"` to
-`VisualizationGraph.render_widget()` to pin it.
-====
-
 == Exporting to HTML
 
 The object returned by the `render` method is a `IPython.display.HTML` object.
