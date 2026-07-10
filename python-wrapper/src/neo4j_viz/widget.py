@@ -3,12 +3,13 @@ from __future__ import annotations
 import json
 import pathlib
 from functools import cached_property
-from typing import Any, Callable, Union
+from typing import Any, Callable, TypeVar, Union, cast
 
 import anywidget
+import pydantic
 import traitlets
 
-from ._graph_entity_operations import GraphEntityOperations
+from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
 from ._validation import OnDangling, check_dangling_relationships
 from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
@@ -17,6 +18,7 @@ from .options import (
     GraphSelection,
     Layout,
     LayoutOptions,
+    Legend,
     NvlOptions,
     PanPosition,
     Renderer,
@@ -58,6 +60,21 @@ def entity_to_json(entity_list: list[Node | Relationship], widget: anywidget.Any
     return [_serialize_entity(entity) for entity in entity_list]
 
 
+_ModelT = TypeVar("_ModelT", bound=pydantic.BaseModel)
+
+
+class PydanticTrait(traitlets.Instance[_ModelT]):
+    """A typed traitlets trait holding a pydantic model."""
+
+    klass: type[_ModelT]
+
+    def validate(self, obj: traitlets.HasTraits, value: Any) -> _ModelT:
+        if not isinstance(value, self.klass):
+            value = self.klass.model_validate(value)
+        # super().validate is typed Optional to support allow_none; we never allow None.
+        return cast("_ModelT", super().validate(obj, value))
+
+
 # Dev mode: set ANYWIDGET_HMR=1 and run ``yarn dev`` in js-applet/
 # for hot module replacement during development.
 
@@ -79,7 +96,7 @@ class GraphWidget(anywidget.AnyWidget):
     relationships: traitlets.List[Relationship] = traitlets.List([]).tag(sync=True, to_json=entity_to_json)
     width: traitlets.Unicode[str, str | bytes] = traitlets.Unicode("100%").tag(sync=True)
     height: traitlets.Unicode[str, str | bytes] = traitlets.Unicode("600px").tag(sync=True)
-    options: traitlets.Any = traitlets.Any().tag(
+    options: PydanticTrait[WidgetOptions] = PydanticTrait(WidgetOptions, args=()).tag(
         sync=True,
         to_json=lambda value, widget: value.to_json(),
         from_json=lambda value, widget: WidgetOptions.model_validate(value),
@@ -87,7 +104,9 @@ class GraphWidget(anywidget.AnyWidget):
     theme: traitlets.Unicode[str, str | bytes] = traitlets.Unicode(
         default_value="auto", help="Theme of the graph widget. Can be 'auto', 'light', or 'dark'."
     ).tag(sync=True)
-    selected: traitlets.Any = traitlets.Any(
+    selected: PydanticTrait[GraphSelection] = PydanticTrait(
+        GraphSelection,
+        args=(),
         help="The nodes and relationships currently selected in the widget UI, as a "
         "`GraphSelection` with `nodeIds` and `relationshipIds`. Synced two-way with the frontend.",
     ).tag(
@@ -95,24 +114,16 @@ class GraphWidget(anywidget.AnyWidget):
         to_json=lambda value, widget: value.to_json(),
         from_json=lambda value, widget: GraphSelection.model_validate(value),
     )
-
-    @traitlets.default("options")
-    def _default_options(self) -> WidgetOptions:
-        return WidgetOptions()
-
-    @traitlets.validate("options")
-    def _coerce_options(self, proposal: dict[str, Any]) -> WidgetOptions:
-        value = proposal["value"]
-        return value if isinstance(value, WidgetOptions) else WidgetOptions.model_validate(value)
-
-    @traitlets.default("selected")
-    def _default_selected(self) -> GraphSelection:
-        return GraphSelection()
-
-    @traitlets.validate("selected")
-    def _coerce_selected(self, proposal: dict[str, Any]) -> GraphSelection:
-        value = proposal["value"]
-        return value if isinstance(value, GraphSelection) else GraphSelection.model_validate(value)
+    legend: PydanticTrait[Legend] = PydanticTrait(
+        Legend,
+        args=(),
+        help="The node and relationship color legend, a `Legend`. Populated automatically by "
+        "`color_nodes`/`color_relationships` and overridable via `set_legend`. Synced to the frontend.",
+    ).tag(
+        sync=True,
+        to_json=lambda value, widget: value.to_json(),
+        from_json=lambda value, widget: Legend.model_validate(value),
+    )
 
     def on_selection_change(self, callback: Callable[[GraphSelection], None]) -> Callable[[dict[str, Any]], None]:
         """
@@ -161,6 +172,7 @@ class GraphWidget(anywidget.AnyWidget):
         height: str = "600px",
         options: RenderOptions | None = None,
         theme: str = "auto",
+        legend: Legend | None = None,
     ) -> GraphWidget:
         """Create a GraphWidget from Node and Relationship lists."""
         return cls(
@@ -170,6 +182,7 @@ class GraphWidget(anywidget.AnyWidget):
             height=height,
             options=options.to_widget_options() if options else WidgetOptions(),
             theme=theme,
+            legend=legend if legend is not None else Legend(),
         )
 
     def __str__(self) -> str:
@@ -360,7 +373,11 @@ class GraphWidget(anywidget.AnyWidget):
         >>> widget.color_nodes(field="label", colors=Moonrise1_5.colors)
         """
         self._entity_ops.color_nodes(
-            field=field, property=property, colors=colors, color_space=color_space, override=override
+            field=field,
+            property=property,
+            colors=colors,
+            color_space=color_space,
+            override=override,
         )
 
     def color_relationships(
@@ -422,8 +439,51 @@ class GraphWidget(anywidget.AnyWidget):
         >>> widget.color_relationships(property="score", color_space=ColorSpace.CONTINUOUS)
         """
         self._entity_ops.color_relationships(
-            field=field, property=property, colors=colors, color_space=color_space, override=override
+            field=field,
+            property=property,
+            colors=colors,
+            color_space=color_space,
+            override=override,
         )
+
+    def set_legend(
+        self,
+        *,
+        nodes: LegendSectionInput | None = None,
+        relationships: LegendSectionInput | None = None,
+        visible: bool = True,
+    ) -> None:
+        """
+        Set the color legend explicitly, overriding any legend captured from `color_nodes`/`color_relationships`.
+
+        Parameters
+        ----------
+        nodes:
+            The node legend. Either a `LegendSection`, a `{label: color}` mapping, or an iterable of
+            `LegendEntry` / `(label, color)` pairs. Left unchanged if None.
+        relationships:
+            The relationship legend, in the same accepted forms as `nodes`. Left unchanged if None.
+        visible:
+            Whether the legend overlay is shown.
+
+        Examples
+        --------
+        Given a GraphWidget `widget`:
+
+        >>> widget.set_legend(nodes={"Movies": "blue", "Directors": "red"})
+        """
+        self._entity_ops.set_legend(nodes=nodes, relationships=relationships, visible=visible)
+
+    def show_legend(self, visible: bool = True) -> None:
+        """
+        Show or hide the color legend overlay.
+
+        Parameters
+        ----------
+        visible:
+            Whether the legend overlay is shown.
+        """
+        self._entity_ops.show_legend(visible)
 
     def _render_options(self) -> WidgetOptions:
         """Return a mutable copy of the current JS-shaped render options.

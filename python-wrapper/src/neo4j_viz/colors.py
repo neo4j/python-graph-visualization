@@ -9,7 +9,7 @@ ColorsType = Union[dict[Any, ColorType], Iterable[ColorType]]
 
 
 @enum_tools.documentation.document_enum
-class ColorSpace(Enum):
+class ColorSpace(str, Enum):
     """
     Describes the type of color space used by a color palette.
     """

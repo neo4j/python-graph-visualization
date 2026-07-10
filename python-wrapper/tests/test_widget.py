@@ -165,7 +165,7 @@ class TestWidgetDataBinding:
 
         widget.nodes = [Node(id="n1")]
         widget.relationships = [Relationship(source="n1", target="n1")]
-        widget.options = {"zoom": 1.5}
+        widget.options = WidgetOptions(zoom=1.5)
 
         assert change_log == ["nodes", "relationships", "options"]
 
@@ -245,8 +245,9 @@ class TestWidgetUtilityMethods:
         assert widget.nodes[0].color is not None
         assert widget.nodes[1].color is not None
         assert widget.nodes[0].color != widget.nodes[1].color
-        # Mutating in place must still push the updated nodes to the frontend.
-        assert synced == ["nodes"]
+        # Mutating in place must still push the updated nodes to the frontend, and coloring also
+        # updates (and syncs) the captured legend.
+        assert synced == ["legend", "nodes"]
 
     def test_color_relationships(self) -> None:
         widget = GraphWidget(
@@ -262,7 +263,8 @@ class TestWidgetUtilityMethods:
 
         assert widget.relationships[0].color is not None
         assert widget.relationships[0].color != widget.relationships[1].color
-        assert synced == ["relationships"]
+        # Coloring also updates (and syncs) the captured legend.
+        assert synced == ["legend", "relationships"]
 
     def test_resize_nodes(self) -> None:
         widget = GraphWidget(
@@ -334,9 +336,7 @@ class TestWidgetSelection:
         """The frontend syncs a plain dict, which is coerced to a typed GraphSelection."""
         widget = GraphWidget(nodes=[Node(id="n1"), Node(id="n2")])
 
-        widget.selected = {"nodeIds": ["n2"], "relationshipIds": []}
-
-        assert isinstance(widget.selected, GraphSelection)
+        widget.selected = GraphSelection(nodeIds=["n2"], relationshipIds=[])
         assert widget.selected.nodeIds == ["n2"]
 
     def test_selection_serializes_for_frontend(self) -> None:
@@ -372,10 +372,9 @@ class TestWidgetSelection:
         received: list[GraphSelection] = []
         widget.on_selection_change(received.append)
 
-        widget.selected = {"nodeIds": ["n2"], "relationshipIds": []}
+        widget.selected = GraphSelection(nodeIds=["n2"], relationshipIds=[])
 
         assert len(received) == 1
-        assert isinstance(received[0], GraphSelection)
         assert received[0].nodeIds == ["n2"]
 
     def test_on_selection_change_returns_handler_for_unobserve(self) -> None:
@@ -460,6 +459,7 @@ class TestRenderWidget:
 
         assert widget.options.layout == "hierarchical"
         assert widget.options.zoom == 2.0
+        assert widget.options.nvl_options is not None
         assert widget.options.nvl_options.min_zoom == 0.1
         assert widget.options.nvl_options.max_zoom == 5.0
 
@@ -505,7 +505,7 @@ class TestRenderOptionSetters:
         widget = GraphWidget()
 
         widget.set_pan(100, 50)
-
+        assert widget.options.pan is not None
         assert widget.options.pan.x == 100
         assert widget.options.pan.y == 50
 
@@ -514,6 +514,7 @@ class TestRenderOptionSetters:
 
         widget.set_renderer(Renderer.CANVAS)
 
+        assert widget.options.nvl_options is not None
         assert widget.options.nvl_options.disable_web_gl is True
 
     def test_set_renderer_webgl(self) -> None:
@@ -522,6 +523,7 @@ class TestRenderOptionSetters:
         with pytest.warns(UserWarning):
             widget.set_renderer(Renderer.WEB_GL)
 
+        assert widget.options.nvl_options is not None
         assert widget.options.nvl_options.disable_web_gl is False
 
     def test_set_renderer_preserves_other_nvl_options(self) -> None:
@@ -529,6 +531,7 @@ class TestRenderOptionSetters:
 
         widget.set_renderer(Renderer.CANVAS)
 
+        assert widget.options.nvl_options is not None
         assert widget.options.nvl_options.min_zoom == 0.1
         assert widget.options.nvl_options.disable_web_gl is True
 

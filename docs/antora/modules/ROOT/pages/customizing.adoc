@@ -143,6 +143,29 @@ Since we only provided five colors in the range, the granularity of the gradient
 
 `palettable` and `matplotlib` are great libraries to use to create custom color gradients.
 
+=== The color legend
+
+Whenever you call `color_nodes` or `color_relationships`, a color legend is captured automatically and shown as an overlay in the bottom-left corner of the visualization, so it always reflects the colors currently drawn.
+For a discrete coloring it lists one color box per value; for a continuous coloring it shows the color gradient together with the minimum and maximum values.
+The legend works in both `render()` and `render_widget()`.
+
+You can set the legend explicitly, overriding whatever was captured, using `set_legend`.
+It accepts a `{label: color}` mapping, an iterable of `(label, color)` pairs, or a `LegendSection`:
+
+[source, python]
+----
+# VG is a VisualizationGraph object
+VG.set_legend(nodes={"Movies": "blue", "Directors": "red"})
+----
+
+To hide or show the legend overlay, use `show_legend`:
+
+[source, python]
+----
+VG.show_legend(False)  # hide
+VG.show_legend(True)   # show
+----
+
 == Sizing nodes and relationships
 
 Nodes can be given a size directly by providing them with a size field, upon creation.

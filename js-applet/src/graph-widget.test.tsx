@@ -23,6 +23,7 @@ vi.mock("@neo4j-ndl/react", async () => {
 });
 
 import widget from "./graph-widget";
+import { createLocalModel } from "./local-model";
 
 type WidgetState = {
   nodes: Array<{ id: string; caption?: string; properties: Record<string, unknown> }>;
@@ -35,34 +36,17 @@ type WidgetState = {
   width: string;
   theme: "light" | "dark" | "auto";
   selected: { nodeIds: string[]; relationshipIds: string[] };
+  legend: {
+    nodes?: { colorSpace?: string; title?: string; entries?: Array<{ label: string; color: string }> } | null;
+    relationships?: { colorSpace?: string; title?: string; entries?: Array<{ label: string; color: string }> } | null;
+    visible?: boolean;
+  };
 };
 
-class FakeModel {
-  private readonly listeners = new Map<string, Set<() => void>>();
-
-  constructor(private readonly state: WidgetState) {}
-
-  get<K extends keyof WidgetState>(key: K): WidgetState[K] {
-    return this.state[key];
-  }
-
-  set<K extends keyof WidgetState>(key: K, value: WidgetState[K]): void {
-    this.state[key] = value;
-    this.listeners.get(`change:${String(key)}`)?.forEach((listener) => listener());
-  }
-
-  on(event: string, listener: () => void): void {
-    const listeners = this.listeners.get(event) ?? new Set<() => void>();
-    listeners.add(listener);
-    this.listeners.set(event, listeners);
-  }
-
-  off(event: string, listener: () => void): void {
-    this.listeners.get(event)?.delete(listener);
-  }
-
-  save_changes(): void {}
-}
+// The static HTML render path uses the real `createLocalModel` shim, so tests
+// exercise it directly rather than a hand-rolled fake — this keeps the shim's
+// contract (notably `set` emitting change events, see GDS-286) under test.
+type FakeModel = ReturnType<typeof createLocalModel<WidgetState>>;
 
 type RenderedWidget = {
   el: HTMLDivElement;
@@ -81,7 +65,7 @@ async function renderWidget(
     { id: "r1", from: "n1", to: "n1", properties: {} },
   ];
 
-  const model = new FakeModel({
+  const model = createLocalModel<WidgetState>({
     nodes: overrides.nodes ?? defaultNodes,
     relationships: overrides.relationships ?? defaultRelationships,
     options: {
@@ -93,6 +77,7 @@ async function renderWidget(
     width: overrides.width ?? "600px",
     theme: overrides.theme ?? "light",
     selected: overrides.selected ?? { nodeIds: [], relationshipIds: [] },
+    legend: overrides.legend ?? { nodes: null, relationships: null, visible: true },
   });
 
   let teardown: RenderedWidget["teardown"] = undefined;
@@ -116,7 +101,7 @@ async function renderWidgetInShadowRoot(
   const el = document.createElement("div");
   shadowRoot.appendChild(el);
 
-  const model = new FakeModel({
+  const model = createLocalModel<WidgetState>({
     nodes: [{ id: "n1", caption: "Node 1", properties: {} }],
     relationships: [{ id: "r1", from: "n1", to: "n1", properties: {} }],
     options: {
@@ -128,6 +113,7 @@ async function renderWidgetInShadowRoot(
     width: "600px",
     theme: "light",
     selected: { nodeIds: [], relationshipIds: [] },
+    legend: { nodes: null, relationships: null, visible: true },
   });
 
   let teardown: RenderedWidget["teardown"] = undefined;
@@ -201,6 +187,111 @@ describe("graph-widget button testing", () => {
       expect(model.get("selected")).toEqual({
         nodeIds: ["n1"],
         relationshipIds: [],
+      });
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("renders a non-empty legend sourced from the model", async () => {
+    const { el, teardown } = await renderWidget({
+      legend: {
+        nodes: {
+          colorSpace: "discrete",
+          title: "label",
+          entries: [{ label: "Movies", color: "#569480" }],
+        },
+        relationships: null,
+        visible: true,
+      },
+    });
+
+    try {
+      await waitFor(() => {
+        expect(within(el).getByText("Movies")).toBeTruthy();
+      });
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("toggles the legend overlay via its island button", async () => {
+    const { el, teardown } = await renderWidget({
+      legend: {
+        nodes: {
+          colorSpace: "discrete",
+          entries: [{ label: "Movies", color: "#569480" }],
+        },
+        relationships: null,
+        visible: true,
+      },
+    });
+
+    try {
+      // Auto-shown when a legend is available.
+      await waitFor(() => {
+        expect(within(el).getByText("Movies")).toBeTruthy();
+      });
+
+      const toggle = within(el).getByRole("button", { name: "Toggle legend" });
+      await act(async () => {
+        fireEvent.click(toggle);
+      });
+      expect(within(el).queryByText("Movies")).toBeNull();
+
+      await act(async () => {
+        fireEvent.click(toggle);
+      });
+      expect(within(el).getByText("Movies")).toBeTruthy();
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("renders no legend panel when the legend is empty", async () => {
+    const { el, teardown } = await renderWidget();
+
+    try {
+      await waitFor(() => {
+        expect(within(el).getByRole("button", { name: /download/i })).toBeTruthy();
+      });
+
+      expect(el.querySelector(".nvl-legend")).toBeNull();
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("re-renders the legend when the model's legend trait changes", async () => {
+    const { el, model, teardown } = await renderWidget();
+
+    try {
+      await waitFor(() => {
+        expect(within(el).getByRole("button", { name: /download/i })).toBeTruthy();
+      });
+      expect(el.querySelector(".nvl-legend")).toBeNull();
+
+      await act(async () => {
+        model.set("legend", {
+          nodes: {
+            colorSpace: "discrete",
+            entries: [{ label: "Directors", color: "#c990c0" }],
+          },
+          relationships: null,
+          visible: true,
+        });
+      });
+
+      await waitFor(() => {
+        expect(within(el).getByText("Directors")).toBeTruthy();
       });
     } finally {
       if (typeof teardown === "function") {

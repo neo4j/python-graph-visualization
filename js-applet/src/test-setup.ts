@@ -1,7 +1,19 @@
+import ndlCssText from "@neo4j-ndl/base/lib/neo4j-ds-styles.css?inline";
 import { cleanup } from "@testing-library/react";
-import { afterEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+
+// Make the NDL stylesheet available to every component test, so they render in the same styled context as
+// production.
+beforeEach(() => {
+  if (!document.head.querySelector("[data-ndl-test-styles]")) {
+    const style = document.createElement("style");
+    style.setAttribute("data-ndl-test-styles", "true");
+    style.textContent = ndlCssText;
+    document.head.appendChild(style);
+  }
+});
 
 class ResizeObserver {
   observe() {}
