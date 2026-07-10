@@ -8,8 +8,7 @@ try:
     from neo4j import Driver, EagerResult, Result, RoutingControl
 except ImportError as exc:
     raise ImportError(
-        "neo4j_viz.neo4j requires the optional 'neo4j' dependency. "
-        "Install it with: pip install 'neo4j-viz[neo4j]'"
+        "neo4j_viz.neo4j requires the optional 'neo4j' dependency. Install it with: pip install 'neo4j-viz[neo4j]'"
     ) from exc
 from pydantic import BaseModel, ValidationError
 

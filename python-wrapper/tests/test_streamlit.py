@@ -5,6 +5,7 @@ import pytest
 
 from neo4j_viz import GraphSelection, Node, Relationship, VisualizationGraph, WidgetOptions
 from neo4j_viz import streamlit as st_module
+from neo4j_viz.options import WidgetLayout
 from neo4j_viz.streamlit import _RECEIVE_KEYS, _SEND_KEYS, render_widget
 from neo4j_viz.widget import GraphWidget
 
@@ -137,7 +138,7 @@ def test_persisted_ui_state_is_carried_into_data(monkeypatch: pytest.MonkeyPatch
     (call,) = component.calls
     assert call["data"]["options"]["layout"] == "hierarchical"
     # ...and the Python widget reflects it too.
-    assert widget.options.layout.value == "hierarchical"
+    assert widget.options.layout == WidgetLayout.HIERARCHICAL
 
 
 def test_no_persistence_without_key(monkeypatch: pytest.MonkeyPatch, widget: GraphWidget) -> None:
