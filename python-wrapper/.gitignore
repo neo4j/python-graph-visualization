@@ -4,5 +4,4 @@ build
 dist
 
 src/neo4j_viz/resources/*/assets
-srce/neo4j_viz/resources/*Layout.worker*
 out/*

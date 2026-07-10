@@ -3,8 +3,14 @@ from __future__ import annotations
 import warnings
 from typing import Optional, Union
 
-import neo4j.graph
-from neo4j import Driver, EagerResult, Result, RoutingControl
+try:
+    import neo4j.graph
+    from neo4j import Driver, EagerResult, Result, RoutingControl
+except ImportError as exc:
+    raise ImportError(
+        "neo4j_viz.neo4j requires the optional 'neo4j' dependency. "
+        "Install it with: pip install 'neo4j-viz[neo4j]'"
+    ) from exc
 from pydantic import BaseModel, ValidationError
 
 from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace

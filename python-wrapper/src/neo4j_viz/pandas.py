@@ -3,7 +3,13 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Optional, Union
 
-from pandas import DataFrame
+try:
+    from pandas import DataFrame
+except ImportError as exc:
+    raise ImportError(
+        "neo4j_viz.pandas requires the optional 'pandas' dependency. "
+        "Install it with: pip install 'neo4j-viz[pandas]'"
+    ) from exc
 from pydantic import BaseModel, ValidationError
 
 from .node import Node

@@ -28,9 +28,16 @@ from functools import lru_cache
 from importlib.resources import files
 from typing import Any, Literal
 
-import streamlit as st
-from streamlit.components.v2 import component
-from streamlit.components.v2.types import ComponentRenderer
+try:
+    import streamlit as st
+    from streamlit.components.v2 import component
+    from streamlit.components.v2.types import ComponentRenderer
+except ImportError as exc:
+    raise ImportError(
+        "neo4j_viz.streamlit requires the optional 'streamlit' dependency "
+        "(streamlit>=1.58, for the Components v2 API). "
+        "Install it with: pip install 'neo4j-viz[streamlit]'"
+    ) from exc
 
 from .widget import GraphWidget
 

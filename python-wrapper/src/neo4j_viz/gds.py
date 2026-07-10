@@ -5,9 +5,15 @@ from itertools import chain
 from typing import Any, Collection, Optional
 from uuid import uuid4
 
-import pandas as pd
-from graphdatascience import GraphDataScience
-from graphdatascience.session import AuraGraphDataScience
+try:
+    import pandas as pd
+    from graphdatascience import GraphDataScience
+    from graphdatascience.session import AuraGraphDataScience
+except ImportError as exc:
+    raise ImportError(
+        "neo4j_viz.gds requires the optional 'gds' dependency. "
+        "Install it with: pip install 'neo4j-viz[gds]'"
+    ) from exc
 
 from neo4j_viz.colors import NEO4J_COLORS_DISCRETE, ColorSpace
 
