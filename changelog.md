@@ -5,6 +5,7 @@
 ## New features
 
 * Allow reacting to DoubleClickEvents on nodes or relationships using `widget.on_node_double_click`.
+* Handle duplicates for `widget.add_data` and allow different strategies (`ignore`, `replace` or `none`)
 
 
 ## Bug fixes
