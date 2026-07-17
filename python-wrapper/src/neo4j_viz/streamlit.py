@@ -46,7 +46,7 @@ _SEND_KEYS = ("nodes", "relationships", "options", "width", "height", "theme", "
 
 # Traits the frontend may write back to Python. Must stay in sync with
 # WRITABLE_KEYS in js-applet/src/streamlit-entrypoint.ts.
-_RECEIVE_KEYS = ("selected", "options")
+_RECEIVE_KEYS = ("selected", "options", "last_double_click")
 
 
 @lru_cache(maxsize=1)
@@ -134,6 +134,7 @@ def display_widget(any_widget: GraphWidget, *, key: str = "neo4j-viz-widget") ->
         default={trait: None for trait in _RECEIVE_KEYS},
         on_selected_change=lambda *_a, **_k: None,  # register `selected` as a state key
         on_options_change=lambda *_a, **_k: None,  # register `options` as a state key
+        on_last_double_click_change=lambda *_a, **_k: None,  # register `last_double_click` as a state key
     )
 
     # `result` holds the browser's current values only *after* the render; apply them

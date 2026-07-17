@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 from neo4j_viz import GraphSelection, GraphWidget, Node, Relationship, VisualizationGraph
-from neo4j_viz.options import Layout, Renderer, RenderOptions, SelectionMode, WidgetOptions
+from neo4j_viz.options import DoubleClickEvent, Layout, Renderer, RenderOptions, SelectionMode, WidgetOptions
 from neo4j_viz.widget import _serialize_entity
 
 
@@ -438,6 +438,90 @@ class TestWidgetSelection:
 
         widget.unobserve(handler, names=["selected"])
         widget.selected = GraphSelection(relationshipIds=["r1"])
+        assert len(received) == 1
+
+
+class TestWidgetDoubleClick:
+    def test_last_double_click_defaults_to_none(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1")])
+        assert widget.last_double_click is None
+
+    def test_double_click_syncs_from_frontend(self) -> None:
+        """The `last_double_click` trait is synced, so observers fire when the frontend updates it."""
+        widget = GraphWidget(nodes=[Node(id="n1")])
+        changes: list[dict[str, Any]] = []
+        widget.observe(lambda change: changes.append(change), names=["last_double_click"])
+
+        widget.last_double_click = DoubleClickEvent(kind="node", id="n1")
+
+        assert len(changes) == 1
+        assert changes[0]["name"] == "last_double_click"
+
+    def test_on_node_double_click_receives_resolved_node(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1", caption="A"), Node(id="n2")])
+        received: list[Node | None] = []
+        widget.on_node_double_click(received.append)
+
+        widget.last_double_click = DoubleClickEvent(kind="node", id="n1")
+
+        assert len(received) == 1
+        assert isinstance(received[0], Node)
+        assert received[0].id == "n1"
+
+    def test_on_node_double_click_yields_none_for_unknown_id(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1")])
+        received: list[Node | None] = []
+        widget.on_node_double_click(received.append)
+
+        widget.last_double_click = DoubleClickEvent(kind="node", id="gone")
+
+        assert received == [None]
+
+    def test_on_node_double_click_ignores_relationship_events(self) -> None:
+        widget = GraphWidget(
+            nodes=[Node(id="n1"), Node(id="n2")],
+            relationships=[Relationship(id="r1", source="n1", target="n2")],
+        )
+        received: list[Node | None] = []
+        widget.on_node_double_click(received.append)
+
+        widget.last_double_click = DoubleClickEvent(kind="relationship", id="r1")
+
+        assert received == []
+
+    def test_on_relationship_double_click_receives_resolved_relationship(self) -> None:
+        widget = GraphWidget(
+            nodes=[Node(id="n1"), Node(id="n2")],
+            relationships=[Relationship(id="r1", source="n1", target="n2", caption="REL")],
+        )
+        received: list[Relationship | None] = []
+        widget.on_relationship_double_click(received.append)
+
+        widget.last_double_click = DoubleClickEvent(kind="relationship", id="r1")
+
+        assert len(received) == 1
+        assert isinstance(received[0], Relationship)
+        assert received[0].id == "r1"
+
+    def test_on_relationship_double_click_ignores_node_events(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1")])
+        received: list[Relationship | None] = []
+        widget.on_relationship_double_click(received.append)
+
+        widget.last_double_click = DoubleClickEvent(kind="node", id="n1")
+
+        assert received == []
+
+    def test_on_node_double_click_returns_handler_for_unobserve(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1"), Node(id="n2")])
+        received: list[Node | None] = []
+        handler = widget.on_node_double_click(received.append)
+
+        widget.last_double_click = DoubleClickEvent(kind="node", id="n1")
+        assert len(received) == 1
+
+        widget.unobserve(handler, names=["last_double_click"])
+        widget.last_double_click = DoubleClickEvent(kind="node", id="n2")
         assert len(received) == 1
 
 

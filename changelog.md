@@ -4,6 +4,9 @@
 
 ## New features
 
+* Allow reacting to DoubleClickEvents on nodes or relationships using `widget.on_node_double_click`.
+
+
 ## Bug fixes
 
 * Fixed clicks being misaligned while the built-in "Node details" side panel is open ([#417](https://github.com/neo4j/python-graph-visualization/issues/417)). 

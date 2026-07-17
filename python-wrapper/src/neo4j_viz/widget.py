@@ -15,6 +15,7 @@ from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
 from .node_size import RealNumber
 from .options import (
+    DoubleClickEvent,
     GraphSelection,
     Layout,
     LayoutOptions,
@@ -69,9 +70,8 @@ class PydanticTrait(traitlets.Instance[_ModelT]):
     klass: type[_ModelT]
 
     def validate(self, obj: traitlets.HasTraits, value: Any) -> _ModelT:
-        if not isinstance(value, self.klass):
+        if value is not None and not isinstance(value, self.klass):
             value = self.klass.model_validate(value)
-        # super().validate is typed Optional to support allow_none; we never allow None.
         return cast("_ModelT", super().validate(obj, value))
 
 
@@ -124,6 +124,19 @@ class GraphWidget(anywidget.AnyWidget):
         to_json=lambda value, widget: value.to_json(),
         from_json=lambda value, widget: Legend.model_validate(value),
     )
+    last_double_click: PydanticTrait[DoubleClickEvent] = PydanticTrait(
+        DoubleClickEvent,
+        allow_none=True,
+        default_value=None,
+        help="The most recently double-clicked node or relationship in the widget UI, as a "
+        "`DoubleClickEvent` with `kind` and `id`, or `None` until the first double-click. Synced "
+        "from the frontend; prefer the `on_node_double_click` / `on_relationship_double_click` "
+        "convenience methods.",
+    ).tag(
+        sync=True,
+        to_json=lambda value, widget: value.to_json() if value is not None else None,
+        from_json=lambda value, widget: DoubleClickEvent.model_validate(value) if value is not None else None,
+    )
 
     _max_allowed_nodes: int = 10_000
 
@@ -163,6 +176,82 @@ class GraphWidget(anywidget.AnyWidget):
             callback(change["new"])
 
         self.observe(handler, names=["selected"])
+        return handler
+
+    def on_node_double_click(self, callback: Callable[[Node | None], None]) -> Callable[[dict[str, Any]], None]:
+        """
+        Register a callback that fires whenever a node is double-clicked in the widget UI.
+
+        The callback receives the double-clicked `Node`, resolved from the widget's current
+        `nodes` by matching ids. It is `None` in the rare case the node is no longer in the graph.
+        Relationship double-clicks are ignored by this callback (use `on_relationship_double_click`).
+
+        Note that double-clicking the *same* node twice in a row fires the callback only once, since
+        the underlying `last_double_click` trait does not change value. For the raw event (`kind`
+        and `id`), observe the `last_double_click` trait directly instead.
+
+        Parameters
+        ----------
+        callback:
+            A function called with the double-clicked `Node` (or `None`).
+
+        Returns
+        -------
+        The registered handler. Pass it to `unobserve(handler, names=["last_double_click"])` to stop
+        observing.
+
+        Examples
+        --------
+        Given a GraphWidget `widget`:
+
+        >>> def expand(node):
+        ...     print("double-clicked", node.id if node else None)
+        >>> handler = widget.on_node_double_click(expand)
+        """
+
+        def handler(change: dict[str, Any]) -> None:
+            event: DoubleClickEvent | None = change["new"]
+            if event is None or event.kind != "node":
+                return
+            node = next((n for n in self.nodes if str(n.id) == event.id), None)
+            callback(node)
+
+        self.observe(handler, names=["last_double_click"])
+        return handler
+
+    def on_relationship_double_click(
+        self, callback: Callable[[Relationship | None], None]
+    ) -> Callable[[dict[str, Any]], None]:
+        """
+        Register a callback that fires whenever a relationship is double-clicked in the widget UI.
+
+        The callback receives the double-clicked `Relationship`, resolved from the widget's current
+        `relationships` by matching ids. It is `None` in the rare case the relationship is no longer
+        in the graph. Node double-clicks are ignored by this callback (use `on_node_double_click`).
+
+        Note that double-clicking the *same* relationship twice in a row fires the callback only
+        once, since the underlying `last_double_click` trait does not change value. For the raw event
+        (`kind` and `id`), observe the `last_double_click` trait directly instead.
+
+        Parameters
+        ----------
+        callback:
+            A function called with the double-clicked `Relationship` (or `None`).
+
+        Returns
+        -------
+        The registered handler. Pass it to `unobserve(handler, names=["last_double_click"])` to stop
+        observing.
+        """
+
+        def handler(change: dict[str, Any]) -> None:
+            event: DoubleClickEvent | None = change["new"]
+            if event is None or event.kind != "relationship":
+                return
+            relationship = next((r for r in self.relationships if str(r.id) == event.id), None)
+            callback(relationship)
+
+        self.observe(handler, names=["last_double_click"])
         return handler
 
     @classmethod

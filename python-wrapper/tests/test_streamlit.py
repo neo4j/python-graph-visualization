@@ -4,7 +4,7 @@ import pytest
 
 from neo4j_viz import GraphSelection, Node, Relationship, VisualizationGraph, WidgetOptions
 from neo4j_viz import streamlit as st_module
-from neo4j_viz.options import WidgetLayout
+from neo4j_viz.options import DoubleClickEvent, WidgetLayout
 from neo4j_viz.streamlit import _RECEIVE_KEYS, _SEND_KEYS, display_widget
 from neo4j_viz.widget import GraphWidget
 
@@ -85,13 +85,23 @@ def test_no_interaction_leaves_state_untouched(component: _FakeComponent, widget
 
 
 def test_ignores_unexpected_returned_keys(component: _FakeComponent, widget: GraphWidget) -> None:
-    assert set(_RECEIVE_KEYS) == {"selected", "options"}
+    assert set(_RECEIVE_KEYS) == {"selected", "options", "last_double_click"}
     component.return_value = {"nodes": [{"id": "bogus"}], "theme": "dark"}
 
     display_widget(widget)
 
     assert [n.id for n in widget.nodes] == ["0", "1"]
     assert widget.theme == "auto"
+
+
+def test_receives_and_deserializes_double_click(component: _FakeComponent, widget: GraphWidget) -> None:
+    component.return_value = {"last_double_click": {"kind": "node", "id": "0"}}
+
+    display_widget(widget)
+
+    assert isinstance(widget.last_double_click, DoubleClickEvent)
+    assert widget.last_double_click.kind == "node"
+    assert widget.last_double_click.id == "0"
 
 
 def test_rejects_non_widget() -> None:

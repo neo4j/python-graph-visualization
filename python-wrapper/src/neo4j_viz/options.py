@@ -201,6 +201,27 @@ class GraphSelection(BaseModel):
         return self.model_dump(mode="json")
 
 
+DoubleClickKind = Literal["node", "relationship"]
+
+
+# Mirrors the DoubleClickEvent type in js-applet/src/graph-widget.tsx. Field names match the
+# frontend wire format verbatim.
+class DoubleClickEvent(BaseModel):
+    """A double-click on a node or relationship in the ``GraphWidget`` UI.
+
+    Held by ``GraphWidget.last_double_click``, which is ``None`` until the first double-click. The
+    ``id`` is a string, so match it against ``str(node.id)`` / ``str(relationship.id)`` to recover
+    the entity.
+    """
+
+    kind: DoubleClickKind
+    id: str
+
+    def to_json(self) -> dict[str, Any]:
+        """Serialize to the dict the frontend consumes."""
+        return self.model_dump(mode="json")
+
+
 # Mirrors the LegendEntry/LegendSection/LegendData types in js-applet/src/legend.tsx
 class LegendEntry(
     BaseModel,

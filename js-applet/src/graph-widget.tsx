@@ -27,6 +27,11 @@ export type GraphOptions = {
   selectionMode?: Gesture;
 };
 
+export type DoubleClickEvent = {
+  kind: "node" | "relationship";
+  id: string;
+};
+
 export type WidgetData = {
   nodes: SerializedNode[];
   relationships: SerializedRelationship[];
@@ -36,6 +41,7 @@ export type WidgetData = {
   theme: Theme;
   selected: GraphSelection;
   legend: LegendData;
+  last_double_click: DoubleClickEvent | null;
 };
 
 const EMPTY_SELECTION: GraphSelection = { nodeIds: [], relationshipIds: [] };
@@ -174,6 +180,8 @@ function GraphWidget() {
   const [width] = useModelState<WidgetData["width"]>("width");
   const [theme] = useModelState<WidgetData["theme"]>("theme");
   const [selected, setSelected] = useModelState<WidgetData["selected"]>("selected");
+  const [, setLastDoubleClick] =
+    useModelState<WidgetData["last_double_click"]>("last_double_click");
   const [legend] = useModelState<WidgetData["legend"]>("legend");
   const { layout, nvlOptions, zoom, pan, layoutOptions, showLayoutButton, selectionMode } =
     options ?? {};
@@ -318,6 +326,12 @@ function GraphWidget() {
           setGesture={setGesture}
           selected={selected ?? EMPTY_SELECTION}
           setSelected={setSelected}
+          mouseEventCallbacks={{
+            onNodeDoubleClick: (node) =>
+              setLastDoubleClick({ kind: "node", id: String(node.id) }),
+            onRelationshipDoubleClick: (rel) =>
+              setLastDoubleClick({ kind: "relationship", id: String(rel.id) }),
+          }}
           layout={layout}
           setLayout={setLayout}
           nvlOptions={nvlOptionsWithoutWorkers}
