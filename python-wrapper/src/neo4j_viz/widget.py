@@ -10,7 +10,7 @@ import pydantic
 import traitlets
 
 from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
-from ._validation import OnDangling, check_dangling_relationships
+from ._validation import OnDangling, OnDuplicate, check_dangling_relationships, merge_on_duplicate
 from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
 from .node_size import RealNumber
@@ -696,6 +696,7 @@ class GraphWidget(anywidget.AnyWidget):
         nodes: Node | list[Node] | None = None,
         relationships: Relationship | list[Relationship] | None = None,
         on_dangling: OnDangling = "warn",
+        on_duplicate: OnDuplicate = "ignore",
     ) -> None:
         """
         Add nodes or relationships to the graph widget.
@@ -710,6 +711,13 @@ class GraphWidget(anywidget.AnyWidget):
             What to do when a resulting relationship references a node id that is not in the graph
             (which the frontend would silently render as empty). One of "warn" (default), "error",
             or "none".
+        on_duplicate:
+            What to do when an added node or relationship has the same id as one already in the
+            graph (ids are compared as strings, and the check also de-duplicates within the added
+            batch). One of "ignore" (default, keep the existing entity and drop the added
+            duplicate), "replace" (swap the existing entity for the added one, keeping its
+            position), or "none" (skip the check and append everything, which may leave duplicate
+            ids).
         """
         if isinstance(nodes, Node):
             nodes = [nodes]
@@ -725,9 +733,9 @@ class GraphWidget(anywidget.AnyWidget):
             )
 
         if nodes:
-            self.nodes = self.nodes + nodes
+            self.nodes = merge_on_duplicate(self.nodes, nodes, on_duplicate)
         if relationships:
-            self.relationships = self.relationships + relationships
+            self.relationships = merge_on_duplicate(self.relationships, relationships, on_duplicate)
 
         check_dangling_relationships(self.nodes, self.relationships, on_dangling)
 

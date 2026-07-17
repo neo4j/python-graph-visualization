@@ -197,6 +197,68 @@ class TestWidgetDataBinding:
         assert len(widget.nodes) == 4
         assert len(widget.relationships) == 2
 
+    def test_add_data_on_duplicate_none_appends(self) -> None:
+        """`on_duplicate="none"` skips the check and appends, leaving duplicate ids."""
+        widget = GraphWidget(nodes=[Node(id="n1", caption="old")])
+
+        widget.add_data(nodes=Node(id="n1", caption="new"), on_duplicate="none")
+
+        assert [n.id for n in widget.nodes] == ["n1", "n1"]
+
+    def test_add_data_defaults_to_ignore(self) -> None:
+        """By default a duplicate id is ignored, keeping the existing entity."""
+        widget = GraphWidget(nodes=[Node(id="n1", caption="old")])
+
+        widget.add_data(nodes=Node(id="n1", caption="new"))
+
+        assert [n.id for n in widget.nodes] == ["n1"]
+        assert widget.nodes[0].caption == "old"
+
+    def test_add_data_on_duplicate_ignore_keeps_existing(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1", caption="old"), Node(id="n2")])
+
+        widget.add_data(nodes=[Node(id="n1", caption="new"), Node(id="n3")], on_duplicate="ignore")
+
+        assert [n.id for n in widget.nodes] == ["n1", "n2", "n3"]
+        # The existing node is kept untouched.
+        assert widget.nodes[0].caption == "old"
+
+    def test_add_data_on_duplicate_replace_swaps_in_place(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1", caption="old"), Node(id="n2")])
+
+        widget.add_data(nodes=[Node(id="n1", caption="new"), Node(id="n3")], on_duplicate="replace")
+
+        # Same order, but n1 now holds the incoming node; n3 is appended.
+        assert [n.id for n in widget.nodes] == ["n1", "n2", "n3"]
+        assert widget.nodes[0].caption == "new"
+
+    def test_add_data_on_duplicate_replace_relationships(self) -> None:
+        widget = GraphWidget(
+            nodes=[Node(id="n1"), Node(id="n2")],
+            relationships=[Relationship(id="r1", source="n1", target="n2", caption="old")],
+        )
+
+        widget.add_data(
+            relationships=Relationship(id="r1", source="n1", target="n2", caption="new"),
+            on_duplicate="replace",
+        )
+
+        assert len(widget.relationships) == 1
+        assert widget.relationships[0].caption == "new"
+
+    def test_add_data_on_duplicate_dedupes_within_batch(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1")])
+
+        widget.add_data(nodes=[Node(id="n2"), Node(id="n2")], on_duplicate="ignore")
+
+        assert [n.id for n in widget.nodes] == ["n1", "n2"]
+
+    def test_add_data_on_duplicate_invalid_value(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1")])
+
+        with pytest.raises(ValueError, match="Invalid `on_duplicate`"):
+            widget.add_data(nodes=Node(id="n2"), on_duplicate="bogus")  # type: ignore[arg-type]
+
     def test_remove_data(self) -> None:
         """Test removing data from the graph."""
         node_1 = Node(id="n1")
