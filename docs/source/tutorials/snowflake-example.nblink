@@ -1,3 +1,7 @@
 {
-  "path": "../../../examples/snowflake-example.ipynb"
+  "path": "../../../examples/snowflake-example.ipynb",
+  "extra-media": [
+    "../../../examples/example_instruments_1.png",
+    "../../../examples/example_instruments_2.png"
+  ]
 }
