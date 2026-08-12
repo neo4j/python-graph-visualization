@@ -26,12 +26,13 @@ The nodes will be colored so that nodes from the same table have the same color,
 
 == Example
 
-In this small example, we import a toy graph representing a social network from two tables in Snowflake.
+In this small example, we import a toy graph representing a social network from two tables in Snowflake, and display it
+as an interactive widget using link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.render_widget[`render_widget`].
 
 [source, python]
 ----
 from snowflake.snowpark import Session
-from neo4j_viz.snowflake import from_dfs
+from neo4j_viz.snowflake import from_snowflake
 
 # Configure according to your own setup
 connection_parameters = {
@@ -82,6 +83,8 @@ VG = from_snowflake(
         },
     },
 )
+
+VG.render_widget()
 ----
 
 For a full example of the `from_snowflake` importer in action, please see the link:{tutorials-docs-uri}/snowflake-example/[Visualizing Snowflake Tables tutorial].
