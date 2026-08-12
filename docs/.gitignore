@@ -3,3 +3,4 @@ build
 # Antora docs
 antora/package-lock.json
 antora/node_modules/
+source/tutorials/*.png
