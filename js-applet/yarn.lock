@@ -514,14 +514,15 @@
   resolved "https://registry.yarnpkg.com/@neo4j-ndl/base/-/base-4.17.4.tgz#f9bc5cbbc9d4668ebeeada61420cf74b951a8aaf"
   integrity sha512-QR31Ls9zHD4SBBRZB7uDNNvTZn9n5/rjUBYBbWdZAGRvv+ZNyxpr47yvw5TMm78THqAOEN7uMuQNWJP944PQSA==
 
-"@neo4j-ndl/react-graph@1.3.34":
-  version "1.3.34"
-  resolved "https://registry.yarnpkg.com/@neo4j-ndl/react-graph/-/react-graph-1.3.34.tgz#af10a4cc1eed731eb5ce3cced5023439a7c9a07a"
-  integrity sha512-vpWO2K7h7XLNrZ+yYhngikkFvpWEqhgM5ylq+TyJ+d9Cz0W6uA/lFXuYi3zLSE9iQ02ceqz7cOaIfW7Nkdn/gA==
+"@neo4j-ndl/react-graph@2.1.3":
+  version "2.1.3"
+  resolved "https://registry.yarnpkg.com/@neo4j-ndl/react-graph/-/react-graph-2.1.3.tgz#f577ae264f8effe0df95889e34ac371b771044ea"
+  integrity sha512-ogzyetAapVDvfr86gTtbBJ6j76wva5qowgplMhdUueABJ6xt0gtUNsxPZ9DHCImPvs8ZQaMHK3qBjmaCZW4d6w==
   dependencies:
     classnames "2.5.1"
     re-resizable "6.11.2"
-    zod "^4.3.6"
+    temporal-polyfill "1.0.1"
+    zod "4.3.6"
 
 "@neo4j-ndl/react@4.18.4":
   version "4.18.4"
@@ -5374,11 +5375,6 @@ zod@4.3.6:
   version "4.3.6"
   resolved "https://registry.yarnpkg.com/zod/-/zod-4.3.6.tgz#89c56e0aa7d2b05107d894412227087885ab112a"
   integrity sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==
-
-zod@^4.3.6:
-  version "4.4.3"
-  resolved "https://registry.yarnpkg.com/zod/-/zod-4.4.3.tgz#b680f172885d18bbebf21a834ea25e55a1bbf356"
-  integrity sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==
 
 zwitch@^2.0.0, zwitch@^2.0.4:
   version "2.0.4"
