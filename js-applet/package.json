@@ -12,22 +12,11 @@
     "build:html": "vite build --config vite.config.html.ts",
     "build:streamlit": "vite build --config vite.config.streamlit.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "devDependencies": {
-    "@anywidget/vite": "^0.3.0",
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/react": "^16.3.2",
-    "@types/node": "^26.2.0",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
-    "@vitejs/plugin-react": "^6.0.5",
-    "concurrently": "^10.0.4",
-    "jsdom": "^30.0.1",
-    "typescript": "7.0.2",
-    "vite": "^8.2.1",
-    "vite-plugin-singlefile": "^2.3.3",
-    "vitest": "^4.1.10"
+    "test:watch": "vitest",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check ."
   },
   "dependencies": {
     "@anywidget/react": "^0.2.2",
@@ -40,5 +29,22 @@
     "@tanstack/react-table": "^8.21.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@anywidget/vite": "^0.3.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "concurrently": "^10.0.4",
+    "jsdom": "^30.0.1",
+    "oxfmt": "0.36.0",
+    "oxlint": "1.51.0",
+    "typescript": "7.0.2",
+    "vite": "^8.2.1",
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^4.1.10"
   }
 }

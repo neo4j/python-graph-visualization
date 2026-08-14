@@ -1,4 +1,4 @@
-name: Check code style
+name: Python - Check code style
 
 # Controls when the workflow will run
 on:
@@ -35,5 +35,5 @@ jobs:
       - run: uv venv
       - run: uv sync --group dev --extra pandas --extra neo4j --extra gds --extra snowflake
 
-      - name: Check code styleyes
+      - name: Check code style
         run: source .venv/bin/activate && cd ${GITHUB_WORKSPACE} && ./scripts/checkstyle.sh

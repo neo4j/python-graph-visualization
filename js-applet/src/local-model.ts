@@ -15,7 +15,7 @@ export type LocalModel<T extends Record<string, unknown>> = {
  * State is kept local to the page; nothing is synced back to Python.
  */
 export function createLocalModel<T extends Record<string, unknown>>(
-  data: Partial<T>
+  data: Partial<T>,
 ): LocalModel<T> {
   const listeners = new Map<string, Set<() => void>>();
 
