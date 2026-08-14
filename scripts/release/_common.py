@@ -11,7 +11,6 @@ if sys.version_info < (3, 11):
 
 import tomllib  # Python 3.11+
 
-
 PACKAGE = "neo4j-viz"
 MAIN_BRANCH = "main"
 

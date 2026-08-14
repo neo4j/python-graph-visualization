@@ -8,7 +8,6 @@
 
 import pathlib
 
-
 project = "Graph Visualization for Python"
 copyright = "2025, Neo4j, Inc."
 author = "Neo4j, Inc."
@@ -57,8 +56,6 @@ def setup(app):  # type: ignore
     app.add_js_file("js/deprecated.js", loading_method="defer")
 
 
-rst_epilog = """
-.. |api-version| replace:: {versionnum}
-""".format(
-    versionnum=release,
-)
+rst_epilog = f"""
+.. |api-version| replace:: {release}
+"""

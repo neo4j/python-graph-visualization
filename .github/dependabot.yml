@@ -5,10 +5,11 @@
 
 version: 2
 updates:
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "/python-wrapper"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 10
     groups:
       python-patch-and-minor:
         update-types:

@@ -22,7 +22,7 @@ import re
 import sys
 from pathlib import Path
 
-from _common import PACKAGE, bold, green, git_root, pyproject_path, read_version
+from _common import PACKAGE, bold, git_root, green, pyproject_path, read_version
 
 CHANGELOG_TEMPLATE = """# Changes
 
