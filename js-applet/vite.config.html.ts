@@ -3,8 +3,8 @@ import { defineConfig } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
 // HTML build: produces a single self-contained index.html with all JS and
-// CSS inlined. Python injects graph data at runtime via
-// window.__NEO4J_VIZ_DATA__ before serving it.
+// CSS inlined. Python injects graph data at runtime as an inert
+// <script type="application/json" id="neo4j-viz-data"> block before serving.
 export default defineConfig({
   plugins: [react(), viteSingleFile()],
   define: {
