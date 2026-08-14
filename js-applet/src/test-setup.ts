@@ -55,7 +55,7 @@ const canvasContextStub = {
 } as unknown as CanvasRenderingContext2D;
 
 HTMLCanvasElement.prototype.getContext = vi.fn(
-  () => canvasContextStub
+  () => canvasContextStub,
 ) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 
 afterEach(() => {

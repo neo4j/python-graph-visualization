@@ -11,12 +11,7 @@ import {
 } from "./data-transforms";
 import { hasLegendContent, Legend, LegendData } from "./legend";
 import { GraphErrorBoundary } from "./graph-error-boundary";
-import {
-  Divider,
-  IconButton,
-  IconButtonArray,
-  NeedleThemeProvider,
-} from "@neo4j-ndl/react";
+import { Divider, IconButton, IconButtonArray, NeedleThemeProvider } from "@neo4j-ndl/react";
 import { SwatchIconOutline } from "@neo4j-ndl/react/icons";
 
 export type Theme = "dark" | "light" | "auto";
@@ -50,10 +45,16 @@ const EMPTY_LEGEND: LegendData = {
 };
 
 function detectTheme(): "light" | "dark" {
-  if (document.body.classList.contains("vscode-light") || document.body.classList.contains("light-theme")) {
+  if (
+    document.body.classList.contains("vscode-light") ||
+    document.body.classList.contains("light-theme")
+  ) {
     return "light";
   }
-  if (document.body.classList.contains("vscode-dark") || document.body.classList.contains("dark-theme")) {
+  if (
+    document.body.classList.contains("vscode-dark") ||
+    document.body.classList.contains("dark-theme")
+  ) {
     return "dark";
   }
 
@@ -84,7 +85,7 @@ function resolveTheme(theme: Theme): "light" | "dark" {
 function useResolvedTheme(theme: Theme | undefined): "light" | "dark" {
   const normalizedTheme = theme ?? "auto";
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() =>
-    resolveTheme(normalizedTheme)
+    resolveTheme(normalizedTheme),
   );
 
   useEffect(() => {
@@ -95,9 +96,7 @@ function useResolvedTheme(theme: Theme | undefined): "light" | "dark" {
 
     const updateTheme = () => {
       const nextTheme = detectTheme();
-      setResolvedTheme((currentTheme) =>
-        currentTheme === nextTheme ? currentTheme : nextTheme
-      );
+      setResolvedTheme((currentTheme) => (currentTheme === nextTheme ? currentTheme : nextTheme));
     };
 
     updateTheme();
@@ -124,9 +123,7 @@ function useResolvedTheme(theme: Theme | undefined): "light" | "dark" {
 // @font-face rules in shadow DOM adopted stylesheets don't register fonts at the
 // document level, so the browser can't find them for rendering. We extract and hoist
 // them into document.head eagerly at module load so fonts begin loading immediately.
-const fontFaceRules = (ndlCssText.match(/@font-face\s*\{[^}]*\}/g) || []).join(
-  "\n"
-);
+const fontFaceRules = (ndlCssText.match(/@font-face\s*\{[^}]*\}/g) || []).join("\n");
 if (fontFaceRules) {
   const fontStyle = document.createElement("style");
   fontStyle.textContent = fontFaceRules;
@@ -137,11 +134,7 @@ const documentStyleSelector = "[data-neo4j-viz-ndl-main]";
 const overlayStyleSelector = "[data-neo4j-viz-ndl-overlays]";
 const shadowRootStyleSelector = "[data-neo4j-viz-ndl-shadow-root]";
 
-function appendStyle(
-  root: Node & ParentNode,
-  attributeName: string,
-  cssText: string
-) {
+function appendStyle(root: Node & ParentNode, attributeName: string, cssText: string) {
   const style = document.createElement("style");
   style.setAttribute(attributeName, "true");
   style.textContent = cssText;
@@ -174,14 +167,12 @@ function injectNdlCss(el: HTMLElement) {
 
 function GraphWidget() {
   const [nodes] = useModelState<WidgetData["nodes"]>("nodes");
-  const [relationships] =
-    useModelState<WidgetData["relationships"]>("relationships");
+  const [relationships] = useModelState<WidgetData["relationships"]>("relationships");
   const [options, setOptions] = useModelState<WidgetData["options"]>("options");
   const [height] = useModelState<WidgetData["height"]>("height");
   const [width] = useModelState<WidgetData["width"]>("width");
   const [theme] = useModelState<WidgetData["theme"]>("theme");
-  const [selected, setSelected] =
-    useModelState<WidgetData["selected"]>("selected");
+  const [selected, setSelected] = useModelState<WidgetData["selected"]>("selected");
   const [legend] = useModelState<WidgetData["legend"]>("legend");
   const { layout, nvlOptions, zoom, pan, layoutOptions, showLayoutButton, selectionMode } =
     options ?? {};
@@ -204,11 +195,8 @@ function GraphWidget() {
   }, []);
 
   const [neoNodes, neoRelationships] = useMemo(
-    () => [
-      transformNodes(nodes ?? []),
-      transformRelationships(relationships ?? []),
-    ],
-    [nodes, relationships]
+    () => [transformNodes(nodes ?? []), transformRelationships(relationships ?? [])],
+    [nodes, relationships],
   );
 
   const nvlOptionsWithoutWorkers = useMemo(
@@ -218,7 +206,7 @@ function GraphWidget() {
       maxZoom: 1000,
       disableWebWorkers: true,
     }),
-    [nvlOptions]
+    [nvlOptions],
   );
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [sidePanelWidth, setSidePanelWidth] = useState(300);
@@ -236,10 +224,7 @@ function GraphWidget() {
   const legendAvailable = hasLegendContent(legend ?? EMPTY_LEGEND);
 
   return (
-    <NeedleThemeProvider
-      theme={resolvedTheme}
-      wrapperProps={{ isWrappingChildren: false }}
-    >
+    <NeedleThemeProvider theme={resolvedTheme} wrapperProps={{ isWrappingChildren: false }}>
       <div
         ref={wrapperRef}
         style={{
@@ -268,9 +253,7 @@ function GraphWidget() {
             sidePanelWidth,
             children: <GraphVisualization.SingleSelectionSidePanelContents />,
           }}
-          topLeftIsland={
-            <GraphVisualization.DownloadButton tooltipPlacement="right" />
-          }
+          topLeftIsland={<GraphVisualization.DownloadButton tooltipPlacement="right" />}
           topRightIsland={
             <IconButtonArray size="small" orientation="horizontal">
               {legendAvailable && (

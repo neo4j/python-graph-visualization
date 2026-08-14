@@ -22,7 +22,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Required to help bundle the widget.js and style.css into a single file
-        inlineDynamicImports: true,
+        // (codeSplitting:false replaces the deprecated inlineDynamicImports:true)
+        codeSplitting: false,
         assetFileNames: "style.[ext]",
       },
     },
