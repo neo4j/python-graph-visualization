@@ -2,7 +2,7 @@
 
 import marimo
 
-__generated_with = "0.20.4"
+__generated_with = "0.23.16"
 app = marimo.App(width="full", app_title="Neo4jVizExample")
 
 
@@ -68,6 +68,7 @@ def _(VisualizationGraph, nodes, relationships):
     VG = VisualizationGraph(nodes=nodes, relationships=relationships)
     # Note, we need to pass the theme explicitly in Marimo.
     widget = VG.render_widget(renderer="canvas")
+    widget
     return VG, widget
 
 
@@ -101,6 +102,9 @@ def _(mo):
 @app.cell
 def _(VG):
     # Save the visualization to a file
+    import os
+
+    os.makedirs("out", exist_ok=True)
     with open("out/marimo_output.html", "w") as f:
         print(f"{f}")
         f.write(VG.render(renderer="canvas").data)

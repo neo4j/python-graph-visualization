@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 GIT_ROOT=$(git rev-parse --show-toplevel)
+PY_PROJECT="${GIT_ROOT}/python-wrapper"
 
 set -o errexit
 set -o nounset
 set -o pipefail
 
-python -m ruff check .
-python -m ruff format --check .
-python -m mypy --config-file "${GIT_ROOT}/python-wrapper/pyproject.toml" .
+uv run --project "${PY_PROJECT}" python -m ruff check .
+uv run --project "${PY_PROJECT}" python -m ruff format --check .
+uv run --project "${PY_PROJECT}" python -m mypy --config-file "${PY_PROJECT}/pyproject.toml" .
 
 
 if [ "${SKIP_NOTEBOOKS:-false}" == "true" ]; then
@@ -21,7 +22,7 @@ NOTEBOOKS="${GIT_ROOT}/examples/*.ipynb" # ./examples/dev/*.ipynb"
 for f in $NOTEBOOKS
 do
   NB=$(cat $f)
-  FORMATTED_NB=$(python "${GIT_ROOT}/scripts/clean_notebooks.py" -i "$f" -o stdout)
+  FORMATTED_NB=$(uv run --project "${PY_PROJECT}" python "${GIT_ROOT}/scripts/clean_notebooks.py" -i "$f" -o stdout)
 
   if [[ "$FORMATTED_NB" != "$NB" ]];
   then
