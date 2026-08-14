@@ -10,6 +10,9 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    cooldown:
+      default-day: 3
+      enabled: true
     groups:
       python-patch-and-minor:
         update-types:
@@ -22,6 +25,9 @@ updates:
     directory: "/js-applet"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-day: 3
+      enabled: true
     groups:
       js-patch-and-minor:
         update-types:
@@ -34,6 +40,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-day: 3
+      enabled: true
     groups:
       github-actions-patch-and-minor:
         update-types:
