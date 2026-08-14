@@ -132,6 +132,12 @@ class GraphEntityOperations:
                 if node.size is not None:
                     all_sizes[node.id] = node.size
 
+        if property is not None and not all_sizes:
+            raise ValueError(
+                f"No node has the property {property!r}, so sizes cannot be computed. "
+                "Check the spelling, or pass explicit `sizes`."
+            )
+
         # Validate node sizes
         for id, size in all_sizes.items():
             if size is None:
@@ -207,6 +213,9 @@ class GraphEntityOperations:
     def _normalize_values(
         node_map: dict[NodeIdType, RealNumber], min_max: tuple[float, float] = (0, 1)
     ) -> dict[NodeIdType, RealNumber]:
+        if not node_map:
+            return {}
+
         unscaled_min_size = min(node_map.values())
         unscaled_max_size = max(node_map.values())
         unscaled_size_range = float(unscaled_max_size - unscaled_min_size)
@@ -262,6 +271,21 @@ class GraphEntityOperations:
                 colors = NEO4J_COLORS_DISCRETE
         else:
             node_map = {node.id: node_to_attr(node) for node in self.nodes if node_to_attr(node) is not None}
+
+            if not node_map:
+                raise ValueError(
+                    f"No node has a value for {attribute!r}, so continuous coloring cannot be computed. "
+                    "Check the spelling, or use `color_space=ColorSpace.DISCRETE` for categorical values."
+                )
+
+            for node_id, value in node_map.items():
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    raise ValueError(
+                        f"Continuous coloring needs numeric values, but node {node_id!r} has "
+                        f"{attribute}={value!r} ({type(value).__name__}). "
+                        "Use `color_space=ColorSpace.DISCRETE` for non-numeric values."
+                    )
+
             normalized_map = self._normalize_values(node_map)
 
             if colors is None:

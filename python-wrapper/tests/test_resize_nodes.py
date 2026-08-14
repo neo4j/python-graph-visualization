@@ -158,3 +158,10 @@ def test_resize_nodes_no_args_failure() -> None:
 
     with pytest.raises(ValueError, match="At least one of `sizes`, `property` or `node_radius_min_max` must be given"):
         VG.resize_nodes(node_radius_min_max=None)
+
+
+def test_resize_nodes_missing_property_raises() -> None:
+    VG = VisualizationGraph(nodes=[Node(id="1"), Node(id="2")], relationships=[])
+
+    with pytest.raises(ValueError, match=re.escape("No node has the property 'pagerank'")):
+        VG.resize_nodes(property="pagerank")

@@ -213,6 +213,57 @@ class TestWidgetDataBinding:
         assert {n.id for n in widget.nodes} == {"n3"}
         assert {r.id for r in widget.relationships} == {43}
 
+    def test_remove_data_nodes_only_deletes_dangling_relationships(self) -> None:
+        nodes = [Node(id="n1"), Node(id="n2")]
+        rels = [
+            Relationship(source="n1", target="n2"),
+            Relationship(source="n2", target="n2"),
+        ]
+        widget = GraphWidget.from_graph_data(nodes, rels)
+
+        widget.remove_data(nodes=["n1"])
+        assert {n.id for n in widget.nodes} == {"n2"}
+        # The relationship that pointed at the removed node is deleted, not left dangling.
+        assert {(r.source, r.target) for r in widget.relationships} == {("n2", "n2")}
+
+    def test_remove_data_relationships_only(self) -> None:
+        nodes = [Node(id="n1"), Node(id="n2")]
+        rels = [Relationship(id="r1", source="n1", target="n2"), Relationship(id="r2", source="n2", target="n1")]
+        widget = GraphWidget.from_graph_data(nodes, rels)
+
+        widget.remove_data(relationships=["r1"])
+        assert {n.id for n in widget.nodes} == {"n1", "n2"}
+        assert {r.id for r in widget.relationships} == {"r2"}
+
+    def test_remove_data_id_type_mismatch(self) -> None:
+        widget = GraphWidget.from_graph_data([Node(id=1), Node(id=2)], [Relationship(source=1, target=2)])
+
+        widget.remove_data(nodes="1")
+        assert {n.id for n in widget.nodes} == {2}
+        # Relationship pointing at the removed node is also deleted.
+        assert widget.relationships == []
+
+    def test_add_data_exceeds_max_allowed_nodes(self) -> None:
+        widget = GraphWidget.from_graph_data([Node(id="n1")], [], max_allowed_nodes=10)
+
+        with pytest.raises(ValueError, match="exceeds the maximum of 10 nodes"):
+            widget.add_data(nodes=[Node(id=f"x{i}") for i in range(10)])
+
+        # The graph must be left unchanged when the limit would be exceeded.
+        assert {n.id for n in widget.nodes} == {"n1"}
+
+    def test_add_data_max_allowed_nodes_threaded_from_render_widget(self) -> None:
+        """A custom max_allowed_nodes passed to render_widget is honored by add_data (L-03)."""
+        vg = VisualizationGraph(nodes=[Node(id="n1")], relationships=[])
+        widget = vg.render_widget(max_allowed_nodes=3)
+
+        # Up to the limit is fine.
+        widget.add_data(nodes=[Node(id="n2")])
+        assert len(widget.nodes) == 2
+
+        with pytest.raises(ValueError, match="exceeds the maximum of 3 nodes"):
+            widget.add_data(nodes=[Node(id=f"x{i}") for i in range(3)])
+
     def test_add_data_dangling_warns_by_default(self) -> None:
         widget = GraphWidget.from_graph_data([Node(id="n1")], [])
         with pytest.warns(UserWarning, match=re.escape("reference node ids that are not in the graph")):

@@ -125,6 +125,8 @@ class GraphWidget(anywidget.AnyWidget):
         from_json=lambda value, widget: Legend.model_validate(value),
     )
 
+    _max_allowed_nodes: int = 10_000
+
     def on_selection_change(self, callback: Callable[[GraphSelection], None]) -> Callable[[dict[str, Any]], None]:
         """
         Register a callback that fires whenever the widget's `selected` trait changes.
@@ -173,9 +175,10 @@ class GraphWidget(anywidget.AnyWidget):
         options: RenderOptions | None = None,
         theme: str = "auto",
         legend: Legend | None = None,
+        max_allowed_nodes: int = 10_000,
     ) -> GraphWidget:
         """Create a GraphWidget from Node and Relationship lists."""
-        return cls(
+        widget = cls(
             nodes=nodes,
             relationships=relationships,
             width=width,
@@ -184,6 +187,8 @@ class GraphWidget(anywidget.AnyWidget):
             theme=theme,
             legend=legend if legend is not None else Legend(),
         )
+        widget._max_allowed_nodes = max_allowed_nodes
+        return widget
 
     def __str__(self) -> str:
         return f"GraphWidget(nodes={len(self.nodes)}, relationships={len(self.relationships)}, options={self.options}, theme={self.theme}, width={self.width}, height={self.height})"
@@ -622,6 +627,14 @@ class GraphWidget(anywidget.AnyWidget):
         if isinstance(relationships, Relationship):
             relationships = [relationships]
 
+        if nodes and len(self.nodes) + len(nodes) > self._max_allowed_nodes:
+            raise ValueError(
+                f"Adding {len(nodes)} nodes would result in {len(self.nodes) + len(nodes)} nodes, "
+                f"which exceeds the maximum of {self._max_allowed_nodes} nodes set when this widget "
+                "was created. It can be increased by overriding `max_allowed_nodes` in "
+                "`render_widget`, but rendering could then take a long time."
+            )
+
         if nodes:
             self.nodes = self.nodes + nodes
         if relationships:
@@ -644,33 +657,39 @@ class GraphWidget(anywidget.AnyWidget):
         relationships:
             Relationships to remove from the graph widget.
         """
+        # Compare ids as strings on both sides, matching how ids are serialized for the
+        # frontend (see _validation.check_dangling_relationships): ``Node(id=1)`` and a
+        # request to remove ``"1"`` refer to the same node.
         if isinstance(nodes, Node):
-            node_ids_to_remove = {nodes.id}
+            node_ids_to_remove = {str(nodes.id)}
         elif isinstance(nodes, NodeIdType):
-            node_ids_to_remove = {nodes}
+            node_ids_to_remove = {str(nodes)}
         elif nodes is None:
             node_ids_to_remove = set()
         else:
-            node_ids_to_remove = {n.id if isinstance(n, Node) else n for n in nodes}
+            node_ids_to_remove = {str(n.id) if isinstance(n, Node) else str(n) for n in nodes}
 
         if isinstance(relationships, Relationship):
-            rel_ids_to_remove = {relationships.id}
+            rel_ids_to_remove = {str(relationships.id)}
         elif isinstance(relationships, RelationshipIdType):
-            rel_ids_to_remove = {relationships}
+            rel_ids_to_remove = {str(relationships)}
         elif relationships is None:
             rel_ids_to_remove = set()
         else:
-            rel_ids_to_remove = {r.id if isinstance(r, Relationship) else r for r in relationships}
+            rel_ids_to_remove = {str(r.id) if isinstance(r, Relationship) else str(r) for r in relationships}
 
         if node_ids_to_remove:
-            self.nodes = [n for n in self.nodes if n.id not in node_ids_to_remove]
+            self.nodes = [n for n in self.nodes if str(n.id) not in node_ids_to_remove]
 
         def keep_rel(r: Relationship) -> bool:
             return (
-                r.id not in rel_ids_to_remove
-                and r.source not in node_ids_to_remove
-                and r.target not in node_ids_to_remove
+                str(r.id) not in rel_ids_to_remove
+                and str(r.source) not in node_ids_to_remove
+                and str(r.target) not in node_ids_to_remove
             )
 
-        if rel_ids_to_remove:
+        # Run the cleanup whenever anything is being removed. A node-only delete must also
+        # drop the relationships that pointed at it, otherwise the frontend silently renders
+        # an empty graph (see _validation.check_dangling_relationships).
+        if node_ids_to_remove or rel_ids_to_remove:
             self.relationships = [r for r in self.relationships if keep_rel(r)]
