@@ -2,7 +2,6 @@ import pathlib
 import random
 
 import streamlit as st
-
 from neo4j_viz import Node, Relationship, VisualizationGraph
 from neo4j_viz.streamlit import display_widget
 
