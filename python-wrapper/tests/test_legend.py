@@ -187,7 +187,7 @@ def test_render_injects_legend_into_html() -> None:
 
     html = VG.render().data
 
-    assert "window.__NEO4J_VIZ_DATA__" in html
+    assert 'type="application/json" id="neo4j-viz-data"' in html
     assert '"legend"' in html
     assert "Movie" in html
 

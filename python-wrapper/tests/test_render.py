@@ -1,3 +1,4 @@
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -171,3 +172,25 @@ def test_render_with_wrong_layout_options() -> None:
         match="Unexpected `ForceDirectedLayoutOptions` parameter 'direction' with provided input 'left'",
     ):
         VG.render(layout=Layout.FORCE_DIRECTED, layout_options={"direction": "left"})
+
+
+def test_render_escapes_script_breakout() -> None:
+    # Regression test for F-01: a caption containing </script> must not break
+    # out of the data block and run as executable markup. Single quotes are
+    # used inside the injected script because json.dumps escapes " to \", which
+    # after a breakout would be a JS syntax error and silently do nothing —
+    # the test must exercise a payload that would actually execute if unescaped.
+
+    payload = "</script><script>alert('xss')</script>"
+    VG = VisualizationGraph(nodes=[Node(id="1", caption=payload)], relationships=[])
+    out = VG.render().data
+
+    # The breakout sequence must not appear literally in the output.
+    assert "</script><script>alert" not in out
+    # Data is delivered as inert JSON, not as an executable script assignment.
+    assert 'type="application/json" id="neo4j-viz-data"' in out
+    assert "<script>window.__NEO4J_VIZ_DATA__" not in out
+    # The escaped JSON still parses back to the original caption exactly.
+    block = re.search(r'<script type="application/json" id="neo4j-viz-data">(.*?)</script>', out, re.DOTALL)
+    assert block is not None
+    assert json.loads(block.group(1))["nodes"][0]["caption"] == payload

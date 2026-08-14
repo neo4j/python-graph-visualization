@@ -4,4 +4,5 @@ build
 dist
 
 src/neo4j_viz/resources/*/assets
+/src/neo4j_viz/resources/nvl_entrypoint/*Layout.worker*.js
 out/*

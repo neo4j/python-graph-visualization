@@ -12,8 +12,9 @@
     </style>
     <!--
       Data injection point.
-      Python (nvl.py) injects a <script> here setting window.__NEO4J_VIZ_DATA__
-      before this page is served.
+      Python (nvl.py) injects a <script type="application/json"
+      id="neo4j-viz-data"> block here with graph data before this page is
+      served. The standalone entrypoint reads it back via JSON.parse.
     -->
   </head>
   <body>
