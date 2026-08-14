@@ -85,6 +85,8 @@ async function renderWidget(
     teardown = await widget.render({
       el,
       model: model as never,
+      signal: new AbortController().signal,
+      host: {} as never,
       experimental: {} as never,
     });
   });
@@ -121,6 +123,8 @@ async function renderWidgetInShadowRoot(
     teardown = await widget.render({
       el,
       model: model as never,
+      signal: new AbortController().signal,
+      host: {} as never,
       experimental: {} as never,
     });
   });
