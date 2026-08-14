@@ -29,3 +29,15 @@ updates:
       js-major:
         update-types:
           - "major"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions-patch-and-minor:
+        update-types:
+          - "patch"
+          - "minor"
+      github-actions-major:
+        update-types:
+          - "major"
