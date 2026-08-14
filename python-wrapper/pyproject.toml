@@ -45,10 +45,10 @@ requires-python = ">=3.10"
 pandas = ["pandas>=2, <3", "pandas-stubs>=2, <3"]
 gds = ["graphdatascience>=1.22, <3"]
 neo4j = ["neo4j"]
-snowflake = ["snowflake-snowpark-python>=1, <2"]
+snowflake = ["snowflake-snowpark-python<2,>=1"]
 # The Streamlit integration (neo4j_viz.streamlit) uses the Components v2 API,
 # available from streamlit 1.58.
-streamlit = ["streamlit>=1.58, <2"]
+streamlit = ["streamlit<2,>=1.58"]
 
 
 [dependency-groups]
@@ -61,7 +61,7 @@ dev = [
     "palettable==3.3.3",
     "pytest-mock==3.15.1",
     "nbconvert==7.17.1",
-    "streamlit==1.58.0",
+    "streamlit==1.61.1",
     "matplotlib>=3.9.4",
     "jupyterlab>=4.5.7",
     "anywidget[dev]",
@@ -83,7 +83,7 @@ notebook = [
     "ipywidgets>=8.0.0",
     "palettable>=3.3.3",
     "matplotlib>=3.9.4",
-    "snowflake-snowpark-python==1.52.0",
+    "snowflake-snowpark-python==1.54.0",
     "requests",
     "marimo",
     "python-dotenv"
