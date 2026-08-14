@@ -15,19 +15,19 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "@anywidget/vite": "^0.2.2",
+    "@anywidget/vite": "^0.3.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^25.2.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
-    "@vitejs/plugin-react": "^4.5.2",
+    "@vitejs/plugin-react": "^6.0.5",
     "concurrently": "^9.2.1",
     "jsdom": "^29.1.1",
     "typescript": "7.0.2",
-    "vite": "^6.3.5",
+    "vite": "^8.2.1",
     "vite-plugin-singlefile": "^2.3.3",
-    "vitest": "~4.0.0"
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "@anywidget/react": "^0.2.2",
