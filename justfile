@@ -85,6 +85,10 @@ js-rebuild:
 js-build:
     ./scripts/build_js_applet.sh
 
+js-style:
+    cd js-applet && yarn && yarn lint:fix && yarn format
+    cd js-applet && yarn && yarn lint && yarn format:check
+
 streamlit:
     ./scripts/run_streamlit_example.sh
 
