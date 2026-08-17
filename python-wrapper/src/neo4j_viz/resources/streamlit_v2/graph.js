@@ -94570,22 +94570,48 @@ function wre() {
 			...n,
 			layout: e
 		});
-	}, b = (0, x.useRef)(null), S = yre(o);
+	}, b = (0, x.useRef)(null), S = (0, x.useRef)(null), C = yre(o);
 	(0, x.useEffect)(() => {
 		b.current && Cre(b.current);
+	}, []), (0, x.useEffect)(() => {
+		if (!b.current) return;
+		let e, t = null, n = 0, r = 0, i = !1, a = (e) => !!e && !!e.__resizeTriggers__?.firstElementChild, o = () => {
+			let e = S.current?.getContainer?.() ?? null;
+			if (a(e)) try {
+				e.dispatchEvent(new Event("scroll"));
+			} catch {}
+		}, s = (n) => {
+			t !== n && (e?.disconnect(), t = n, e = new ResizeObserver(o), e.observe(n));
+		}, c = new MutationObserver(() => {
+			if (i) return;
+			let e = S.current?.getContainer?.() ?? null;
+			a(e) && e !== t && s(e);
+		});
+		c.observe(b.current, {
+			childList: !0,
+			subtree: !0
+		});
+		let l = () => {
+			if (i) return;
+			let e = S.current?.getContainer?.() ?? null;
+			a(e) ? s(e) : ++r < 120 && (n = requestAnimationFrame(l));
+		};
+		return l(), () => {
+			i = !0, cancelAnimationFrame(n), e?.disconnect(), c.disconnect();
+		};
 	}, []);
-	let [C, w] = (0, x.useMemo)(() => [dre(e ?? []), fre(t ?? [])], [e, t]), T = (0, x.useMemo)(() => ({
+	let [w, T] = (0, x.useMemo)(() => [dre(e ?? []), fre(t ?? [])], [e, t]), D = (0, x.useMemo)(() => ({
 		...d,
 		minZoom: 0,
 		maxZoom: 1e3,
 		disableWebWorkers: !0
-	}), [d]), [D, O] = (0, x.useState)(!1), [k, A] = (0, x.useState)(300), [j, M] = (0, x.useState)(!1);
+	}), [d]), [O, k] = (0, x.useState)(!1), [A, j] = (0, x.useState)(300), [M, N] = (0, x.useState)(!1);
 	(0, x.useEffect)(() => {
-		q9(l ?? J9) && M(!0);
+		q9(l ?? J9) && N(!0);
 	}, [l]);
-	let N = q9(l ?? J9);
+	let P = q9(l ?? J9);
 	return /* @__PURE__ */ (0, z.jsx)(Ja, {
-		theme: S,
+		theme: C,
 		wrapperProps: { isWrappingChildren: !1 },
 		children: /* @__PURE__ */ (0, z.jsxs)("div", {
 			ref: b,
@@ -94595,35 +94621,36 @@ function wre() {
 				width: a ?? "100%"
 			},
 			children: [/* @__PURE__ */ (0, z.jsx)(W9, {
-				nodes: C,
-				rels: w,
+				nodes: w,
+				rels: T,
 				gesture: _,
 				setGesture: v,
 				selected: s ?? _re,
 				setSelected: c,
 				layout: u,
 				setLayout: y,
-				nvlOptions: T,
+				nvlOptions: D,
+				nvlRef: S,
 				zoom: f,
 				pan: p,
 				layoutOptions: m,
 				sidepanel: {
-					isSidePanelOpen: D,
-					setIsSidePanelOpen: O,
-					onSidePanelResize: A,
-					sidePanelWidth: k,
+					isSidePanelOpen: O,
+					setIsSidePanelOpen: k,
+					onSidePanelResize: j,
+					sidePanelWidth: A,
 					children: /* @__PURE__ */ (0, z.jsx)(W9.SingleSelectionSidePanelContents, {})
 				},
 				topLeftIsland: /* @__PURE__ */ (0, z.jsx)(W9.DownloadButton, { tooltipPlacement: "right" }),
 				topRightIsland: /* @__PURE__ */ (0, z.jsxs)(ME, {
 					size: "small",
 					orientation: "horizontal",
-					children: [N && /* @__PURE__ */ (0, z.jsx)(TE, {
+					children: [P && /* @__PURE__ */ (0, z.jsx)(TE, {
 						size: "small",
 						isFloating: !0,
-						isActive: j,
-						description: j ? "Hide legend" : "Show legend",
-						onClick: () => M((e) => !e),
+						isActive: M,
+						description: M ? "Hide legend" : "Show legend",
+						onClick: () => N((e) => !e),
 						htmlAttributes: { "aria-label": "Toggle legend" },
 						tooltipProps: { root: {
 							placement: "bottom",
@@ -94650,7 +94677,7 @@ function wre() {
 						})] })
 					]
 				})
-			}), j && /* @__PURE__ */ (0, z.jsx)(hre, { legend: l ?? J9 })]
+			}), M && /* @__PURE__ */ (0, z.jsx)(hre, { legend: l ?? J9 })]
 		})
 	});
 }

@@ -1,6 +1,7 @@
 import { createRender, useModelState } from "@anywidget/react";
 import ndlCssText from "@neo4j-ndl/base/lib/neo4j-ds-styles.css?inline";
 import { Gesture, GraphSelection, GraphVisualization } from "@neo4j-ndl/react-graph";
+import type NVL from "@neo4j-nvl/base";
 import type { Layout, NvlOptions } from "@neo4j-nvl/base";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -187,11 +188,88 @@ function GraphWidget() {
   };
 
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const nvlRef = useRef<NVL | null>(null);
   const resolvedTheme = useResolvedTheme(theme);
 
   useEffect(() => {
     if (!wrapperRef.current) return;
     injectNdlCss(wrapperRef.current);
+  }, []);
+
+  // NVL sizes its <canvas> once at mount via an internal `element-resize-event` scroll-sensor
+  // polyfill that doesn't fire when the side panel (NDL Drawer, type "push") flex-shrinks its
+  // container — so the canvas keeps its initial width and clicks land offset by the panel width
+  // (#417). NVL has no public resize API, so we bridge a real ResizeObserver to that polyfill: on
+  // any size change we dispatch a synthetic `scroll` on the container, which the polyfill listens
+  // for (capture) and uses to recompute the canvas size. TEMPORARY SHIM — remove once the upstream
+  // NVL resize fix (see changelog/PR) is bumped into this package.
+  //
+  // NVL may replace its container element after mount (observed in the Streamlit/Components-v2
+  // mount flow), so a one-shot observer would stick to a detached element. We watch the stable
+  // wrapper subtree with a MutationObserver and re-attach the ResizeObserver whenever the
+  // current container (`getContainer()`) changes.
+  useEffect(() => {
+    if (!wrapperRef.current) return;
+    let ro: ResizeObserver | undefined;
+    let observed: HTMLElement | null = null;
+    let raf = 0;
+    let attempts = 0;
+    let disposed = false;
+
+    // The polyfill is only safe to poke while it's live: on NVL destroy it sets
+    // `__resizeTriggers__` to `false` and (due to a capture-flag bug) leaves its `scroll` listener
+    // attached, so an unguarded `scroll` dispatch would throw inside that leaked listener — and
+    // `dispatchEvent` doesn't propagate listener exceptions, so it can't be caught. Guard on a
+    // real `__resizeTriggers__.firstElementChild` instead.
+    const ready = (el: HTMLElement | null): el is HTMLElement =>
+      !!el &&
+      !!(el as unknown as { __resizeTriggers__?: HTMLElement }).__resizeTriggers__
+        ?.firstElementChild;
+
+    const dispatch = () => {
+      // Re-resolve each time: NVL may have been recreated after mount.
+      const cur = nvlRef.current?.getContainer?.() ?? null;
+      if (ready(cur)) {
+        try {
+          cur.dispatchEvent(new Event("scroll"));
+        } catch {
+          /* best-effort */
+        }
+      }
+    };
+
+    const attach = (el: HTMLElement) => {
+      if (observed === el) return;
+      ro?.disconnect();
+      observed = el;
+      ro = new ResizeObserver(dispatch);
+      ro.observe(el);
+    };
+
+    // Re-attach whenever NVL swaps in a new container (it replaces the element, leaving the
+    // previous one detached, so the prior observer would go silent).
+    const mo = new MutationObserver(() => {
+      if (disposed) return;
+      const el = nvlRef.current?.getContainer?.() ?? null;
+      if (ready(el) && el !== observed) attach(el);
+    });
+    mo.observe(wrapperRef.current, { childList: true, subtree: true });
+
+    // NVL is created in a child effect; retry briefly until its polyfill is attached.
+    const tick = () => {
+      if (disposed) return;
+      const el = nvlRef.current?.getContainer?.() ?? null;
+      if (ready(el)) attach(el);
+      else if (++attempts < 120) raf = requestAnimationFrame(tick);
+    };
+    tick();
+
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+      mo.disconnect();
+    };
   }, []);
 
   const [neoNodes, neoRelationships] = useMemo(
@@ -243,6 +321,7 @@ function GraphWidget() {
           layout={layout}
           setLayout={setLayout}
           nvlOptions={nvlOptionsWithoutWorkers}
+          nvlRef={nvlRef}
           zoom={zoom}
           pan={pan}
           layoutOptions={layoutOptions}
