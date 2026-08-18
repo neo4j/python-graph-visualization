@@ -8,7 +8,10 @@ set -o pipefail
 
 uv run --project "${PY_PROJECT}" python -m ruff check .
 uv run --project "${PY_PROJECT}" python -m ruff format --check .
-uv run --project "${PY_PROJECT}" python -m mypy --config-file "${PY_PROJECT}/pyproject.toml" .
+# MYPY_TARGETS scopes mypy to a subset (e.g. `python-wrapper/src`) — used to type-check
+# the v1 GDS compat surface under a pinned graphdatascience without pulling in test
+# helpers that import v2-only modules.
+uv run --project "${PY_PROJECT}" python -m mypy --config-file "${PY_PROJECT}/pyproject.toml" "${MYPY_TARGETS:-.}"
 
 
 if [ "${SKIP_NOTEBOOKS:-false}" == "true" ]; then
