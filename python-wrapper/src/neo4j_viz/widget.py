@@ -186,9 +186,7 @@ class GraphWidget(anywidget.AnyWidget):
         """
         Register a callback that fires whenever the given node mouse event occurs.
 
-        ``event_type`` is one of ``"click"``, ``"double_click"``, ``"right_click"``; the node
-        category is implied by this method, so the full ``last_event.type`` (``"node_<event>"``)
-        is matched internally. The callback receives the resolved `Node` matched by id from the
+        The callback receives the resolved `Node` matched by id from the
         widget's current `nodes`, or `None` if that id is no longer in the graph.
 
         Note that firing the *same* event on the *same* node twice in a row calls the callback
@@ -201,7 +199,7 @@ class GraphWidget(anywidget.AnyWidget):
         Parameters
         ----------
         event_type:
-            The mouse event to react to (see `MouseEvent`).
+            The mouse event to react to.
         callback:
             A function called with the resolved `Node` (or `None`).
 
@@ -235,10 +233,7 @@ class GraphWidget(anywidget.AnyWidget):
         """
         Register a callback that fires whenever the given relationship mouse event occurs.
 
-        ``event_type`` is one of ``"click"``, ``"double_click"``, ``"right_click"``; the
-        relationship category is implied by this method, so the full ``last_event.type``
-        (``"relationship_<event>"``) is matched internally. The callback receives the resolved
-        `Relationship` matched by id from the widget's current `relationships`, or `None` if that
+        The callback receives the resolved `Relationship` matched by id from the widget's current `relationships`, or `None` if that
         id is no longer in the graph.
 
         See `on_node_event` for the repeated-event and selection caveats, which apply here too.
@@ -278,9 +273,7 @@ class GraphWidget(anywidget.AnyWidget):
         """
         Register a callback that fires whenever the given canvas mouse event occurs.
 
-        ``event_type`` is one of ``"click"``, ``"double_click"``, ``"right_click"``; the canvas
-        category is implied by this method, so the full ``last_event.type`` (``"canvas_<event>"``)
-        is matched internally. Canvas events target the empty graph background rather than an
+        Canvas events target the empty graph background rather than an
         entity, so the callback takes **no arguments** (unlike `on_node_event` /
         `on_relationship_event`).
 
