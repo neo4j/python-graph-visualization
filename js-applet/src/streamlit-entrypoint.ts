@@ -40,7 +40,7 @@ type Listener = (...args: unknown[]) => void;
 
 // Traits the frontend is allowed to write back to Python. Mirror the two-way traits
 // on GraphWidget (`selected` and `options`) and `_RECEIVE_KEYS` in streamlit.py.
-const WRITABLE_KEYS: (keyof WidgetData)[] = ["selected", "options", "last_double_click"];
+const WRITABLE_KEYS: (keyof WidgetData)[] = ["selected", "options", "last_event"];
 
 class StreamlitModel {
   private state: Partial<WidgetData> = {};

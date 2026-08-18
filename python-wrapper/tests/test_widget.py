@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 from neo4j_viz import GraphSelection, GraphWidget, Node, Relationship, VisualizationGraph
-from neo4j_viz.options import DoubleClickEvent, Layout, Renderer, RenderOptions, SelectionMode, WidgetOptions
+from neo4j_viz.options import InteractionEvent, Layout, Renderer, RenderOptions, SelectionMode, WidgetOptions
 from neo4j_viz.widget import _serialize_entity
 
 
@@ -503,88 +503,127 @@ class TestWidgetSelection:
         assert len(received) == 1
 
 
-class TestWidgetDoubleClick:
-    def test_last_double_click_defaults_to_none(self) -> None:
+class TestWidgetEvents:
+    def test_last_event_defaults_to_none(self) -> None:
         widget = GraphWidget(nodes=[Node(id="n1")])
-        assert widget.last_double_click is None
+        assert widget.last_event is None
 
-    def test_double_click_syncs_from_frontend(self) -> None:
-        """The `last_double_click` trait is synced, so observers fire when the frontend updates it."""
+    def test_last_event_syncs_from_frontend(self) -> None:
+        """The `last_event` trait is synced, so observers fire when the frontend updates it."""
         widget = GraphWidget(nodes=[Node(id="n1")])
         changes: list[dict[str, Any]] = []
-        widget.observe(lambda change: changes.append(change), names=["last_double_click"])
+        widget.observe(lambda change: changes.append(change), names=["last_event"])
 
-        widget.last_double_click = DoubleClickEvent(kind="node", id="n1")
+        widget.last_event = InteractionEvent(type="node_click", id="n1")
 
         assert len(changes) == 1
-        assert changes[0]["name"] == "last_double_click"
+        assert changes[0]["name"] == "last_event"
 
-    def test_on_node_double_click_receives_resolved_node(self) -> None:
+    def test_on_node_event_click_receives_resolved_node(self) -> None:
         widget = GraphWidget(nodes=[Node(id="n1", caption="A"), Node(id="n2")])
         received: list[Node | None] = []
-        widget.on_node_double_click(received.append)
+        widget.on_node_event("click", received.append)
 
-        widget.last_double_click = DoubleClickEvent(kind="node", id="n1")
+        widget.last_event = InteractionEvent(type="node_click", id="n1")
 
         assert len(received) == 1
         assert isinstance(received[0], Node)
         assert received[0].id == "n1"
 
-    def test_on_node_double_click_yields_none_for_unknown_id(self) -> None:
+    def test_on_node_event_yields_none_for_unknown_id(self) -> None:
         widget = GraphWidget(nodes=[Node(id="n1")])
         received: list[Node | None] = []
-        widget.on_node_double_click(received.append)
+        widget.on_node_event("click", received.append)
 
-        widget.last_double_click = DoubleClickEvent(kind="node", id="gone")
+        widget.last_event = InteractionEvent(type="node_click", id="gone")
 
         assert received == [None]
 
-    def test_on_node_double_click_ignores_relationship_events(self) -> None:
+    def test_on_node_event_ignores_relationship_and_canvas_events(self) -> None:
         widget = GraphWidget(
             nodes=[Node(id="n1"), Node(id="n2")],
             relationships=[Relationship(id="r1", source="n1", target="n2")],
         )
         received: list[Node | None] = []
-        widget.on_node_double_click(received.append)
+        widget.on_node_event("click", received.append)
 
-        widget.last_double_click = DoubleClickEvent(kind="relationship", id="r1")
+        widget.last_event = InteractionEvent(type="relationship_click", id="r1")
+        widget.last_event = InteractionEvent(type="canvas_click", id=None)
 
         assert received == []
 
-    def test_on_relationship_double_click_receives_resolved_relationship(self) -> None:
+    def test_on_relationship_event_right_click_receives_resolved_relationship(self) -> None:
         widget = GraphWidget(
             nodes=[Node(id="n1"), Node(id="n2")],
             relationships=[Relationship(id="r1", source="n1", target="n2", caption="REL")],
         )
         received: list[Relationship | None] = []
-        widget.on_relationship_double_click(received.append)
+        widget.on_relationship_event("right_click", received.append)
 
-        widget.last_double_click = DoubleClickEvent(kind="relationship", id="r1")
+        widget.last_event = InteractionEvent(type="relationship_right_click", id="r1")
 
         assert len(received) == 1
         assert isinstance(received[0], Relationship)
         assert received[0].id == "r1"
 
-    def test_on_relationship_double_click_ignores_node_events(self) -> None:
+    def test_on_relationship_event_ignores_node_events(self) -> None:
         widget = GraphWidget(nodes=[Node(id="n1")])
         received: list[Relationship | None] = []
-        widget.on_relationship_double_click(received.append)
+        widget.on_relationship_event("click", received.append)
 
-        widget.last_double_click = DoubleClickEvent(kind="node", id="n1")
+        widget.last_event = InteractionEvent(type="node_click", id="n1")
 
         assert received == []
 
-    def test_on_node_double_click_returns_handler_for_unobserve(self) -> None:
+    def test_on_canvas_event_click_receives_no_args(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1")])
+        calls: list[tuple[()]] = []
+        widget.on_canvas_event("click", lambda: calls.append(()))
+
+        widget.last_event = InteractionEvent(type="canvas_click", id=None)
+
+        assert calls == [()]
+
+    def test_on_canvas_event_ignores_entity_events(self) -> None:
+        widget = GraphWidget(nodes=[Node(id="n1")])
+        calls: list[tuple[()]] = []
+        widget.on_canvas_event("click", lambda: calls.append(()))
+
+        widget.last_event = InteractionEvent(type="node_click", id="n1")
+
+        assert calls == []
+
+    def test_on_node_event_distinguishes_gestures_on_same_target(self) -> None:
+        """A node_click handler must not fire for a node_double_click on the same node."""
+        widget = GraphWidget(nodes=[Node(id="n1")])
+        clicks: list[Node | None] = []
+        double_clicks: list[Node | None] = []
+        widget.on_node_event("click", clicks.append)
+        widget.on_node_event("double_click", double_clicks.append)
+
+        widget.last_event = InteractionEvent(type="node_double_click", id="n1")
+
+        assert clicks == []
+        assert len(double_clicks) == 1
+
+    def test_on_node_event_returns_handler_for_unobserve(self) -> None:
         widget = GraphWidget(nodes=[Node(id="n1"), Node(id="n2")])
         received: list[Node | None] = []
-        handler = widget.on_node_double_click(received.append)
+        handler = widget.on_node_event("click", received.append)
 
-        widget.last_double_click = DoubleClickEvent(kind="node", id="n1")
+        widget.last_event = InteractionEvent(type="node_click", id="n1")
         assert len(received) == 1
 
-        widget.unobserve(handler, names=["last_double_click"])
-        widget.last_double_click = DoubleClickEvent(kind="node", id="n2")
+        widget.unobserve(handler, names=["last_event"])
+        widget.last_event = InteractionEvent(type="node_click", id="n2")
         assert len(received) == 1
+
+    def test_on_event_rejects_unknown_mouse_event_at_registration(self) -> None:
+        """An invalid mouse-event string raises ValueError when the handler is registered
+        (caught early), rather than silently never firing."""
+        widget = GraphWidget(nodes=[Node(id="n1")])
+        with pytest.raises(ValueError):
+            widget.on_node_event("clik", lambda _node: None)  # type: ignore[arg-type]
 
 
 render_widget_cases = {

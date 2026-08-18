@@ -94561,22 +94561,22 @@ function Cre(e) {
 	document.head.querySelector(bre) || Z9(document.head, "data-neo4j-viz-ndl-main", O);
 }
 function wre() {
-	let [e] = E("nodes"), [t] = E("relationships"), [n, r] = E("options"), [i] = E("height"), [a] = E("width"), [o] = E("theme"), [s, c] = E("selected"), [l] = E("legend"), { layout: u, nvlOptions: d, zoom: f, pan: p, layoutOptions: m, showLayoutButton: h, selectionMode: g } = n ?? {}, [_, v] = (0, x.useState)(g ?? "single");
+	let [e] = E("nodes"), [t] = E("relationships"), [n, r] = E("options"), [i] = E("height"), [a] = E("width"), [o] = E("theme"), [s, c] = E("selected"), [, l] = E("last_event"), [u] = E("legend"), { layout: d, nvlOptions: f, zoom: p, pan: m, layoutOptions: h, showLayoutButton: g, selectionMode: _ } = n ?? {}, [v, y] = (0, x.useState)(_ ?? "single");
 	(0, x.useEffect)(() => {
-		g && v(g);
-	}, [g]);
-	let y = (e) => {
+		_ && y(_);
+	}, [_]);
+	let b = (e) => {
 		r({
 			...n,
 			layout: e
 		});
-	}, b = (0, x.useRef)(null), S = (0, x.useRef)(null), C = yre(o);
+	}, S = (0, x.useRef)(null), C = (0, x.useRef)(null), w = yre(o);
 	(0, x.useEffect)(() => {
-		b.current && Cre(b.current);
+		S.current && Cre(S.current);
 	}, []), (0, x.useEffect)(() => {
-		if (!b.current) return;
+		if (!S.current) return;
 		let e, t = null, n = 0, r = 0, i = !1, a = (e) => !!e && !!e.__resizeTriggers__?.firstElementChild, o = () => {
-			let e = S.current?.getContainer?.() ?? null;
+			let e = C.current?.getContainer?.() ?? null;
 			if (a(e)) try {
 				e.dispatchEvent(new Event("scroll"));
 			} catch {}
@@ -94584,73 +94584,111 @@ function wre() {
 			t !== n && (e?.disconnect(), t = n, e = new ResizeObserver(o), e.observe(n));
 		}, c = new MutationObserver(() => {
 			if (i) return;
-			let e = S.current?.getContainer?.() ?? null;
+			let e = C.current?.getContainer?.() ?? null;
 			a(e) && e !== t && s(e);
 		});
-		c.observe(b.current, {
+		c.observe(S.current, {
 			childList: !0,
 			subtree: !0
 		});
 		let l = () => {
 			if (i) return;
-			let e = S.current?.getContainer?.() ?? null;
+			let e = C.current?.getContainer?.() ?? null;
 			a(e) ? s(e) : ++r < 120 && (n = requestAnimationFrame(l));
 		};
 		return l(), () => {
 			i = !0, cancelAnimationFrame(n), e?.disconnect(), c.disconnect();
 		};
 	}, []);
-	let [w, T] = (0, x.useMemo)(() => [dre(e ?? []), fre(t ?? [])], [e, t]), D = (0, x.useMemo)(() => ({
-		...d,
+	let [T, D] = (0, x.useMemo)(() => [dre(e ?? []), fre(t ?? [])], [e, t]), O = (0, x.useMemo)(() => ({
+		...f,
 		minZoom: 0,
 		maxZoom: 1e3,
 		disableWebWorkers: !0
-	}), [d]), [O, k] = (0, x.useState)(!1), [A, j] = (0, x.useState)(300), [M, N] = (0, x.useState)(!1);
+	}), [f]), [k, A] = (0, x.useState)(!1), [j, M] = (0, x.useState)(300), [N, P] = (0, x.useState)(!1);
 	(0, x.useEffect)(() => {
-		q9(l ?? J9) && N(!0);
-	}, [l]);
-	let P = q9(l ?? J9);
+		q9(u ?? J9) && P(!0);
+	}, [u]);
+	let F = q9(u ?? J9);
 	return /* @__PURE__ */ (0, z.jsx)(Ja, {
-		theme: C,
+		theme: w,
 		wrapperProps: { isWrappingChildren: !1 },
 		children: /* @__PURE__ */ (0, z.jsxs)("div", {
-			ref: b,
+			ref: S,
 			style: {
 				position: "relative",
 				height: i ?? "600px",
 				width: a ?? "100%"
 			},
 			children: [/* @__PURE__ */ (0, z.jsx)(W9, {
-				nodes: w,
-				rels: T,
-				gesture: _,
-				setGesture: v,
+				nodes: T,
+				rels: D,
+				gesture: v,
+				setGesture: y,
 				selected: s ?? _re,
 				setSelected: c,
-				layout: u,
-				setLayout: y,
-				nvlOptions: D,
-				nvlRef: S,
-				zoom: f,
-				pan: p,
-				layoutOptions: m,
+				mouseEventCallbacks: {
+					onNodeClick: (e) => l({
+						type: "node_click",
+						id: String(e.id)
+					}),
+					onNodeDoubleClick: (e) => l({
+						type: "node_double_click",
+						id: String(e.id)
+					}),
+					onNodeRightClick: (e) => l({
+						type: "node_right_click",
+						id: String(e.id)
+					}),
+					onRelationshipClick: (e) => l({
+						type: "relationship_click",
+						id: String(e.id)
+					}),
+					onRelationshipDoubleClick: (e) => l({
+						type: "relationship_double_click",
+						id: String(e.id)
+					}),
+					onRelationshipRightClick: (e) => l({
+						type: "relationship_right_click",
+						id: String(e.id)
+					}),
+					onCanvasClick: () => l({
+						type: "canvas_click",
+						id: null
+					}),
+					onCanvasDoubleClick: () => l({
+						type: "canvas_double_click",
+						id: null
+					}),
+					onCanvasRightClick: () => l({
+						type: "canvas_right_click",
+						id: null
+					})
+				},
+				layout: d,
+				setLayout: b,
+				nvlOptions: O,
+				nvlRef: C,
+				zoom: p,
+				pan: m,
+				layoutOptions: h,
 				sidepanel: {
-					isSidePanelOpen: O,
-					setIsSidePanelOpen: k,
-					onSidePanelResize: j,
-					sidePanelWidth: A,
+					isSidePanelOpen: k,
+					setIsSidePanelOpen: A,
+					onSidePanelResize: M,
+					sidePanelWidth: j,
 					children: /* @__PURE__ */ (0, z.jsx)(W9.SingleSelectionSidePanelContents, {})
 				},
 				topLeftIsland: /* @__PURE__ */ (0, z.jsx)(W9.DownloadButton, { tooltipPlacement: "right" }),
 				topRightIsland: /* @__PURE__ */ (0, z.jsxs)(ME, {
 					size: "small",
 					orientation: "horizontal",
-					children: [P && /* @__PURE__ */ (0, z.jsx)(TE, {
+					children: [F && /* @__PURE__ */ (0, z.jsx)(TE, {
 						size: "small",
 						isFloating: !0,
-						isActive: M,
-						description: M ? "Hide legend" : "Show legend",
-						onClick: () => N((e) => !e),
+						isActive: N,
+						description: N ? "Hide legend" : "Show legend",
+						onClick: () => P((e) => !e),
 						htmlAttributes: { "aria-label": "Toggle legend" },
 						tooltipProps: { root: {
 							placement: "bottom",
@@ -94671,20 +94709,24 @@ function wre() {
 						/* @__PURE__ */ (0, z.jsx)(W9.ZoomInButton, { tooltipPlacement: "top" }),
 						/* @__PURE__ */ (0, z.jsx)(W9.ZoomOutButton, { tooltipPlacement: "top" }),
 						/* @__PURE__ */ (0, z.jsx)(W9.ZoomToFitButton, { tooltipPlacement: "top" }),
-						h && /* @__PURE__ */ (0, z.jsxs)(z.Fragment, { children: [/* @__PURE__ */ (0, z.jsx)(H, { orientation: "vertical" }), /* @__PURE__ */ (0, z.jsx)(W9.LayoutSelectButton, {
+						g && /* @__PURE__ */ (0, z.jsxs)(z.Fragment, { children: [/* @__PURE__ */ (0, z.jsx)(H, { orientation: "vertical" }), /* @__PURE__ */ (0, z.jsx)(W9.LayoutSelectButton, {
 							menuPlacement: "top-end-bottom-end",
 							tooltipPlacement: "top"
 						})] })
 					]
 				})
-			}), M && /* @__PURE__ */ (0, z.jsx)(hre, { legend: l ?? J9 })]
+			}), N && /* @__PURE__ */ (0, z.jsx)(hre, { legend: u ?? J9 })]
 		})
 	});
 }
 function Tre() {
 	return /* @__PURE__ */ (0, z.jsx)(gre, { children: /* @__PURE__ */ (0, z.jsx)(wre, {}) });
 }
-var Ere = { render: D(Tre) }, Dre = ["selected", "options"], Ore = class {
+var Ere = { render: D(Tre) }, Dre = [
+	"selected",
+	"options",
+	"last_event"
+], Ore = class {
 	setStateValue;
 	state = {};
 	listeners = /* @__PURE__ */ new Map();

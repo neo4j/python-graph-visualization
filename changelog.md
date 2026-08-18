@@ -4,7 +4,7 @@
 
 ## New features
 
-* Allow reacting to DoubleClickEvents on nodes or relationships using `widget.on_node_double_click`.
+* Allow reacting to interaction events (click, double-click, and right-click on nodes, relationships, or the canvas) using `widget.on_node_event`, `widget.on_relationship_event`, and `widget.on_canvas_event`, and the synced `widget.last_event` trait.
 * Handle duplicates for `widget.add_data` and allow different strategies (`ignore`, `replace` or `none`)
 
 

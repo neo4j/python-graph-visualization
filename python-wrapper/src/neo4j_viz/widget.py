@@ -9,17 +9,19 @@ import anywidget
 import pydantic
 import traitlets
 
+from ._events import _to_full_event_type
 from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
 from ._validation import OnDangling, OnDuplicate, check_dangling_relationships, merge_on_duplicate
 from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
 from .node_size import RealNumber
 from .options import (
-    DoubleClickEvent,
     GraphSelection,
+    InteractionEvent,
     Layout,
     LayoutOptions,
     Legend,
+    MouseEvent,
     NvlOptions,
     PanPosition,
     Renderer,
@@ -124,18 +126,18 @@ class GraphWidget(anywidget.AnyWidget):
         to_json=lambda value, widget: value.to_json(),
         from_json=lambda value, widget: Legend.model_validate(value),
     )
-    last_double_click: PydanticTrait[DoubleClickEvent] = PydanticTrait(
-        DoubleClickEvent,
+    last_event: PydanticTrait[InteractionEvent] = PydanticTrait(
+        InteractionEvent,
         allow_none=True,
         default_value=None,
-        help="The most recently double-clicked node or relationship in the widget UI, as a "
-        "`DoubleClickEvent` with `kind` and `id`, or `None` until the first double-click. Synced "
-        "from the frontend; prefer the `on_node_double_click` / `on_relationship_double_click` "
-        "convenience methods.",
+        help="The most recent discrete interaction event (click / double-click / right-click on a "
+        "node, relationship, or the canvas) in the widget UI, as an `InteractionEvent` with `type` "
+        "and `id`, or `None` until the first event. Synced from the frontend; prefer the "
+        "`on_node_event` / `on_relationship_event` / `on_canvas_event` convenience methods.",
     ).tag(
         sync=True,
         to_json=lambda value, widget: value.to_json() if value is not None else None,
-        from_json=lambda value, widget: DoubleClickEvent.model_validate(value) if value is not None else None,
+        from_json=lambda value, widget: InteractionEvent.model_validate(value) if value is not None else None,
     )
 
     _max_allowed_nodes: int = 10_000
@@ -178,26 +180,34 @@ class GraphWidget(anywidget.AnyWidget):
         self.observe(handler, names=["selected"])
         return handler
 
-    def on_node_double_click(self, callback: Callable[[Node | None], None]) -> Callable[[dict[str, Any]], None]:
+    def on_node_event(
+        self, event_type: MouseEvent, callback: Callable[[Node | None], None]
+    ) -> Callable[[dict[str, Any]], None]:
         """
-        Register a callback that fires whenever a node is double-clicked in the widget UI.
+        Register a callback that fires whenever the given node mouse event occurs.
 
-        The callback receives the double-clicked `Node`, resolved from the widget's current
-        `nodes` by matching ids. It is `None` in the rare case the node is no longer in the graph.
-        Relationship double-clicks are ignored by this callback (use `on_relationship_double_click`).
+        ``event_type`` is one of ``"click"``, ``"double_click"``, ``"right_click"``; the node
+        category is implied by this method, so the full ``last_event.type`` (``"node_<event>"``)
+        is matched internally. The callback receives the resolved `Node` matched by id from the
+        widget's current `nodes`, or `None` if that id is no longer in the graph.
 
-        Note that double-clicking the *same* node twice in a row fires the callback only once, since
-        the underlying `last_double_click` trait does not change value. For the raw event (`kind`
-        and `id`), observe the `last_double_click` trait directly instead.
+        Note that firing the *same* event on the *same* node twice in a row calls the callback
+        only once, since the underlying `last_event` trait does not change value. For the raw event
+        (`type` and `id`) on every occurrence, observe the `last_event` trait directly instead.
+
+        Selection is a separate concern and is unaffected: single-click still updates the `selected`
+        trait (in the click-based selection mode) in addition to firing this callback.
 
         Parameters
         ----------
+        event_type:
+            The mouse event to react to (see `MouseEvent`).
         callback:
-            A function called with the double-clicked `Node` (or `None`).
+            A function called with the resolved `Node` (or `None`).
 
         Returns
         -------
-        The registered handler. Pass it to `unobserve(handler, names=["last_double_click"])` to stop
+        The registered handler. Pass it to `unobserve(handler, names=["last_event"])` to stop
         observing.
 
         Examples
@@ -206,52 +216,105 @@ class GraphWidget(anywidget.AnyWidget):
 
         >>> def expand(node):
         ...     print("double-clicked", node.id if node else None)
-        >>> handler = widget.on_node_double_click(expand)
+        >>> handler = widget.on_node_event("double_click", expand)
         """
+        full_type = _to_full_event_type("node", event_type)
 
         def handler(change: dict[str, Any]) -> None:
-            event: DoubleClickEvent | None = change["new"]
-            if event is None or event.kind != "node":
+            event: InteractionEvent | None = change["new"]
+            if event is None or event.type != full_type:
                 return
-            node = next((n for n in self.nodes if str(n.id) == event.id), None)
-            callback(node)
+            callback(next((n for n in self.nodes if str(n.id) == event.id), None))
 
-        self.observe(handler, names=["last_double_click"])
+        self.observe(handler, names=["last_event"])
         return handler
 
-    def on_relationship_double_click(
-        self, callback: Callable[[Relationship | None], None]
+    def on_relationship_event(
+        self, event_type: MouseEvent, callback: Callable[[Relationship | None], None]
     ) -> Callable[[dict[str, Any]], None]:
         """
-        Register a callback that fires whenever a relationship is double-clicked in the widget UI.
+        Register a callback that fires whenever the given relationship mouse event occurs.
 
-        The callback receives the double-clicked `Relationship`, resolved from the widget's current
-        `relationships` by matching ids. It is `None` in the rare case the relationship is no longer
-        in the graph. Node double-clicks are ignored by this callback (use `on_node_double_click`).
+        ``event_type`` is one of ``"click"``, ``"double_click"``, ``"right_click"``; the
+        relationship category is implied by this method, so the full ``last_event.type``
+        (``"relationship_<event>"``) is matched internally. The callback receives the resolved
+        `Relationship` matched by id from the widget's current `relationships`, or `None` if that
+        id is no longer in the graph.
 
-        Note that double-clicking the *same* relationship twice in a row fires the callback only
-        once, since the underlying `last_double_click` trait does not change value. For the raw event
-        (`kind` and `id`), observe the `last_double_click` trait directly instead.
+        See `on_node_event` for the repeated-event and selection caveats, which apply here too.
 
         Parameters
         ----------
+        event_type:
+            The mouse event to react to (see `MouseEvent`).
         callback:
-            A function called with the double-clicked `Relationship` (or `None`).
+            A function called with the resolved `Relationship` (or `None`).
 
         Returns
         -------
-        The registered handler. Pass it to `unobserve(handler, names=["last_double_click"])` to stop
+        The registered handler. Pass it to `unobserve(handler, names=["last_event"])` to stop
         observing.
+
+        Examples
+        --------
+        Given a GraphWidget `widget`:
+
+        >>> def show(rel):
+        ...     print("right-clicked", rel.id if rel else None)
+        >>> handler = widget.on_relationship_event("right_click", show)
         """
+        full_type = _to_full_event_type("relationship", event_type)
 
         def handler(change: dict[str, Any]) -> None:
-            event: DoubleClickEvent | None = change["new"]
-            if event is None or event.kind != "relationship":
+            event: InteractionEvent | None = change["new"]
+            if event is None or event.type != full_type:
                 return
-            relationship = next((r for r in self.relationships if str(r.id) == event.id), None)
-            callback(relationship)
+            callback(next((r for r in self.relationships if str(r.id) == event.id), None))
 
-        self.observe(handler, names=["last_double_click"])
+        self.observe(handler, names=["last_event"])
+        return handler
+
+    def on_canvas_event(self, event_type: MouseEvent, callback: Callable[[], None]) -> Callable[[dict[str, Any]], None]:
+        """
+        Register a callback that fires whenever the given canvas mouse event occurs.
+
+        ``event_type`` is one of ``"click"``, ``"double_click"``, ``"right_click"``; the canvas
+        category is implied by this method, so the full ``last_event.type`` (``"canvas_<event>"``)
+        is matched internally. Canvas events target the empty graph background rather than an
+        entity, so the callback takes **no arguments** (unlike `on_node_event` /
+        `on_relationship_event`).
+
+        See `on_node_event` for the repeated-event caveat, which applies here too.
+
+        Parameters
+        ----------
+        event_type:
+            The mouse event to react to (see `MouseEvent`).
+        callback:
+            A function called with no arguments when the event occurs.
+
+        Returns
+        -------
+        The registered handler. Pass it to `unobserve(handler, names=["last_event"])` to stop
+        observing.
+
+        Examples
+        --------
+        Given a GraphWidget `widget`:
+
+        >>> def clear():
+        ...     print("canvas clicked — clear selection")
+        >>> handler = widget.on_canvas_event("click", clear)
+        """
+        full_type = _to_full_event_type("canvas", event_type)
+
+        def handler(change: dict[str, Any]) -> None:
+            event: InteractionEvent | None = change["new"]
+            if event is None or event.type != full_type:
+                return
+            callback()
+
+        self.observe(handler, names=["last_event"])
         return handler
 
     @classmethod

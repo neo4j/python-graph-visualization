@@ -17,6 +17,8 @@ prerelease:
 postrelease part="minor":
     python scripts/release/postrelease.py --part {{part}}
 
+style: py-style js-style
+
 py-style:
     just py-sync
     ./scripts/makestyle.sh && ./scripts/checkstyle.sh
