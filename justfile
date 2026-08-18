@@ -23,6 +23,21 @@ py-style:
     just py-sync
     ./scripts/makestyle.sh && ./scripts/checkstyle.sh
 
+# Run Python style checks (ruff + mypy) against a pinned `graphdatascience` version, so
+# the v1/v2 compat surface in _gds_compat is type-checked under that version. mypy is
+# scoped to `src` because the test helpers import v2-only modules (covered by the default
+# v2 gate); ruff runs on the whole tree as usual.
+# example: just py-style-gds 1.22
+py-style-gds version="1.22":
+    #!/usr/bin/env bash
+    set -e
+    just py-sync
+    uv pip install --python python-wrapper/.venv/bin/python "graphdatascience=={{version}}"
+    # UV_NO_SYNC stops `uv run` inside the style scripts from re-syncing (which would
+    # revert the pin back to the latest GDS).
+    UV_NO_SYNC=1 ./scripts/makestyle.sh
+    UV_NO_SYNC=1 MYPY_TARGETS=python-wrapper/src ./scripts/checkstyle.sh
+
 py-test:
     cd python-wrapper && uv sync --all-extras --group dev
     cd python-wrapper && uv run --group dev pytest

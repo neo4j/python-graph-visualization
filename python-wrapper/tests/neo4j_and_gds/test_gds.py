@@ -7,7 +7,7 @@ from graphdatascience import GraphDataScience
 from graphdatascience.session import AuraGraphDataScience
 
 from neo4j_viz import Node
-from neo4j_viz._gds_compat import _catalog
+from neo4j_viz._gds_compat import _catalog, _project_cypher, _project_native
 from neo4j_viz.gds import from_gds
 
 
@@ -26,9 +26,9 @@ def db_setup(gds: GraphDataScience | AuraGraphDataScience) -> Generator[None, No
 
 def project_graph(gds: GraphDataScience | AuraGraphDataScience) -> Any:
     if isinstance(gds, GraphDataScience):
-        return _catalog(gds).project("g2", "*", "*")
+        return _project_native(gds, "g2", ["*"], ["*"])
     elif isinstance(gds, AuraGraphDataScience):
-        return _catalog(gds).project("g2", "MATCH (n)–->(m) RETURN gds.graph.project.remote(n, m)")
+        return _project_cypher(gds, "g2", "MATCH (n)–->(m) RETURN gds.graph.project.remote(n, m)")
     raise Exception(f"Unsupported GDS type {type(gds)}")
 
 

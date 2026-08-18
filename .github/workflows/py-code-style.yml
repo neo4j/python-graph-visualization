@@ -37,3 +37,30 @@ jobs:
 
       - name: Check code style
         run: source .venv/bin/activate && cd ${GITHUB_WORKSPACE} && ./scripts/checkstyle.sh
+
+  # Type-check the v1 (1.22) side of the GDS compat surface.
+  code-style-gds-v1:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: python-wrapper
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv and set the Python version
+        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        with:
+          python-version: "3.11"
+          enable-cache: true
+      - run: uv venv
+      - run: uv sync --group dev --extra pandas --extra neo4j --extra gds --extra snowflake
+      - run: uv pip install --python .venv/bin/python "graphdatascience==1.22"
+
+      - name: Check code style (GDS 1.22)
+        env:
+          UV_NO_SYNC: "1"
+          MYPY_TARGETS: "python-wrapper/src"
+        run: source .venv/bin/activate && cd ${GITHUB_WORKSPACE} && ./scripts/checkstyle.sh
+
