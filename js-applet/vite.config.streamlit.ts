@@ -22,7 +22,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Bundle everything into a single graph.js + style.css.
-        inlineDynamicImports: true,
+        // (codeSplitting:false replaces the deprecated inlineDynamicImports:true)
+        codeSplitting: false,
         assetFileNames: "style.[ext]",
       },
     },

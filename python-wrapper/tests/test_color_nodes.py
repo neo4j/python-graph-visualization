@@ -290,3 +290,21 @@ def test_color_nodes_override_false() -> None:
     assert VG.nodes[0].color == Color("#ff0000")  # Should keep existing color
     assert VG.nodes[1].color == Color("#ff0000")  # Should keep existing color
     assert VG.nodes[2].color == Color("#00ff00")  # Should get new color (no existing color)
+
+
+def test_color_nodes_continuous_missing_property_raises() -> None:
+    VG = VisualizationGraph(nodes=[Node(id="1"), Node(id="2")], relationships=[])
+
+    with pytest.raises(ValueError, match="No node has a value for 'name'"):
+        VG.color_nodes(property="name", color_space=ColorSpace.CONTINUOUS)
+
+
+def test_color_nodes_continuous_non_numeric_raises() -> None:
+    nodes = [
+        Node(id="1", properties={"name": "Alice"}),
+        Node(id="2", properties={"name": "Bob"}),
+    ]
+    VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+    with pytest.raises(ValueError, match="Continuous coloring needs numeric values"):
+        VG.color_nodes(property="name", color_space=ColorSpace.CONTINUOUS)

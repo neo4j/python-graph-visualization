@@ -1,6 +1,5 @@
-from matplotlib.colors import LinearSegmentedColormap as lsc
 import numpy as np
-
+from matplotlib.colors import LinearSegmentedColormap as lsc
 from neo4j_viz.colors import _NEO4J_COLORS_CONTINUOUS_BASE
 
 color_map = lsc.from_list("neo4j", _NEO4J_COLORS_CONTINUOUS_BASE, N=256)

@@ -201,6 +201,45 @@ class GraphSelection(BaseModel):
         return self.model_dump(mode="json")
 
 
+#: The mouse-event part of an interaction, passed to `on_node_event` /
+#: `on_relationship_event` / `on_canvas_event`. The category (node/relationship/canvas) is implied
+#: by the method, so only the mouse event is required.
+MouseEvent = Literal["click", "double_click", "right_click"]
+
+#: Any discrete interaction event NVL emits on the wire (``last_event.type``): the category
+#: (node/relationship/canvas) joined with a `MouseEvent`. Matches the frontend `InteractionEvent`
+#: type in `js-applet/src/graph-widget.tsx` verbatim.
+InteractionEventType = Literal[
+    "node_click",
+    "node_double_click",
+    "node_right_click",
+    "relationship_click",
+    "relationship_double_click",
+    "relationship_right_click",
+    "canvas_click",
+    "canvas_double_click",
+    "canvas_right_click",
+]
+
+
+# Mirrors the InteractionEvent type in js-applet/src/graph-widget.tsx. Field names match the
+# frontend wire format verbatim.
+class InteractionEvent(BaseModel):
+    """An interaction event on a node, relationship, or the canvas in the ``GraphWidget`` UI.
+
+    Held by ``GraphWidget.last_event``, which is ``None`` until the first event. The ``id`` is the
+    stringified entity id for node/relationship events and ``None`` for canvas events; match it
+    against ``str(node.id)`` / ``str(relationship.id)`` to recover the entity.
+    """
+
+    type: InteractionEventType
+    id: Optional[str] = None
+
+    def to_json(self) -> dict[str, Any]:
+        """Serialize to the dict the frontend consumes."""
+        return self.model_dump(mode="json")
+
+
 # Mirrors the LegendEntry/LegendSection/LegendData types in js-applet/src/legend.tsx
 class LegendEntry(
     BaseModel,

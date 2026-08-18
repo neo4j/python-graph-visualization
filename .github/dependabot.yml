@@ -5,10 +5,13 @@
 
 version: 2
 updates:
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "/python-wrapper"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 3
     groups:
       python-patch-and-minor:
         update-types:
@@ -21,11 +24,29 @@ updates:
     directory: "/js-applet"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-day: 3
+      enabled: true
     groups:
       js-patch-and-minor:
         update-types:
           - "patch"
           - "minor"
       js-major:
+        update-types:
+          - "major"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-day: 3
+      enabled: true
+    groups:
+      github-actions-patch-and-minor:
+        update-types:
+          - "patch"
+          - "minor"
+      github-actions-major:
         update-types:
           - "major"

@@ -2,7 +2,7 @@
 
 import marimo
 
-__generated_with = "0.20.4"
+__generated_with = "0.23.16"
 app = marimo.App(width="full", app_title="Neo4jVizExample")
 
 
@@ -21,7 +21,6 @@ def _(mo):
     This example demonstrates how to use `neo4j-viz` to visualize graphs in Marimo notebooks.
     We'll create a simple graph representing a social network with people and their relationships.
     """)
-    return
 
 
 @app.cell
@@ -36,7 +35,6 @@ def _(mo):
     mo.md(r"""
     ## Create Nodes and Relationships
     """)
-    return
 
 
 @app.cell
@@ -62,7 +60,6 @@ def _(mo):
     mo.md(r"""
     ## Visualize the Graph as a Widget
     """)
-    return
 
 
 @app.cell
@@ -79,7 +76,6 @@ def _(VisualizationGraph, nodes, relationships):
 def _(widget):
     print(widget.theme)
     print(widget.options)
-    return
 
 
 @app.cell
@@ -94,7 +90,6 @@ def _(Node, Relationship, widget):
     new_rel = Relationship(source=new_id, target=target_id, caption="KNOWS")
 
     widget.add_data(nodes=[new_node], relationships=[new_rel])
-    return
 
 
 @app.cell(hide_code=True)
@@ -102,16 +97,17 @@ def _(mo):
     mo.md(r"""
     ## Standalone Visualization the Graph
     """)
-    return
 
 
 @app.cell
 def _(VG):
     # Save the visualization to a file
+    import os
+
+    os.makedirs("out", exist_ok=True)
     with open("out/marimo_output.html", "w") as f:
         print(f"{f}")
         f.write(VG.render(renderer="canvas").data)
-    return
 
 
 if __name__ == "__main__":

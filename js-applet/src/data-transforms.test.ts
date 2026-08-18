@@ -127,9 +127,7 @@ describe("data-transforms", () => {
   });
 
   it("should respect exting labels", () => {
-    const nodes: SerializedNode[] = [
-      { id: "35", properties: { labels: ["User"] } },
-    ];
+    const nodes: SerializedNode[] = [{ id: "35", properties: { labels: ["User"] } }];
 
     const result = transformNodes(nodes);
     expect(result).toHaveLength(1);

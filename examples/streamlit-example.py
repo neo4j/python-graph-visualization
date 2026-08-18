@@ -2,7 +2,6 @@ import pathlib
 import random
 
 import streamlit as st
-
 from neo4j_viz import Node, Relationship, VisualizationGraph
 from neo4j_viz.streamlit import display_widget
 
@@ -11,9 +10,7 @@ script_path = pathlib.Path(__file__).resolve()
 
 
 st.title("Neo4j Viz Streamlit Example")
-st.text(
-    "This is an example of how to use Streamlit with the Graph Visualization for Python library by Neo4j."
-)
+st.text("This is an example of how to use Streamlit with the Graph Visualization for Python library by Neo4j.")
 
 
 def create_small_graph() -> VisualizationGraph:
@@ -23,10 +20,7 @@ def create_small_graph() -> VisualizationGraph:
         ("Carol", "Engineer"),
         ("Dan", "Manager"),
     ]
-    nodes = [
-        Node(id=str(i), caption=name, properties={"role": role})
-        for i, (name, role) in enumerate(people)
-    ]
+    nodes = [Node(id=str(i), caption=name, properties={"role": role}) for i, (name, role) in enumerate(people)]
     relationships = [
         Relationship(source="0", target="1", caption="KNOWS"),
         Relationship(source="1", target="2", caption="KNOWS"),
@@ -48,12 +42,8 @@ if "added_nodes" not in st.session_state:
 with st.sidebar:
     height = st.slider("Height in pixels", 100, 2000, 600, 50)
     if st.button("Add random node"):
-        existing_ids = [n.id for n in small_graph.nodes] + [
-            n.id for n in st.session_state.added_nodes
-        ]
-        new_node = Node(
-            id=f"added-{len(st.session_state.added_nodes)}", caption="New", size=20
-        )
+        existing_ids = [n.id for n in small_graph.nodes] + [n.id for n in st.session_state.added_nodes]
+        new_node = Node(id=f"added-{len(st.session_state.added_nodes)}", caption="New", size=20)
         st.session_state.added_nodes.append(new_node)
         # Link the new node to a random existing one.
         st.session_state.added_relationships.append(
@@ -76,16 +66,12 @@ st.text(
 # Build the widget from the small graph plus any runtime additions.
 graph_widget = small_graph.render_widget(height=f"{height}px")
 if st.session_state.added_nodes:
-    graph_widget.add_data(
-        st.session_state.added_nodes, st.session_state.added_relationships
-    )
+    graph_widget.add_data(st.session_state.added_nodes, st.session_state.added_relationships)
 
 display_widget(graph_widget, key="small-graph-widget")
 
 selection = graph_widget.selected
-st.write(
-    f"Selected {len(selection.nodeIds)} node(s) and {len(selection.relationshipIds)} relationship(s)."
-)
+st.write(f"Selected {len(selection.nodeIds)} node(s) and {len(selection.relationshipIds)} relationship(s).")
 if selection.nodeIds:
     st.write("Selected node IDs:", selection.nodeIds)
 

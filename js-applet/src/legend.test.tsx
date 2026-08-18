@@ -93,7 +93,7 @@ describe("Legend", () => {
 
   it("renders nothing when both sections are empty", () => {
     const { container } = render(
-      <Legend legend={{ nodes: null, relationships: null, visible: true }} />
+      <Legend legend={{ nodes: null, relationships: null, visible: true }} />,
     );
 
     expect(container.firstChild).toBeNull();

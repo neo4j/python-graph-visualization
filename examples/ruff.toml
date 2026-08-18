@@ -1,0 +1,6 @@
+extend = "../python-wrapper/pyproject.toml"
+
+[lint]
+# Marimo notebook cells (marimo-example.py) use a bare trailing expression as
+# the cell output, which ruff flags as a useless expression.
+ignore = ["B018"]

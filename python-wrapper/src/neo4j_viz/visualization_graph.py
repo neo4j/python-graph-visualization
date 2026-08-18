@@ -572,4 +572,5 @@ class VisualizationGraph:
             options=render_options,
             theme=theme,
             legend=self.legend,
+            max_allowed_nodes=max_allowed_nodes,
         )

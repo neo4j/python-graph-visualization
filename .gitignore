@@ -30,3 +30,4 @@ out/*
 .virtual_documents
 # ignore top-level yarn files, the js-applet files are relevant
 yarn.lock
+

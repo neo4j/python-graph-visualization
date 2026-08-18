@@ -40,7 +40,7 @@ type Listener = (...args: unknown[]) => void;
 
 // Traits the frontend is allowed to write back to Python. Mirror the two-way traits
 // on GraphWidget (`selected` and `options`) and `_RECEIVE_KEYS` in streamlit.py.
-const WRITABLE_KEYS: (keyof WidgetData)[] = ["selected", "options"];
+const WRITABLE_KEYS: (keyof WidgetData)[] = ["selected", "options", "last_event"];
 
 class StreamlitModel {
   private state: Partial<WidgetData> = {};
@@ -108,25 +108,19 @@ class StreamlitModel {
 // host, so (unlike VS Code/Marimo) there is no class to sniff. Resolve "auto" from
 // the host's `--st-background-color` brightness. ────────────────────────────────
 function hostElement(parentElement: ShadowRoot | HTMLElement): HTMLElement {
-  return parentElement instanceof ShadowRoot
-    ? (parentElement.host as HTMLElement)
-    : parentElement;
+  return parentElement instanceof ShadowRoot ? (parentElement.host as HTMLElement) : parentElement;
 }
 
 function resolveStreamlitTheme(host: HTMLElement): "light" | "dark" | null {
   const bg = getComputedStyle(host).getPropertyValue("--st-background-color").trim();
   const rgb = bg.match(/\d+/g);
   if (!rgb || rgb.length < 3) return null;
-  const brightness =
-    Number(rgb[0]) * 0.2126 + Number(rgb[1]) * 0.7152 + Number(rgb[2]) * 0.0722;
+  const brightness = Number(rgb[0]) * 0.2126 + Number(rgb[1]) * 0.7152 + Number(rgb[2]) * 0.0722;
   return brightness < 128 ? "dark" : "light";
 }
 
 /** Replace a "auto" theme with the concrete Streamlit theme when we can detect it. */
-function withResolvedTheme(
-  data: Partial<WidgetData>,
-  host: HTMLElement
-): Partial<WidgetData> {
+function withResolvedTheme(data: Partial<WidgetData>, host: HTMLElement): Partial<WidgetData> {
   if ((data.theme ?? "auto") !== "auto") return data;
   const resolved = resolveStreamlitTheme(host);
   return resolved ? { ...data, theme: resolved as Theme } : data;

@@ -1,4 +1,4 @@
-name: Check code style
+name: Check JS code style
 
 # Controls when the workflow will run
 on:
@@ -7,33 +7,39 @@ on:
     branches: ["main"]
   pull_request:
     paths:
-      - "python-wrapper/**" # python code + its resources
+      - "js-applet/**" # js/ts code + its resources
     branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  code-style:
+  js-code-style:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
     defaults:
       run:
-        working-directory: python-wrapper
+        working-directory: js-applet
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install uv and set the Python version
-        uses: astral-sh/setup-uv@v6
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          python-version: "3.11"
-          enable-cache: true
-      - run: uv venv
-      - run: uv sync --group dev --extra pandas --extra neo4j --extra gds --extra snowflake
+          node-version: "lts/*"
 
-      - name: Check code style
-        run: source .venv/bin/activate && cd ${GITHUB_WORKSPACE} && ./scripts/checkstyle.sh
+      - name: Install dependencies
+        run: yarn
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Check formatting
+        run: yarn format:check

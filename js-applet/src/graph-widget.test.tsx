@@ -3,8 +3,7 @@ import { act, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@neo4j-ndl/react", async () => {
-  const actual =
-    await vi.importActual<typeof import("@neo4j-ndl/react")>("@neo4j-ndl/react");
+  const actual = await vi.importActual<typeof import("@neo4j-ndl/react")>("@neo4j-ndl/react");
 
   return {
     ...actual,
@@ -27,7 +26,12 @@ import { createLocalModel } from "./local-model";
 
 type WidgetState = {
   nodes: Array<{ id: string; caption?: string; properties: Record<string, unknown> }>;
-  relationships: Array<{ id: string; from: string; to: string; properties: Record<string, unknown> }>;
+  relationships: Array<{
+    id: string;
+    from: string;
+    to: string;
+    properties: Record<string, unknown>;
+  }>;
   options: {
     layout: "d3Force" | "hierarchical";
     showLayoutButton: boolean;
@@ -37,8 +41,16 @@ type WidgetState = {
   theme: "light" | "dark" | "auto";
   selected: { nodeIds: string[]; relationshipIds: string[] };
   legend: {
-    nodes?: { colorSpace?: string; title?: string; entries?: Array<{ label: string; color: string }> } | null;
-    relationships?: { colorSpace?: string; title?: string; entries?: Array<{ label: string; color: string }> } | null;
+    nodes?: {
+      colorSpace?: string;
+      title?: string;
+      entries?: Array<{ label: string; color: string }>;
+    } | null;
+    relationships?: {
+      colorSpace?: string;
+      title?: string;
+      entries?: Array<{ label: string; color: string }>;
+    } | null;
     visible?: boolean;
   };
 };
@@ -54,16 +66,12 @@ type RenderedWidget = {
   teardown: void | (() => void | Promise<void>) | (() => Promise<void>);
 };
 
-async function renderWidget(
-  overrides: Partial<WidgetState> = {}
-): Promise<RenderedWidget> {
+async function renderWidget(overrides: Partial<WidgetState> = {}): Promise<RenderedWidget> {
   const el = document.createElement("div");
   document.body.appendChild(el);
 
   const defaultNodes = [{ id: "n1", caption: "Node 1", properties: {} }];
-  const defaultRelationships = [
-    { id: "r1", from: "n1", to: "n1", properties: {} },
-  ];
+  const defaultRelationships = [{ id: "r1", from: "n1", to: "n1", properties: {} }];
 
   const model = createLocalModel<WidgetState>({
     nodes: overrides.nodes ?? defaultNodes,
@@ -85,6 +93,8 @@ async function renderWidget(
     teardown = await widget.render({
       el,
       model: model as never,
+      signal: new AbortController().signal,
+      host: {} as never,
       experimental: {} as never,
     });
   });
@@ -93,7 +103,7 @@ async function renderWidget(
 }
 
 async function renderWidgetInShadowRoot(
-  overrides: Partial<WidgetState["options"]> = {}
+  overrides: Partial<WidgetState["options"]> = {},
 ): Promise<RenderedWidget & { host: HTMLDivElement; shadowRoot: ShadowRoot }> {
   const host = document.createElement("div");
   document.body.appendChild(host);
@@ -121,6 +131,8 @@ async function renderWidgetInShadowRoot(
     teardown = await widget.render({
       el,
       model: model as never,
+      signal: new AbortController().signal,
+      host: {} as never,
       experimental: {} as never,
     });
   });
@@ -304,13 +316,9 @@ describe("graph-widget button testing", () => {
     const { shadowRoot, teardown } = await renderWidgetInShadowRoot();
 
     try {
-      expect(
-        shadowRoot.querySelector('[data-neo4j-viz-ndl-shadow-root]')
-      ).toBeTruthy();
+      expect(shadowRoot.querySelector("[data-neo4j-viz-ndl-shadow-root]")).toBeTruthy();
 
-      expect(
-        document.head.querySelector('[data-neo4j-viz-ndl-overlays]')
-      ).toBeTruthy();
+      expect(document.head.querySelector("[data-neo4j-viz-ndl-overlays]")).toBeTruthy();
     } finally {
       if (typeof teardown === "function") {
         await teardown();
@@ -325,9 +333,9 @@ describe("graph-widget button testing", () => {
 
     try {
       await waitFor(() => {
-        expect(
-          screen.getByTestId("needle-theme-provider").getAttribute("data-theme")
-        ).toBe("light");
+        expect(screen.getByTestId("needle-theme-provider").getAttribute("data-theme")).toBe(
+          "light",
+        );
       });
 
       await act(async () => {
@@ -335,9 +343,7 @@ describe("graph-widget button testing", () => {
       });
 
       await waitFor(() => {
-        expect(
-          screen.getByTestId("needle-theme-provider").getAttribute("data-theme")
-        ).toBe("dark");
+        expect(screen.getByTestId("needle-theme-provider").getAttribute("data-theme")).toBe("dark");
       });
     } finally {
       if (typeof teardown === "function") {
@@ -353,9 +359,9 @@ describe("graph-widget button testing", () => {
 
     try {
       await waitFor(() => {
-        expect(
-          screen.getByTestId("needle-theme-provider").getAttribute("data-theme")
-        ).toBe("light");
+        expect(screen.getByTestId("needle-theme-provider").getAttribute("data-theme")).toBe(
+          "light",
+        );
       });
 
       await act(async () => {
@@ -363,9 +369,9 @@ describe("graph-widget button testing", () => {
       });
 
       await waitFor(() => {
-        expect(
-          screen.getByTestId("needle-theme-provider").getAttribute("data-theme")
-        ).toBe("light");
+        expect(screen.getByTestId("needle-theme-provider").getAttribute("data-theme")).toBe(
+          "light",
+        );
       });
     } finally {
       if (typeof teardown === "function") {

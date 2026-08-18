@@ -4,11 +4,18 @@ import re
 
 from graphdatascience import GdsSessions, GraphDataScience
 from graphdatascience.arrow_client.arrow_authentication import UsernamePasswordAuthentication
-from graphdatascience.semantic_version.semantic_version import SemanticVersion
 from graphdatascience.session import AuraAPICredentials, AuraGraphDataScience, DbmsConnectionInfo, SessionMemory
 from graphdatascience.session.aura_api import AuraApi
 from graphdatascience.session.aura_api_responses import InstanceCreateDetails
 from graphdatascience.version import __version__
+
+# The GDS client >= 2.0 moved `SemanticVersion` under `versions`
+if int(__version__.split(".")[0]) >= 2:
+    from graphdatascience.versions.semantic_version import SemanticVersion
+else:
+    from graphdatascience.semantic_version.semantic_version import (  # type: ignore[import-not-found,no-redef]
+        SemanticVersion,
+    )
 
 
 def parse_version(version: str) -> SemanticVersion:

@@ -3,8 +3,16 @@ import os
 import pytest
 from dotenv import load_dotenv
 from graphdatascience import GraphDataScience
-from graphdatascience.semantic_version.semantic_version import SemanticVersion
 from graphdatascience.session import AuraGraphDataScience
+from graphdatascience.version import __version__
+
+# The GDS client >= 2.0 moved `SemanticVersion` under `versions`
+if int(__version__.split(".")[0]) >= 2:
+    from graphdatascience.versions.semantic_version import SemanticVersion
+else:
+    from graphdatascience.semantic_version.semantic_version import (  # type: ignore[import-not-found,no-redef]
+        SemanticVersion,
+    )
 
 from tests.neo4j_and_gds.gds_helper import GDS_VERSION
 from tests.notebook_runner import run_notebooks

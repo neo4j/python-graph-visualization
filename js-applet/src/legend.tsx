@@ -81,13 +81,7 @@ function GradientBar({ section }: { section: ContinuousLegendSection }) {
   );
 }
 
-function Section({
-  heading,
-  section,
-}: {
-  heading: string;
-  section: LegendSection;
-}) {
+function Section({ heading, section }: { heading: string; section: LegendSection }) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -168,8 +162,7 @@ export function Legend({ legend }: { legend: LegendData }) {
 
   const sections: Array<[string, LegendSection]> = [];
   if (hasContent(legend.nodes)) sections.push(["Nodes", legend.nodes]);
-  if (hasContent(legend.relationships))
-    sections.push(["Relationships", legend.relationships]);
+  if (hasContent(legend.relationships)) sections.push(["Relationships", legend.relationships]);
 
   if (legend.visible === false || sections.length === 0) {
     return null;
