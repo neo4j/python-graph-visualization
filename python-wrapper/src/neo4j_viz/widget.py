@@ -9,16 +9,19 @@ import anywidget
 import pydantic
 import traitlets
 
+from ._events import _to_full_event_type
 from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
-from ._validation import OnDangling, check_dangling_relationships
+from ._validation import OnDangling, OnDuplicate, check_dangling_relationships, merge_on_duplicate
 from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
 from .node_size import RealNumber
 from .options import (
     GraphSelection,
+    InteractionEvent,
     Layout,
     LayoutOptions,
     Legend,
+    MouseEvent,
     NvlOptions,
     PanPosition,
     Renderer,
@@ -69,9 +72,8 @@ class PydanticTrait(traitlets.Instance[_ModelT]):
     klass: type[_ModelT]
 
     def validate(self, obj: traitlets.HasTraits, value: Any) -> _ModelT:
-        if not isinstance(value, self.klass):
+        if value is not None and not isinstance(value, self.klass):
             value = self.klass.model_validate(value)
-        # super().validate is typed Optional to support allow_none; we never allow None.
         return cast("_ModelT", super().validate(obj, value))
 
 
@@ -124,6 +126,19 @@ class GraphWidget(anywidget.AnyWidget):
         to_json=lambda value, widget: value.to_json(),
         from_json=lambda value, widget: Legend.model_validate(value),
     )
+    last_event: PydanticTrait[InteractionEvent] = PydanticTrait(
+        InteractionEvent,
+        allow_none=True,
+        default_value=None,
+        help="The most recent discrete interaction event (click / double-click / right-click on a "
+        "node, relationship, or the canvas) in the widget UI, as an `InteractionEvent` with `type` "
+        "and `id`, or `None` until the first event. Synced from the frontend; prefer the "
+        "`on_node_event` / `on_relationship_event` / `on_canvas_event` convenience methods.",
+    ).tag(
+        sync=True,
+        to_json=lambda value, widget: value.to_json() if value is not None else None,
+        from_json=lambda value, widget: InteractionEvent.model_validate(value) if value is not None else None,
+    )
 
     _max_allowed_nodes: int = 10_000
 
@@ -163,6 +178,136 @@ class GraphWidget(anywidget.AnyWidget):
             callback(change["new"])
 
         self.observe(handler, names=["selected"])
+        return handler
+
+    def on_node_event(
+        self, event_type: MouseEvent, callback: Callable[[Node | None], None]
+    ) -> Callable[[dict[str, Any]], None]:
+        """
+        Register a callback that fires whenever the given node mouse event occurs.
+
+        The callback receives the resolved `Node` matched by id from the
+        widget's current `nodes`, or `None` if that id is no longer in the graph.
+
+        Note that firing the *same* event on the *same* node twice in a row calls the callback
+        only once, since the underlying `last_event` trait does not change value. For the raw event
+        (`type` and `id`) on every occurrence, observe the `last_event` trait directly instead.
+
+        Selection is a separate concern and is unaffected: single-click still updates the `selected`
+        trait (in the click-based selection mode) in addition to firing this callback.
+
+        Parameters
+        ----------
+        event_type:
+            The mouse event to react to.
+        callback:
+            A function called with the resolved `Node` (or `None`).
+
+        Returns
+        -------
+        The registered handler. Pass it to `unobserve(handler, names=["last_event"])` to stop
+        observing.
+
+        Examples
+        --------
+        Given a GraphWidget `widget`:
+
+        >>> def expand(node):
+        ...     print("double-clicked", node.id if node else None)
+        >>> handler = widget.on_node_event("double_click", expand)
+        """
+        full_type = _to_full_event_type("node", event_type)
+
+        def handler(change: dict[str, Any]) -> None:
+            event: InteractionEvent | None = change["new"]
+            if event is None or event.type != full_type:
+                return
+            callback(next((n for n in self.nodes if str(n.id) == event.id), None))
+
+        self.observe(handler, names=["last_event"])
+        return handler
+
+    def on_relationship_event(
+        self, event_type: MouseEvent, callback: Callable[[Relationship | None], None]
+    ) -> Callable[[dict[str, Any]], None]:
+        """
+        Register a callback that fires whenever the given relationship mouse event occurs.
+
+        The callback receives the resolved `Relationship` matched by id from the widget's current `relationships`, or `None` if that
+        id is no longer in the graph.
+
+        See `on_node_event` for the repeated-event and selection caveats, which apply here too.
+
+        Parameters
+        ----------
+        event_type:
+            The mouse event to react to (see `MouseEvent`).
+        callback:
+            A function called with the resolved `Relationship` (or `None`).
+
+        Returns
+        -------
+        The registered handler. Pass it to `unobserve(handler, names=["last_event"])` to stop
+        observing.
+
+        Examples
+        --------
+        Given a GraphWidget `widget`:
+
+        >>> def show(rel):
+        ...     print("right-clicked", rel.id if rel else None)
+        >>> handler = widget.on_relationship_event("right_click", show)
+        """
+        full_type = _to_full_event_type("relationship", event_type)
+
+        def handler(change: dict[str, Any]) -> None:
+            event: InteractionEvent | None = change["new"]
+            if event is None or event.type != full_type:
+                return
+            callback(next((r for r in self.relationships if str(r.id) == event.id), None))
+
+        self.observe(handler, names=["last_event"])
+        return handler
+
+    def on_canvas_event(self, event_type: MouseEvent, callback: Callable[[], None]) -> Callable[[dict[str, Any]], None]:
+        """
+        Register a callback that fires whenever the given canvas mouse event occurs.
+
+        Canvas events target the empty graph background rather than an
+        entity, so the callback takes **no arguments** (unlike `on_node_event` /
+        `on_relationship_event`).
+
+        See `on_node_event` for the repeated-event caveat, which applies here too.
+
+        Parameters
+        ----------
+        event_type:
+            The mouse event to react to (see `MouseEvent`).
+        callback:
+            A function called with no arguments when the event occurs.
+
+        Returns
+        -------
+        The registered handler. Pass it to `unobserve(handler, names=["last_event"])` to stop
+        observing.
+
+        Examples
+        --------
+        Given a GraphWidget `widget`:
+
+        >>> def clear():
+        ...     print("canvas clicked — clear selection")
+        >>> handler = widget.on_canvas_event("click", clear)
+        """
+        full_type = _to_full_event_type("canvas", event_type)
+
+        def handler(change: dict[str, Any]) -> None:
+            event: InteractionEvent | None = change["new"]
+            if event is None or event.type != full_type:
+                return
+            callback()
+
+        self.observe(handler, names=["last_event"])
         return handler
 
     @classmethod
@@ -607,6 +752,7 @@ class GraphWidget(anywidget.AnyWidget):
         nodes: Node | list[Node] | None = None,
         relationships: Relationship | list[Relationship] | None = None,
         on_dangling: OnDangling = "warn",
+        on_duplicate: OnDuplicate = "ignore",
     ) -> None:
         """
         Add nodes or relationships to the graph widget.
@@ -621,6 +767,13 @@ class GraphWidget(anywidget.AnyWidget):
             What to do when a resulting relationship references a node id that is not in the graph
             (which the frontend would silently render as empty). One of "warn" (default), "error",
             or "none".
+        on_duplicate:
+            What to do when an added node or relationship has the same id as one already in the
+            graph (ids are compared as strings, and the check also de-duplicates within the added
+            batch). One of "ignore" (default, keep the existing entity and drop the added
+            duplicate), "replace" (swap the existing entity for the added one, keeping its
+            position), or "none" (skip the check and append everything, which may leave duplicate
+            ids).
         """
         if isinstance(nodes, Node):
             nodes = [nodes]
@@ -636,9 +789,9 @@ class GraphWidget(anywidget.AnyWidget):
             )
 
         if nodes:
-            self.nodes = self.nodes + nodes
+            self.nodes = merge_on_duplicate(self.nodes, nodes, on_duplicate)
         if relationships:
-            self.relationships = self.relationships + relationships
+            self.relationships = merge_on_duplicate(self.relationships, relationships, on_duplicate)
 
         check_dangling_relationships(self.nodes, self.relationships, on_dangling)
 

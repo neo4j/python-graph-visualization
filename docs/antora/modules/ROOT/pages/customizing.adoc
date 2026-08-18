@@ -288,6 +288,55 @@ widget.on_selection_change(on_selection_change)
 `on_selection_change` returns the registered handler, which you can pass to `widget.unobserve(handler, names=["selected"])`
 to stop reacting. You can also read `widget.selected` directly at any point for the current selection.
 
+== Reacting to interaction events
+
+Beyond reading the selection, the widget also exposes interaction events whenever the user clicks, double-clicks,
+or right-clicks a node, a relationship, or the canvas.
+The most recent event is available on the widget's `last_event` attribute, a typed
+link:{api-docs-uri}/widget[`InteractionEvent`] with a `type` and an `id`.
+
+To react to a specific event, register a callback with one of `widget.on_node_event(...)`,
+`widget.on_relationship_event(...)`, or `widget.on_canvas_event(...)`, depending on what was
+interacted with.
+Each takes a `MouseEvent` (one of `"click"`, `"double_click"`, `"right_click"` -- the category
+node/relationship/canvas is implied by the method) and a callback.
+The node and relationship callbacks receive the resolved link:{api-docs-uri}/node[Node] or
+link:{api-docs-uri}/relationship[Relationship] directly (matched by id from the widget's current
+`nodes`/`relationships`), or `None` if that id is no longer in the graph.
+Canvas events target the empty graph background rather than an entity, so the canvas callback takes
+no arguments.
+An unknown `MouseEvent` string raises `ValueError` when the callback is registered, so typos are
+caught early.
+
+One use case is growing the graph on demand -- for example fetching a node's neighborhood from a database when it
+is double-clicked:
+
+[source, python]
+----
+# VG is a VisualizationGraph object
+widget = VG.render_widget()
+
+
+def expand_neighborhood(node):
+    if node is None:
+        return
+    # ... fetch the double-clicked node's neighbors, then widget.add_data(...)
+
+
+widget.on_node_event("double_click", expand_neighborhood)
+----
+
+These methods return the registered handler, which you can pass to `widget.unobserve(handler, names=["last_event"])`
+to stop reacting.
+You can also read `widget.last_event` directly at any point for the most recent event.
+
+Note that firing the *same* event on the *same* entity twice in a row calls the callback only once, because the
+underlying `last_event` value does not change.
+For the raw event (`type` and `id`) on every occurrence, observe `last_event` directly instead.
+
+In a Streamlit app, callbacks are not run live; instead read `widget.last_event` after `display_widget` returns on each
+rerun, the same way you read `widget.selected` (see xref:rendering.adoc[Using with Streamlit]).
+
 == Direct modification of nodes and relationships
 
 Nodes and relationships can also be modified directly by accessing the `nodes` and `relationships` fields of an

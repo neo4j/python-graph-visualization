@@ -11,8 +11,7 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 10
     cooldown:
-      default-day: 3
-      enabled: true
+      default-days: 3
     groups:
       python-patch-and-minor:
         update-types:

@@ -27,6 +27,22 @@ export type GraphOptions = {
   selectionMode?: Gesture;
 };
 
+export type InteractionEventType =
+  | "node_click"
+  | "node_double_click"
+  | "node_right_click"
+  | "relationship_click"
+  | "relationship_double_click"
+  | "relationship_right_click"
+  | "canvas_click"
+  | "canvas_double_click"
+  | "canvas_right_click";
+
+export type InteractionEvent = {
+  type: InteractionEventType;
+  id: string | null;
+};
+
 export type WidgetData = {
   nodes: SerializedNode[];
   relationships: SerializedRelationship[];
@@ -36,6 +52,7 @@ export type WidgetData = {
   theme: Theme;
   selected: GraphSelection;
   legend: LegendData;
+  last_event: InteractionEvent | null;
 };
 
 const EMPTY_SELECTION: GraphSelection = { nodeIds: [], relationshipIds: [] };
@@ -174,6 +191,7 @@ function GraphWidget() {
   const [width] = useModelState<WidgetData["width"]>("width");
   const [theme] = useModelState<WidgetData["theme"]>("theme");
   const [selected, setSelected] = useModelState<WidgetData["selected"]>("selected");
+  const [, setLastEvent] = useModelState<WidgetData["last_event"]>("last_event");
   const [legend] = useModelState<WidgetData["legend"]>("legend");
   const { layout, nvlOptions, zoom, pan, layoutOptions, showLayoutButton, selectionMode } =
     options ?? {};
@@ -318,6 +336,31 @@ function GraphWidget() {
           setGesture={setGesture}
           selected={selected ?? EMPTY_SELECTION}
           setSelected={setSelected}
+          mouseEventCallbacks={{
+            onNodeClick: (node) => setLastEvent({ type: "node_click", id: String(node.id) }),
+            onNodeDoubleClick: (node) =>
+              setLastEvent({ type: "node_double_click", id: String(node.id) }),
+            onNodeRightClick: (node) =>
+              setLastEvent({ type: "node_right_click", id: String(node.id) }),
+            onRelationshipClick: (rel) =>
+              setLastEvent({
+                type: "relationship_click",
+                id: String(rel.id),
+              }),
+            onRelationshipDoubleClick: (rel) =>
+              setLastEvent({
+                type: "relationship_double_click",
+                id: String(rel.id),
+              }),
+            onRelationshipRightClick: (rel) =>
+              setLastEvent({
+                type: "relationship_right_click",
+                id: String(rel.id),
+              }),
+            onCanvasClick: () => setLastEvent({ type: "canvas_click", id: null }),
+            onCanvasDoubleClick: () => setLastEvent({ type: "canvas_double_click", id: null }),
+            onCanvasRightClick: () => setLastEvent({ type: "canvas_right_click", id: null }),
+          }}
           layout={layout}
           setLayout={setLayout}
           nvlOptions={nvlOptionsWithoutWorkers}
