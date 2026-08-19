@@ -4,8 +4,8 @@ html.is-clipped--nav #searchbox {
     display: none !important;
 }
 
-body.sphinx .navbar-link a {
-    color: #3182ce;
+body .sphinxsidebar {
+    background: light-dark(var(--palette-neutral-15), var(--theme-dark-color-neutral-bg-weak));
 }
 
 body.sphinx .navbar-link a.external::after {
@@ -50,21 +50,17 @@ body.sphinx .content .search {
     body.sphinx .nav-container {
         border: none;
     }
-    
+
     body.sphinx .nav,
     body.sphinx .nav-panel-menu {
         height: auto;
         background: initial;
     }
 
-    body.sphinx .sphinxsidebar {
-        background: #f5f7fa;
-    }
-    
     body.sphinx .nav-panel-menu:not(.is-active)::after {
         background: initial;
     }
-    
+
     body.sphinx .navbar-start {
         display: -webkit-box;
         display: -ms-flexbox;
@@ -78,14 +74,13 @@ body.sphinx .content .search {
         align-items: center;
         margin-right: 2rem;
     }
-    
+
     body.sphinx .navbar-start .navbar-link {
         margin-left: auto;
     }
 }
 
 .navbar-item, .navbar-link {
-    color: #4a5568;
     line-height: 1.8;
     padding: 0.5rem 1rem;
     position: relative;
@@ -105,7 +100,6 @@ body.sphinx .content .search {
     flex-grow: 1;
 }
 .doc h1, .doc h2, .doc h3, .doc h4, .doc h5, .doc h6 {
-    color: #4a5568;
     font-weight: 400;
     -webkit-hyphens: none;
     -ms-hyphens: none;
@@ -141,7 +135,9 @@ div.code-block-caption:hover > a.headerlink {
     padding-left: 0;
 }
 
-.nav-menu li.toctree-l1 {
+.nav-menu li.toctree-l1,
+.nav-menu li.toctree-l2,
+.nav-menu li.toctree-l3 {
     list-style: none;
     position: relative;
 }
@@ -151,31 +147,59 @@ div.code-block-caption:hover > a.headerlink {
     padding-left: 1.5rem;
 }
 
+.nav-menu .toctree-l2>a,
+.nav-menu .toctree-l2>span {
+    padding-left: 2.5rem;
+}
+
+.nav-menu .toctree-l3>a,
+.nav-menu .toctree-l3>span {
+    padding-left: 3.5rem;
+}
+
 .nav-menu .toctree-l1>a,
-.nav-menu .toctree-l1>span {
+.nav-menu .toctree-l1>span,
+.nav-menu .toctree-l2>a,
+.nav-menu .toctree-l2>span,
+.nav-menu .toctree-l3>a,
+.nav-menu .toctree-l3>span {
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
 }
 
 .nav-menu .toctree-l1 a:hover,
-.nav-menu .toctree-l1 span:hover {
-    background-color: #e6e9ee;
+.nav-menu .toctree-l1 span:hover,
+.nav-menu .toctree-l2 a:hover,
+.nav-menu .toctree-l2 span:hover,
+.nav-menu .toctree-l3 a:hover,
+.nav-menu .toctree-l3 span:hover {
+    background: light-dark(var(--theme-light-color-neutral-hover), var(--theme-dark-color-primary-hover-weak));
 }
 
-.nav-menu .toctree-l1>a.current {
-    background-color: #e6f8ff;
-    color: #0056b3;
+.nav-menu .toctree-l1>a.current,
+.nav-menu .toctree-l2>a.current,
+.nav-menu .toctree-l3>a.current {
+    background: light-dark(var(--theme-light-color-neutral-hover), var(--theme-dark-color-primary-hover-weak));
+    color: light-dark(var(--theme-light-color-primary-text), var(--theme-dark-color-primary-text));
 }
 
-.nav-menu .toctree-l1>a.current::before {
+.nav-menu .toctree-l1>a.current::before,
+.nav-menu .toctree-l2>a.current::before,
+.nav-menu .toctree-l3>a.current::before {
     content: "";
     width: 4px;
     height: 100%;
     position: absolute;
     left: 0;
     top: 0;
-    background: #0056b3;
     border-radius: 4px;
+}
+
+.toctree-l1>a, .toctree-l1>span,
+.toctree-l2>a, .toctree-l2>span,
+.toctree-l3>a, .toctree-l3>span {
+    position: relative;
+    padding-right: 2rem;
 }
 
 .is-current-page>.nav-link,
@@ -183,13 +207,7 @@ div.code-block-caption:hover > a.headerlink {
     font-weight: 400;
 }
 
-.toctree-l1>a, .toctree-l1>span {
-    position: relative;
-    padding-right: 2rem;
-}
-
 .nav-menu a, .nav-text {
-    color: #535b66;
     font-weight: 400;
     display: block;
     padding: 0.25rem 0;
@@ -231,11 +249,9 @@ body.sphinx .deprecated > *::after {
     content: unset;
 }
 
-body.sphinx .doc dl.deprecated dt:first-of-type span.sig-prename, 
+body.sphinx .doc dl.deprecated dt:first-of-type span.sig-prename,
 body.sphinx .doc dl.deprecated dt:first-of-type span.sig-name {
-    border-bottom: 1px solid #f6ad55;
-    /* color: #702459; */
-    /* background-color: #fed7e2; */
+    border-bottom: 1px solid var(--palette-lemon-30);
 }
 
 body.sphinx .doc dl.deprecated {
@@ -246,7 +262,178 @@ body.sphinx .doc dl.deprecated {
 body.sphinx .doc div.deprecated {
     padding: 1rem;
     margin: 0 2rem;
-    /* color: #702459; */
-    border-left: 2px solid #f6ad55;
-    background-color: #fffaf0;
+    border-left: 2px solid var(--palette-lemon-30);
+}
+
+/* ---- code cells & syntax highlighting (notebooks) -------------------------- */
+/* Pygments ships a light-only "sphinx" theme with hardcoded colors. In dark
+   mode the upstream site.css flips the page dark, but those light token colors
+   become unreadable. Re-declare every token with light-dark() so light mode is
+   unchanged and dark mode gets a readable palette. neo4j.css loads after
+   pygments.css, so equal-specificity rules here win. */
+
+.highlight {
+    background: light-dark(#eeffcc, var(--theme-dark-color-neutral-bg-default));
+}
+.highlight .hll {
+    background-color: light-dark(#ffffcc, var(--theme-dark-color-neutral-bg-strong));
+}
+
+/* comments */
+.highlight .c,
+.highlight .ch,
+.highlight .cm,
+.highlight .cpf,
+.highlight .c1 {
+    color: light-dark(#408090, #6a9fb5);
+}
+.highlight .cs {
+    color: light-dark(#408090, #6a9fb5);
+    background-color: light-dark(#FFF0F0, var(--theme-dark-color-neutral-bg-strong));
+}
+
+/* keywords / builtins / exceptions / operator-word */
+.highlight .k,
+.highlight .cp,
+.highlight .kc,
+.highlight .kd,
+.highlight .kn,
+.highlight .kp,
+.highlight .kr,
+.highlight .nb,
+.highlight .ne,
+.highlight .ow,
+.highlight .bp {
+    color: light-dark(#007020, #7ec699);
+}
+
+/* operator */
+.highlight .o {
+    color: light-dark(#666, #9a9a9a);
+}
+
+/* numbers */
+.highlight .m,
+.highlight .mb,
+.highlight .mf,
+.highlight .mh,
+.highlight .mi,
+.highlight .mo,
+.highlight .il {
+    color: light-dark(#208050, #d19a66);
+}
+
+/* strings / attributes */
+.highlight .s,
+.highlight .sa,
+.highlight .sb,
+.highlight .sc,
+.highlight .dl,
+.highlight .sd,
+.highlight .s2,
+.highlight .sh,
+.highlight .s1,
+.highlight .na {
+    color: light-dark(#4070A0, #61afef);
+}
+.highlight .se {
+    color: light-dark(#4070A0, #61afef);
+}
+.highlight .si {
+    color: light-dark(#70A0D0, #56b6c2);
+}
+.highlight .sx {
+    color: light-dark(#C65D09, #e5c07b);
+}
+.highlight .sr {
+    color: light-dark(#235388, #56b6c2);
+}
+.highlight .ss {
+    color: light-dark(#517918, #98c379);
+}
+
+/* names */
+.highlight .nc,
+.highlight .nn {
+    color: light-dark(#0E84B5, #61afef);
+}
+.highlight .no {
+    color: light-dark(#60ADD5, #61afef);
+}
+.highlight .nd {
+    color: light-dark(#555, #bdc5c5);
+}
+.highlight .ni {
+    color: light-dark(#D55537, #d19a66);
+}
+.highlight .nf,
+.highlight .fm {
+    color: light-dark(#06287E, #61afef);
+}
+.highlight .nl {
+    color: light-dark(#002070, #7aa2f7);
+}
+.highlight .nt {
+    color: light-dark(#062873, #7aa2f7);
+}
+.highlight .nv,
+.highlight .vc,
+.highlight .vg,
+.highlight .vi,
+.highlight .vm {
+    color: light-dark(#BB60D5, #c792ea);
+}
+.highlight .kt {
+    color: light-dark(#902000, #e5c07b);
+}
+
+/* generic */
+.highlight .gd {
+    color: light-dark(#A00000, #f47067);
+}
+.highlight .gr {
+    color: light-dark(#F00, #f47067);
+}
+.highlight .gh {
+    color: light-dark(#000080, #7aa2f7);
+}
+.highlight .gi {
+    color: light-dark(#00A000, #56d364);
+}
+.highlight .go {
+    color: light-dark(#333, #bdbdbd);
+}
+.highlight .gp {
+    color: light-dark(#C65D09, #e5c07b);
+}
+.highlight .gu {
+    color: light-dark(#800080, #c792ea);
+}
+.highlight .gt {
+    color: light-dark(#04D, #7aa2f7);
+}
+.highlight .w {
+    color: light-dark(#BBB, #7f8c98);
+}
+
+/* error */
+.highlight .err {
+    border: 1px solid light-dark(#F00, #f47067);
+}
+
+/* notebook cell chrome -- nbsphinx-code-cells.css loads after this file, so
+   bump specificity with body.sphinx to win. */
+body.sphinx div.nbinput.container div.input_area {
+    border-color: light-dark(#e0e0e0, var(--theme-dark-color-neutral-border-weak));
+}
+body.sphinx div.nbinput.container div.prompt pre,
+body.sphinx div.nbinput.container div.prompt pre > code {
+    color: light-dark(#307FC1, #61afef);
+}
+body.sphinx div.nboutput.container div.prompt pre,
+body.sphinx div.nboutput.container div.prompt pre > code {
+    color: light-dark(#BF5B3D, #e5c07b);
+}
+body.sphinx div.nboutput.container div.output_area.stderr {
+    background: light-dark(#fdd, rgba(244, 112, 103, 0.12));
 }
