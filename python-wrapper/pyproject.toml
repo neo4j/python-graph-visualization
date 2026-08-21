@@ -54,7 +54,7 @@ streamlit = ["streamlit<2,>=1.58"]
 [dependency-groups]
 dev = [
     "ruff==0.16.3",
-    "mypy==2.3.0",
+    "mypy==2.3.1",
     "pytest==9.1.1",
     "selenium==4.47.0",
     "ipykernel==7.3.0",
