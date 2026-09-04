@@ -53,15 +53,15 @@ streamlit = ["streamlit<2,>=1.58"]
 
 [dependency-groups]
 dev = [
-    "ruff==0.16.3",
-    "mypy==2.3.0",
+    "ruff==0.16.5",
+    "mypy==2.3.1",
     "pytest==9.1.1",
-    "selenium==4.47.0",
+    "selenium==4.48.0",
     "ipykernel==7.3.0",
     "palettable==3.3.3",
     "pytest-mock==3.15.1",
     "nbconvert==7.17.1",
-    "streamlit==1.61.1",
+    "streamlit==1.62.0",
     "matplotlib>=3.9.4",
     "jupyterlab>=4.5.7",
     "anywidget[dev]",
