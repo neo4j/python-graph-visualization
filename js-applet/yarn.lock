@@ -188,6 +188,18 @@
   resolved "https://registry.yarnpkg.com/@csstools/css-tokenizer/-/css-tokenizer-4.0.0.tgz#798a33950d11226a0ebb6acafa60f5594424967f"
   integrity sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==
 
+"@dagrejs/dagre@3.1.1":
+  version "3.1.1"
+  resolved "https://registry.yarnpkg.com/@dagrejs/dagre/-/dagre-3.1.1.tgz#06de3070d584886b8820aaceeefc45a553cf2b97"
+  integrity sha512-zroZB1dFOFiGgv4Xcrn1DckB1o4aOikPqD2NDQPV0WM//CXGcS6xiD0rNkqHmw6FEg4tabt4nxPLwgCWT+Vb2A==
+  dependencies:
+    "@dagrejs/graphlib" "4.0.5"
+
+"@dagrejs/graphlib@4.0.5":
+  version "4.0.5"
+  resolved "https://registry.yarnpkg.com/@dagrejs/graphlib/-/graphlib-4.0.5.tgz#1ae7a93a4640a9e50117439d23327e27d6b698d3"
+  integrity sha512-7xrBTqIts3o+PMUZX97wSc+7TUbW+/rULzGNCTP6yooNVDXbzw4Wutg/H/xOutTB/c/k0YqOAavgPh4/Zk9PFA==
+
 "@dnd-kit/accessibility@^3.1.1":
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/@dnd-kit/accessibility/-/accessibility-3.1.1.tgz#3b4202bd6bb370a0730f6734867785919beac6af"
@@ -487,14 +499,6 @@
   dependencies:
     "@chevrotain/types" "~11.1.2"
 
-"@neo4j-bloom/dagre@0.8.14":
-  version "0.8.14"
-  resolved "https://registry.yarnpkg.com/@neo4j-bloom/dagre/-/dagre-0.8.14.tgz#bad99d7ce4b73fc1c5f0926c1e4a505adcc9c681"
-  integrity sha512-FW1hbtbEr1FmJzGdbLxGOcn2SYZPhM1kGCs8RlMkqrjcXpcueTmEDZzGhZJx7KLbT15VSzEM6/sK4CaVsXdhkQ==
-  dependencies:
-    graphlib "2.1.8"
-    lodash "^4.17.19"
-
 "@neo4j-devtools/word-color@0.0.8":
   version "0.0.8"
   resolved "https://registry.yarnpkg.com/@neo4j-devtools/word-color/-/word-color-0.0.8.tgz#48b181022659de01e251073e5967423fc922c053"
@@ -550,12 +554,12 @@
     usehooks-ts "3.1.1"
     zod "4.3.6"
 
-"@neo4j-nvl/base@1.2.2", "@neo4j-nvl/base@^1.2.2":
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/@neo4j-nvl/base/-/base-1.2.2.tgz#1a7d20f618062130ad17bd5404b30ba1ce622196"
-  integrity sha512-KXHjt2LDPwJ3CLVF/4SW/9xvDuCuZBNBOFAh92Cl+vTekLpFDworglrmPQaKJa7lypJWKUD5QMF/CJKwAqsbJA==
+"@neo4j-nvl/base@2.0.0", "@neo4j-nvl/base@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@neo4j-nvl/base/-/base-2.0.0.tgz#501ee79bab51b800964c5614b89541f747c9779f"
+  integrity sha512-l2rSgNNMMolCY5GVVEvNJ67WdKey7REE/CGmdCS/kwRGcajU4lbuPu7XXrJhODtg2u0BOc/FkzNGALMwnnyFbQ==
   dependencies:
-    "@neo4j-nvl/layout-workers" "1.2.2"
+    "@neo4j-nvl/layout-workers" "2.0.0"
     "@segment/analytics-next" "1.81.1"
     color-string "1.9.1"
     d3-force "3.0.0"
@@ -563,39 +567,36 @@
     glsl-inject-defines "1.0.3"
     lodash "4.18.1"
     loglevel "1.9.2"
-    mobx "3.6.2"
+    mobx "6.15.0"
     node-pid-controller "1.0.1"
     resizelistener "1.1.0"
     tinycolor2 "1.6.0"
     uuid "14.0.1"
 
-"@neo4j-nvl/interaction-handlers@1.2.2", "@neo4j-nvl/interaction-handlers@^1.2.2":
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/@neo4j-nvl/interaction-handlers/-/interaction-handlers-1.2.2.tgz#903dea5e06787f122484855616efe3776625e77b"
-  integrity sha512-Av1pe1hNO7UO9A1cirawM+HZmYxQeympKgJVD8cZY37bDsZZmo1Lns+4gNj0Tb4pNOdM2if0V9FKfXUF19tuSQ==
+"@neo4j-nvl/interaction-handlers@2.0.0", "@neo4j-nvl/interaction-handlers@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@neo4j-nvl/interaction-handlers/-/interaction-handlers-2.0.0.tgz#05fde92715cf908ef30c67e094f2463359bb8ae0"
+  integrity sha512-tizF5QnuAdKoC8GL7wR6Nk3yBFOZF+dJmh6lMhZWvnoSPDlkyeq6GkX25EvEG+4Kh1mIFAcjCu+1Uqr4EhnXNQ==
   dependencies:
-    "@neo4j-nvl/base" "1.2.2"
+    "@neo4j-nvl/base" "2.0.0"
     concaveman "1.2.1"
     lodash "4.18.1"
 
-"@neo4j-nvl/layout-workers@1.2.2":
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/@neo4j-nvl/layout-workers/-/layout-workers-1.2.2.tgz#6063d98d99e1242fd5546623ef976aa8b2f0a5e7"
-  integrity sha512-YKkh2bdTfcK8W0I1buzc7kAqu8Ww4YCwmDuDFYFBLNELPevKsybbEyu2I3nApjq7S/guOyuCnlhzp4dI8rYQfA==
+"@neo4j-nvl/layout-workers@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@neo4j-nvl/layout-workers/-/layout-workers-2.0.0.tgz#7a9d366ed265a8d5d3c0cdc4f30e4a22a55ed926"
+  integrity sha512-ryrz5b/PgOZrKt2JJBus17lv/ghcd6rOA2tFknv23t765Nu5z7l7YUTQ13TIwXcGLAFxPww/RWAjN/nKzPAnrQ==
   dependencies:
-    "@neo4j-bloom/dagre" "0.8.14"
+    "@dagrejs/dagre" "3.1.1"
     bin-pack "1.0.2"
-    cytoscape "3.33.1"
-    cytoscape-cose-bilkent "4.1.0"
-    graphlib "2.1.8"
 
-"@neo4j-nvl/react@^1.2.2":
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/@neo4j-nvl/react/-/react-1.2.2.tgz#86859700f38ed3736c3ed3aa146c7237f64642ea"
-  integrity sha512-A9XqkRsPBEWLD7YYPWLihrTlImlYAmrujgByGk1Dz4A186TAGo1If/rgOFv6ozjSlPTyag8s0LgaTV3PCmFLvw==
+"@neo4j-nvl/react@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@neo4j-nvl/react/-/react-2.0.0.tgz#4a684c63dcaf8c343b5928c0a911d33e7455e92a"
+  integrity sha512-OQKThdebLndb9ZgAeuUaZZh877Y7wujLZjcACeBASeVW/HfKpv+Ujo5oba9EwRvl6UELowhn0u4MQ+sBrXGEtA==
   dependencies:
-    "@neo4j-nvl/base" "1.2.2"
-    "@neo4j-nvl/interaction-handlers" "1.2.2"
+    "@neo4j-nvl/base" "2.0.0"
+    "@neo4j-nvl/interaction-handlers" "2.0.0"
     lodash "4.18.1"
 
 "@oxc-project/types@=0.150.0":
@@ -1541,12 +1542,21 @@
   dependencies:
     tslib "^2.8.0"
 
-"@tanstack/react-table@^8.21.3":
-  version "8.21.3"
-  resolved "https://registry.yarnpkg.com/@tanstack/react-table/-/react-table-8.21.3.tgz#2c38c747a5731c1a07174fda764b9c2b1fb5e91b"
-  integrity sha512-5nNMTSETP4ykGegmVkhjcS8tTLW6Vl4axfEGQN3v0zdHYbK4UfoqfPChclTrJ4EoK9QynqAu9oUf8VEmrpZ5Ww==
+"@tanstack/react-store@^0.11.1":
+  version "0.11.1"
+  resolved "https://registry.yarnpkg.com/@tanstack/react-store/-/react-store-0.11.1.tgz#e1e58036ffffa58f5b5d8826c2389f97502fac2c"
+  integrity sha512-HaIGKI3YLmjBYIvy5DFDY23oNaYZIsTZfngey07Uh5iLVJgM3bIGCnZeOFOqzjFld9JHWcaHJnasD/bKoGKwJQ==
   dependencies:
-    "@tanstack/table-core" "8.21.3"
+    "@tanstack/store" "0.11.1"
+    use-sync-external-store "^1.6.0"
+
+"@tanstack/react-table@^9.2.4":
+  version "9.2.4"
+  resolved "https://registry.yarnpkg.com/@tanstack/react-table/-/react-table-9.2.4.tgz#4324dd0e08d4ca53a433110d8694ad82a4606bc7"
+  integrity sha512-Rzp1Q4e0/nIgEjmISYR5HeEgLTNtrG+C7NFZf/AbCxPO5hg+zC3yNGwcoECigUk8SFzzvhXbd2rFdtP2ZiGrfA==
+  dependencies:
+    "@tanstack/react-store" "^0.11.1"
+    "@tanstack/table-core" "9.2.4"
 
 "@tanstack/react-virtual@3.13.23":
   version "3.13.23"
@@ -1555,10 +1565,17 @@
   dependencies:
     "@tanstack/virtual-core" "3.13.23"
 
-"@tanstack/table-core@8.21.3":
-  version "8.21.3"
-  resolved "https://registry.yarnpkg.com/@tanstack/table-core/-/table-core-8.21.3.tgz#2977727d8fc8dfa079112d9f4d4c019110f1732c"
-  integrity sha512-ldZXEhOBb8Is7xLs01fR3YEc3DERiz5silj8tnGkFZytt1abEvl/GhUmCE0PMLaMPTa3Jk4HbKmRlHmu+gCftg==
+"@tanstack/store@0.11.1", "@tanstack/store@^0.11.1":
+  version "0.11.1"
+  resolved "https://registry.yarnpkg.com/@tanstack/store/-/store-0.11.1.tgz#063f634fe3cc925ad83704581a7be75301bec612"
+  integrity sha512-mzTOBhypOuDJAy/D8n2MfUZ1HFkXnmSETviRyhqEC8LUE7/IZQExOTxMANj3KjTofYTkFNpBY67qaVrT41YccA==
+
+"@tanstack/table-core@9.2.4":
+  version "9.2.4"
+  resolved "https://registry.yarnpkg.com/@tanstack/table-core/-/table-core-9.2.4.tgz#8d1b339d6118d306ded4ec8516419320ad2b9e57"
+  integrity sha512-GwdDyGGr6UXAtubF14yAwcXvdaogqfsQgIk89Suebjxob/Rjq2xvfmXsjDF1rQmKmhHsJm9TOY7myxv3i6geJw==
+  dependencies:
+    "@tanstack/store" "^0.11.1"
 
 "@tanstack/virtual-core@3.13.23":
   version "3.13.23"
@@ -2513,7 +2530,7 @@ csstype@^3.0.2, csstype@^3.2.2:
   resolved "https://registry.yarnpkg.com/csstype/-/csstype-3.2.3.tgz#ec48c0f3e993e50648c86da559e2610995cf989a"
   integrity sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==
 
-cytoscape-cose-bilkent@4.1.0, cytoscape-cose-bilkent@^4.1.0:
+cytoscape-cose-bilkent@^4.1.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/cytoscape-cose-bilkent/-/cytoscape-cose-bilkent-4.1.0.tgz#762fa121df9930ffeb51a495d87917c570ac209b"
   integrity sha512-wgQlVIUJF13Quxiv5e1gstZ08rnZj2XaLHGoFMYXz7SkNfCDOOteKBE6SYRfA9WxxI/iBc3ajfDoc6hb/MRAHQ==
@@ -2526,11 +2543,6 @@ cytoscape-fcose@^2.2.0:
   integrity sha512-ki1/VuRIHFCzxWNrsshHYPs6L7TvLu3DL+TyIGEsRcvVERmxokbf5Gdk7mFxZnTdiGtnA4cfSmjZJMviqSuZrQ==
   dependencies:
     cose-base "^2.2.0"
-
-cytoscape@3.33.1:
-  version "3.33.1"
-  resolved "https://registry.yarnpkg.com/cytoscape/-/cytoscape-3.33.1.tgz#449e05d104b760af2912ab76482d24c01cdd4c97"
-  integrity sha512-iJc4TwyANnOGR1OmWhsS9ayRS3s+XQ185FmuHObThD+5AeJCakAAbWv8KimMTt08xCCLNgneQwFp+JRJOr9qGQ==
 
 cytoscape@^3.33.3:
   version "3.34.1"
@@ -3092,13 +3104,6 @@ glsl-tokenizer@^2.0.2:
   dependencies:
     through2 "^0.6.3"
 
-graphlib@2.1.8:
-  version "2.1.8"
-  resolved "https://registry.yarnpkg.com/graphlib/-/graphlib-2.1.8.tgz#5761d414737870084c92ec7b5dbcb0592c9d35da"
-  integrity sha512-jcLLfkpoVGmH7/InMC/1hIvOPSUh38oJtGhvrOFGzioE1DZ+0YW16RgmOJhHiuWTvGiJQ9Z1Ik43JvkRPRvE+A==
-  dependencies:
-    lodash "^4.17.15"
-
 hachure-fill@^0.5.2:
   version "0.5.2"
   resolved "https://registry.yarnpkg.com/hachure-fill/-/hachure-fill-0.5.2.tgz#d19bc4cc8750a5962b47fb1300557a85fcf934cc"
@@ -3591,7 +3596,7 @@ lodash.debounce@^4.0.8:
   resolved "https://registry.yarnpkg.com/lodash.debounce/-/lodash.debounce-4.0.8.tgz#82d79bff30a67c4005ffd5e2515300ad9ca4d7af"
   integrity sha512-FT1yDzDYEoYWhnSGnpE/4Kj1fLZkDFyqRb7fNt6FdYOSxlUWAtp42Eh6Wb0rGIv/m9Bgo7x4GhQbm5Ys4SG5ow==
 
-lodash@4.18.1, lodash@^4.17.15, lodash@^4.17.19:
+lodash@4.18.1:
   version "4.18.1"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.18.1.tgz#ff2b66c1f6326d59513de2407bf881439812771c"
   integrity sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==
@@ -4210,10 +4215,10 @@ micromatch@^4.0.8:
     braces "^3.0.3"
     picomatch "^2.3.1"
 
-mobx@3.6.2:
-  version "3.6.2"
-  resolved "https://registry.yarnpkg.com/mobx/-/mobx-3.6.2.tgz#fb9f5ff5090539a1ad54e75dc4c098b602693320"
-  integrity sha512-Dq3boJFLpZEvuh5a/MbHLUIyN9XobKWIb0dBfkNOJffNkE3vtuY0C9kSDVpfH8BB0BPkVw8g22qCv7d05LEhKg==
+mobx@6.15.0:
+  version "6.15.0"
+  resolved "https://registry.yarnpkg.com/mobx/-/mobx-6.15.0.tgz#78b9b82d383724eebb4b6e50c2eb4ae2da861cb5"
+  integrity sha512-UczzB+0nnwGotYSgllfARAqWCJ5e/skuV2K/l+Zyck/H6pJIhLXuBnz+6vn2i211o7DtbE78HQtsYEKICHGI+g==
 
 ms@^2.1.3:
   version "2.1.3"
