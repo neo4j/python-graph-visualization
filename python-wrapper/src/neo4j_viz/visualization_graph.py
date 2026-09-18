@@ -376,6 +376,7 @@ class VisualizationGraph:
         allow_dynamic_min_zoom: bool,
         max_allowed_nodes: int,
         show_layout_button: bool,
+        show_search_button: bool,
         on_dangling: OnDangling,
     ) -> RenderOptions:
         """Shared validation + option building for render / render_widget."""
@@ -417,6 +418,7 @@ class VisualizationGraph:
             max_zoom=max_zoom,
             allow_dynamic_min_zoom=allow_dynamic_min_zoom,
             show_layout_button=show_layout_button,
+            show_search_button=show_search_button,
         )
 
     def render(
@@ -434,6 +436,8 @@ class VisualizationGraph:
         max_allowed_nodes: int = 10_000,
         theme: Literal["auto"] | Literal["light"] | Literal["dark"] = "auto",
         on_dangling: OnDangling = "warn",
+        show_search_button: bool = True,
+        show_layout_button: bool = True,
     ) -> HTML:
         """
         Render the graph as an HTML object.
@@ -469,6 +473,10 @@ class VisualizationGraph:
             The theme of the rendered graph. Can be 'auto', 'light', or 'dark'
         on_dangling:
             What to do when a relationship references a node id that is not in the graph . One of "warn" (default), "error", or "none".
+        show_search_button:
+            Whether to show the search button that highlights matching nodes and relationships.
+        show_layout_button:
+            Whether to show the layout selector button.
 
         Example
         -------
@@ -485,7 +493,8 @@ class VisualizationGraph:
             max_zoom,
             allow_dynamic_min_zoom,
             max_allowed_nodes,
-            show_layout_button=False,  # The button only works with the widget
+            show_layout_button=show_layout_button,
+            show_search_button=show_search_button,
             on_dangling=on_dangling,
         )
 
@@ -514,6 +523,8 @@ class VisualizationGraph:
         max_allowed_nodes: int = 10_000,
         theme: Literal["auto"] | Literal["light"] | Literal["dark"] = "auto",
         on_dangling: OnDangling = "warn",
+        show_search_button: bool = True,
+        show_layout_button: bool = True,
     ) -> GraphWidget:
         """
         Render the graph as an interactive Jupyter widget (anywidget).
@@ -549,6 +560,10 @@ class VisualizationGraph:
             The theme to use for the rendered graph.
         on_dangling:
             What to do when a relationship references a node id that is not in the graph. One of "warn" (default), "error", or "none".
+        show_search_button:
+            Whether to show the search button that highlights matching nodes and relationships.
+        show_layout_button:
+            Whether to show the layout selector button.
         """
         render_options = self._build_render_options(
             layout,
@@ -560,7 +575,8 @@ class VisualizationGraph:
             max_zoom,
             allow_dynamic_min_zoom,
             max_allowed_nodes,
-            show_layout_button=True,
+            show_layout_button=show_layout_button,
+            show_search_button=show_search_button,
             on_dangling=on_dangling,
         )
 

@@ -35,6 +35,7 @@ type WidgetState = {
   options: {
     layout: "d3Force" | "hierarchical";
     showLayoutButton: boolean;
+    showSearchButton?: boolean;
   };
   height: string;
   width: string;
@@ -66,7 +67,11 @@ type RenderedWidget = {
   teardown: void | (() => void | Promise<void>) | (() => Promise<void>);
 };
 
-async function renderWidget(overrides: Partial<WidgetState> = {}): Promise<RenderedWidget> {
+async function renderWidget(
+  overrides: Omit<Partial<WidgetState>, "options"> & {
+    options?: Partial<WidgetState["options"]>;
+  } = {},
+): Promise<RenderedWidget> {
   const el = document.createElement("div");
   document.body.appendChild(el);
 
@@ -79,6 +84,7 @@ async function renderWidget(overrides: Partial<WidgetState> = {}): Promise<Rende
     options: {
       layout: "d3Force",
       showLayoutButton: true,
+      showSearchButton: true,
       ...(overrides.options ?? {}),
     },
     height: overrides.height ?? "400px",
@@ -117,6 +123,7 @@ async function renderWidgetInShadowRoot(
     options: {
       layout: "d3Force",
       showLayoutButton: true,
+      showSearchButton: true,
       ...overrides,
     },
     height: "400px",
@@ -178,6 +185,82 @@ describe("graph-widget button testing", () => {
       });
 
       expect(await screen.findByText("Download as PNG")).toBeTruthy();
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("renders the search button when enabled", async () => {
+    const { el, teardown } = await renderWidget();
+
+    try {
+      await waitFor(() => {
+        expect(within(el).getByRole("button", { name: "Search" })).toBeTruthy();
+      });
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("hides the search button when disabled", async () => {
+    const { el, teardown } = await renderWidget({ options: { showSearchButton: false } });
+
+    try {
+      await waitFor(() => {
+        expect(within(el).getByRole("button", { name: /download/i })).toBeTruthy();
+      });
+
+      expect(within(el).queryByRole("button", { name: "Search" })).toBeNull();
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("expands the search input when the search button is clicked", async () => {
+    const { el, teardown } = await renderWidget();
+
+    try {
+      const searchButton = await waitFor(() => within(el).getByRole("button", { name: "Search" }));
+
+      await act(async () => {
+        fireEvent.click(searchButton);
+      });
+
+      expect(within(el).getByPlaceholderText("Search...")).toBeTruthy();
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("types a search term and clears it back to no highlight", async () => {
+    const { el, teardown } = await renderWidget();
+
+    try {
+      const searchButton = await waitFor(() => within(el).getByRole("button", { name: "Search" }));
+
+      await act(async () => {
+        fireEvent.click(searchButton);
+      });
+
+      const input = within(el).getByPlaceholderText("Search...") as HTMLInputElement;
+
+      await act(async () => {
+        fireEvent.change(input, { target: { value: "Node 1" } });
+      });
+      expect(input.value).toBe("Node 1");
+
+      await act(async () => {
+        fireEvent.click(within(el).getByRole("button", { name: "Clear search" }));
+      });
+      expect(input.value).toBe("");
     } finally {
       if (typeof teardown === "function") {
         await teardown();

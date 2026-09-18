@@ -13,7 +13,10 @@ from neo4j_viz.options import (
 
 def test_widget_options_empty() -> None:
     options = RenderOptions()
-    assert options.to_widget_options().to_json() == {"showLayoutButton": False}
+    assert options.to_widget_options().to_json() == {
+        "showLayoutButton": False,
+        "showSearchButton": True,
+    }
 
 
 def test_widget_options_layout_force_directed() -> None:
@@ -97,6 +100,11 @@ def test_widget_options_no_selection_mode_by_default() -> None:
     assert "selectionMode" not in js
 
 
+def test_widget_options_show_search_button() -> None:
+    js = RenderOptions(show_search_button=False).to_widget_options().to_json()
+    assert js["showSearchButton"] is False
+
+
 def test_widget_options_layout_is_enum() -> None:
     widget_options = RenderOptions(layout=Layout.GRID).to_widget_options()
     assert widget_options.layout is WidgetLayout.GRID
@@ -121,6 +129,7 @@ def test_widget_options_full() -> None:
         pan_X=50.0,
         pan_Y=-30.0,
         show_layout_button=True,
+        show_search_button=False,
         selection_mode=SelectionMode.LASSO,
     )
     js = options.to_widget_options().to_json()
@@ -136,5 +145,6 @@ def test_widget_options_full() -> None:
         "zoom": 1.5,
         "pan": {"x": 50.0, "y": -30.0},
         "showLayoutButton": True,
+        "showSearchButton": False,
         "selectionMode": "lasso",
     }

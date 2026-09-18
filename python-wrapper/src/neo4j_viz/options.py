@@ -335,6 +335,7 @@ class WidgetOptions(
     zoom: Optional[float] = None
     pan: Optional[PanPosition] = None
     show_layout_button: Optional[bool] = None
+    show_search_button: Optional[bool] = None
     selection_mode: Optional[SelectionMode] = None
 
     def to_json(self) -> dict[str, Any]:
@@ -367,6 +368,8 @@ class RenderOptions(BaseModel, extra="allow"):
     selection_mode: Optional[SelectionMode] = Field(None, serialization_alias="selectionMode")
 
     show_layout_button: bool = False
+
+    show_search_button: bool = True
 
     @model_validator(mode="after")
     def check_layout_options_match(self) -> RenderOptions:
@@ -412,6 +415,7 @@ class RenderOptions(BaseModel, extra="allow"):
             result.pan = PanPosition(x=self.pan_X or 0, y=self.pan_Y or 0)
 
         result.show_layout_button = self.show_layout_button
+        result.show_search_button = self.show_search_button
 
         return result
 

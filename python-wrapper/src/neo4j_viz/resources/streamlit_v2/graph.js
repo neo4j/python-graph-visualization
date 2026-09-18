@@ -94561,22 +94561,22 @@ function Cre(e) {
 	document.head.querySelector(bre) || Z9(document.head, "data-neo4j-viz-ndl-main", O);
 }
 function wre() {
-	let [e] = E("nodes"), [t] = E("relationships"), [n, r] = E("options"), [i] = E("height"), [a] = E("width"), [o] = E("theme"), [s, c] = E("selected"), [, l] = E("last_event"), [u] = E("legend"), { layout: d, nvlOptions: f, zoom: p, pan: m, layoutOptions: h, showLayoutButton: g, selectionMode: _ } = n ?? {}, [v, y] = (0, x.useState)(_ ?? "single");
+	let [e] = E("nodes"), [t] = E("relationships"), [n, r] = E("options"), [i] = E("height"), [a] = E("width"), [o] = E("theme"), [s, c] = E("selected"), [, l] = E("last_event"), [u] = E("legend"), { layout: d, nvlOptions: f, zoom: p, pan: m, layoutOptions: h, showLayoutButton: g, showSearchButton: _, selectionMode: v } = n ?? {}, [y, b] = (0, x.useState)(v ?? "single");
 	(0, x.useEffect)(() => {
-		_ && y(_);
-	}, [_]);
-	let b = (e) => {
+		v && b(v);
+	}, [v]);
+	let S = (e) => {
 		r({
 			...n,
 			layout: e
 		});
-	}, S = (0, x.useRef)(null), C = (0, x.useRef)(null), w = yre(o);
+	}, C = (0, x.useRef)(null), w = (0, x.useRef)(null), T = yre(o);
 	(0, x.useEffect)(() => {
-		S.current && Cre(S.current);
+		C.current && Cre(C.current);
 	}, []), (0, x.useEffect)(() => {
-		if (!S.current) return;
+		if (!C.current) return;
 		let e, t = null, n = 0, r = 0, i = !1, a = (e) => !!e && !!e.__resizeTriggers__?.firstElementChild, o = () => {
-			let e = C.current?.getContainer?.() ?? null;
+			let e = w.current?.getContainer?.() ?? null;
 			if (a(e)) try {
 				e.dispatchEvent(new Event("scroll"));
 			} catch {}
@@ -94584,47 +94584,53 @@ function wre() {
 			t !== n && (e?.disconnect(), t = n, e = new ResizeObserver(o), e.observe(n));
 		}, c = new MutationObserver(() => {
 			if (i) return;
-			let e = C.current?.getContainer?.() ?? null;
+			let e = w.current?.getContainer?.() ?? null;
 			a(e) && e !== t && s(e);
 		});
-		c.observe(S.current, {
+		c.observe(C.current, {
 			childList: !0,
 			subtree: !0
 		});
 		let l = () => {
 			if (i) return;
-			let e = C.current?.getContainer?.() ?? null;
+			let e = w.current?.getContainer?.() ?? null;
 			a(e) ? s(e) : ++r < 120 && (n = requestAnimationFrame(l));
 		};
 		return l(), () => {
 			i = !0, cancelAnimationFrame(n), e?.disconnect(), c.disconnect();
 		};
 	}, []);
-	let [T, D] = (0, x.useMemo)(() => [dre(e ?? []), fre(t ?? [])], [e, t]), O = (0, x.useMemo)(() => ({
+	let [D, O] = (0, x.useMemo)(() => [dre(e ?? []), fre(t ?? [])], [e, t]), k = (0, x.useMemo)(() => ({
 		...f,
 		minZoom: 0,
 		maxZoom: 1e3,
 		disableWebWorkers: !0
-	}), [f]), [k, A] = (0, x.useState)(!1), [j, M] = (0, x.useState)(300), [N, P] = (0, x.useState)(!1);
+	}), [f]), [A, j] = (0, x.useState)(!1), [M, N] = (0, x.useState)(300), [P, F] = (0, x.useState)(!1);
 	(0, x.useEffect)(() => {
-		q9(u ?? J9) && P(!0);
+		q9(u ?? J9) && F(!0);
 	}, [u]);
-	let F = q9(u ?? J9);
+	let I = q9(u ?? J9), [L, R] = (0, x.useState)();
+	(0, x.useEffect)(() => {
+		_ || R(void 0);
+	}, [_]);
+	let [B, V] = (0, x.useState)(!1);
 	return /* @__PURE__ */ (0, z.jsx)(Ja, {
-		theme: w,
+		theme: T,
 		wrapperProps: { isWrappingChildren: !1 },
 		children: /* @__PURE__ */ (0, z.jsxs)("div", {
-			ref: S,
+			ref: C,
 			style: {
 				position: "relative",
 				height: i ?? "600px",
 				width: a ?? "100%"
 			},
 			children: [/* @__PURE__ */ (0, z.jsx)(W9, {
-				nodes: T,
-				rels: D,
-				gesture: v,
-				setGesture: y,
+				nodes: D,
+				rels: O,
+				highlightedNodeIds: L?.nodeIds,
+				highlightedRelationshipIds: L?.relationshipIds,
+				gesture: y,
+				setGesture: b,
 				selected: s ?? _re,
 				setSelected: c,
 				mouseEventCallbacks: {
@@ -94666,36 +94672,51 @@ function wre() {
 					})
 				},
 				layout: d,
-				setLayout: b,
-				nvlOptions: O,
-				nvlRef: C,
+				setLayout: S,
+				nvlOptions: k,
+				nvlRef: w,
 				zoom: p,
 				pan: m,
 				layoutOptions: h,
 				sidepanel: {
-					isSidePanelOpen: k,
-					setIsSidePanelOpen: A,
-					onSidePanelResize: M,
-					sidePanelWidth: j,
+					isSidePanelOpen: A,
+					setIsSidePanelOpen: j,
+					onSidePanelResize: N,
+					sidePanelWidth: M,
 					children: /* @__PURE__ */ (0, z.jsx)(W9.SingleSelectionSidePanelContents, {})
 				},
 				topLeftIsland: /* @__PURE__ */ (0, z.jsx)(W9.DownloadButton, { tooltipPlacement: "right" }),
 				topRightIsland: /* @__PURE__ */ (0, z.jsxs)(ME, {
 					size: "small",
 					orientation: "horizontal",
-					children: [F && /* @__PURE__ */ (0, z.jsx)(TE, {
-						size: "small",
-						isFloating: !0,
-						isActive: N,
-						description: N ? "Hide legend" : "Show legend",
-						onClick: () => P((e) => !e),
-						htmlAttributes: { "aria-label": "Toggle legend" },
-						tooltipProps: { root: {
-							placement: "bottom",
-							isPortaled: !1
-						} },
-						children: /* @__PURE__ */ (0, z.jsx)(Wte, {})
-					}), /* @__PURE__ */ (0, z.jsx)(W9.ToggleSidePanelButton, { tooltipPlacement: "bottom" })]
+					children: [
+						_ && /* @__PURE__ */ (0, z.jsx)("div", {
+							style: { minWidth: B ? "220px" : void 0 },
+							children: /* @__PURE__ */ (0, z.jsx)(W9.SearchButton, {
+								open: B,
+								setOpen: V,
+								tooltipPlacement: "bottom",
+								onSearch: (e, t) => R({
+									nodeIds: e,
+									relationshipIds: t
+								})
+							})
+						}),
+						I && /* @__PURE__ */ (0, z.jsx)(TE, {
+							size: "small",
+							isFloating: !0,
+							isActive: P,
+							description: P ? "Hide legend" : "Show legend",
+							onClick: () => F((e) => !e),
+							htmlAttributes: { "aria-label": "Toggle legend" },
+							tooltipProps: { root: {
+								placement: "bottom",
+								isPortaled: !1
+							} },
+							children: /* @__PURE__ */ (0, z.jsx)(Wte, {})
+						}),
+						/* @__PURE__ */ (0, z.jsx)(W9.ToggleSidePanelButton, { tooltipPlacement: "bottom" })
+					]
 				}),
 				bottomRightIsland: /* @__PURE__ */ (0, z.jsxs)(ME, {
 					size: "medium",
@@ -94715,7 +94736,7 @@ function wre() {
 						})] })
 					]
 				})
-			}), N && /* @__PURE__ */ (0, z.jsx)(hre, { legend: u ?? J9 })]
+			}), P && /* @__PURE__ */ (0, z.jsx)(hre, { legend: u ?? J9 })]
 		})
 	});
 }

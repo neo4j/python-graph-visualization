@@ -84,7 +84,7 @@ class TestGraphWidget:
 
         assert widget.width == "800px"
         assert widget.height == "400px"
-        assert widget.options == WidgetOptions(layout="d3Force", show_layout_button=False)
+        assert widget.options == WidgetOptions(layout="d3Force", show_layout_button=False, show_search_button=True)
 
     def test_widget_trait_defaults(self) -> None:
         widget = GraphWidget()
@@ -779,6 +779,15 @@ class TestRenderOptionSetters:
 
         widget.set_show_layout_button(False)
         assert widget.options.show_layout_button is False
+
+    def test_set_show_search_button(self) -> None:
+        widget = GraphWidget()
+
+        widget.set_show_search_button()
+        assert widget.options.show_search_button is True
+
+        widget.set_show_search_button(False)
+        assert widget.options.show_search_button is False
 
     def test_set_selection_mode_enum(self) -> None:
         widget = GraphWidget()
