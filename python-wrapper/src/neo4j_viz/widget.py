@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import asyncio
+import base64
 import json
 import pathlib
+import urllib.parse
+import uuid
 from functools import cached_property
-from typing import Any, Callable, TypeVar, Union, cast
+from typing import Any, Callable, Literal, TypeVar, Union, cast
 
 import anywidget
 import pydantic
 import traitlets
+from comm import DummyComm
 
 from ._events import _to_full_event_type
 from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
@@ -61,6 +66,52 @@ _STATIC = pathlib.Path(__file__).parent / "resources" / "nvl_entrypoint"
 
 def entity_to_json(entity_list: list[Node | Relationship], widget: anywidget.AnyWidget) -> list[dict[str, Any]]:
     return [_serialize_entity(entity) for entity in entity_list]
+
+
+_SAVE_FORMATS = ("png", "svg")
+
+
+def _resolve_save_format(
+    path: pathlib.Path,
+    format: Literal["png", "svg"] | None,
+) -> Literal["png", "svg"]:
+    """Resolve the format for `GraphWidget.save` from the explicit argument or the file suffix.
+
+    The suffix is used for inference when no explicit format is given; without a recognized
+    suffix the format defaults to "svg". An explicit format that contradicts the suffix is an
+    error, so SVG data is never silently written into a "*.png" file (or vice versa).
+    """
+    if format is None:
+        suffix = path.suffix.lower().lstrip(".")
+        if suffix in _SAVE_FORMATS:
+            return cast('Literal["png", "svg"]', suffix)
+        if suffix:
+            raise ValueError(
+                f"Cannot infer the save format from the file extension '{path.suffix}'. "
+                f"Pass format=... explicitly, one of {list(_SAVE_FORMATS)}."
+            )
+        return "svg"
+
+    normalized = str(format).lower()
+    if normalized not in _SAVE_FORMATS:
+        raise ValueError(f"Invalid save format {format!r}; expected one of {list(_SAVE_FORMATS)}.")
+    if path.suffix and path.suffix.lower() != f".{normalized}":
+        raise ValueError(f"The file extension '{path.suffix}' does not match the format '{normalized}'.")
+    return cast('Literal["png", "svg"]', normalized)
+
+
+def _decode_data_url(data_url: str) -> bytes:
+    """Decode a `data:` URL as produced by the NVL frontend into raw file bytes.
+
+    NVL returns PNGs base64-encoded ("data:image/png;base64,...") and SVGs URL-encoded
+    ("data:image/svg+xml;charset=utf-8,...").
+    """
+    meta, separator, payload = data_url.partition(",")
+    if not data_url.startswith("data:") or not separator:
+        raise ValueError(f"The frontend returned an unexpected image payload: {data_url[:64]!r}")
+    if meta.endswith(";base64"):
+        return base64.b64decode(payload)
+    return urllib.parse.unquote(payload).encode("utf-8")
 
 
 _ModelT = TypeVar("_ModelT", bound=pydantic.BaseModel)
@@ -309,6 +360,125 @@ class GraphWidget(anywidget.AnyWidget):
 
         self.observe(handler, names=["last_event"])
         return handler
+
+    _pending_save_requests: dict[str, asyncio.Future[dict[str, Any]]]
+
+    async def save(
+        self,
+        file: str | pathlib.Path,
+        *,
+        format: Literal["png", "svg"] | None = None,
+        background_color: str | None = None,
+        timeout: float = 30.0,
+    ) -> pathlib.Path:
+        """Save the current visualization as a PNG or SVG file.
+
+        The graph is rendered by the widget frontend (in the browser), so this sends a
+        request over the widget channel and waits for the rendered image. It must be
+        awaited from a notebook cell while the widget is displayed in a live frontend
+        (JupyterLab, Notebook, VS Code, Colab, or marimo). Outside a running kernel,
+        e.g. in a plain Python script, there is no renderer to produce the image and
+        saving is not possible.
+
+        A PNG captures the current view (the canvas at its rendered size, including the
+        current zoom and pan). An SVG always contains the entire graph; note that NVL's
+        SVG export is still marked experimental upstream.
+
+        Parameters
+        ----------
+        file:
+            Path of the file to write. The format is inferred from the suffix (".png" or
+            ".svg"); without a recognized suffix it defaults to SVG.
+        format:
+            The file format, "png" or "svg". If given together with a suffixed `file`,
+            the two must match.
+        background_color:
+            The background color of the image, for example "#ffffff" or "red". A PNG
+            defaults to the canvas' background, an SVG to transparent.
+        timeout:
+            How long to wait for the frontend to render the image, in seconds.
+
+        Returns
+        -------
+        The path of the written file.
+
+        Examples
+        --------
+        Given a GraphWidget `widget` displayed in a notebook:
+
+        >>> await widget.save("graph.svg")
+        >>> await widget.save("snapshot.png", background_color="#ffffff")
+        """
+        path = pathlib.Path(file)
+        save_format = _resolve_save_format(path, format)
+        self._check_save_frontend()
+
+        request_id = uuid.uuid4().hex
+        future: asyncio.Future[dict[str, Any]] = asyncio.get_running_loop().create_future()
+        self._ensure_save_dispatcher()
+        self._pending_save_requests[request_id] = future
+        self.send(
+            {
+                "kind": "save_request",
+                "id": request_id,
+                "format": save_format,
+                "backgroundColor": background_color,
+            }
+        )
+
+        try:
+            response = await asyncio.wait_for(future, timeout=timeout)
+        except asyncio.TimeoutError as exc:
+            raise TimeoutError(
+                f"Saving as {save_format.upper()} timed out after {timeout} seconds. The widget must be "
+                "displayed in a live notebook frontend (JupyterLab, Notebook, VS Code, Colab, or marimo) "
+                "for save() to work."
+            ) from exc
+        finally:
+            self._pending_save_requests.pop(request_id, None)
+
+        if response.get("error"):
+            raise RuntimeError(f"Could not save the graph as {save_format.upper()}: {response['error']}")
+
+        data_url = response.get("dataUrl")
+        if not isinstance(data_url, str):
+            raise RuntimeError(f"Unexpected save response from the frontend: {response!r}")
+
+        path.write_bytes(_decode_data_url(data_url))
+        return path
+
+    def _check_save_frontend(self) -> None:
+        """Fail fast when no live kernel comm can carry a save request to the frontend.
+
+        Mirrors the check `Widget.send` performs before delivering a message: a missing,
+        dummy (kernel-less), or dead-kernel comm means the request would silently go
+        nowhere.
+        """
+        comm = self.comm
+        if comm is None or isinstance(comm, DummyComm) or (hasattr(comm, "kernel") and comm.kernel is None):
+            raise RuntimeError(
+                "GraphWidget.save() requires a live notebook frontend: outside a running kernel "
+                "(e.g. in a plain Python script) there is no browser to render the graph. Display "
+                "the widget in a notebook (JupyterLab, Notebook, VS Code, Colab, or marimo) and "
+                "call save() from a cell."
+            )
+
+    def _ensure_save_dispatcher(self) -> None:
+        """Register the frontend-message dispatcher backing :meth:`save` (once per widget)."""
+        if not hasattr(self, "_pending_save_requests"):
+            self._pending_save_requests = {}
+            self.on_msg(self._on_frontend_msg)
+
+    def _on_frontend_msg(self, widget: object, content: object, buffers: object) -> None:
+        """Route `save_response` messages from the frontend to their awaiting :meth:`save` call."""
+        if not isinstance(content, dict) or content.get("kind") != "save_response":
+            return
+        request_id = content.get("id")
+        if not isinstance(request_id, str):
+            return
+        future = self._pending_save_requests.get(request_id)
+        if future is not None and not future.done():
+            future.set_result(content)
 
     @classmethod
     def from_graph_data(
