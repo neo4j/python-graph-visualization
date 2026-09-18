@@ -747,6 +747,19 @@ class GraphWidget(anywidget.AnyWidget):
         new.show_layout_button = show
         self.options = new
 
+    def set_show_search_button(self, show: bool = True) -> None:
+        """
+        Toggle the search button in the widget UI, in place.
+
+        Parameters
+        -----------
+        show:
+            Whether the search button should be shown.
+        """
+        new = self._render_options()
+        new.show_search_button = show
+        self.options = new
+
     def add_data(
         self,
         nodes: Node | list[Node] | None = None,

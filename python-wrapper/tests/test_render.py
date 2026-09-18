@@ -194,3 +194,24 @@ def test_render_escapes_script_breakout() -> None:
     block = re.search(r'<script type="application/json" id="neo4j-viz-data">(.*?)</script>', out, re.DOTALL)
     assert block is not None
     assert json.loads(block.group(1))["nodes"][0]["caption"] == payload
+
+
+def _render_options_block(html: str) -> dict[str, Any]:
+    block = re.search(r'<script type="application/json" id="neo4j-viz-data">(.*?)</script>', html, re.DOTALL)
+    assert block is not None
+    options: dict[str, Any] = json.loads(block.group(1))["options"]
+    return options
+
+
+def test_render_show_search_button() -> None:
+    VG = VisualizationGraph(nodes=[Node(id="1", caption="Person")], relationships=[])
+
+    assert _render_options_block(VG.render().data)["showSearchButton"] is True
+    assert _render_options_block(VG.render(show_search_button=False).data)["showSearchButton"] is False
+
+
+def test_render_show_layout_button() -> None:
+    VG = VisualizationGraph(nodes=[Node(id="1", caption="Person")], relationships=[])
+
+    assert _render_options_block(VG.render().data)["showLayoutButton"] is True
+    assert _render_options_block(VG.render(show_layout_button=False).data)["showLayoutButton"] is False

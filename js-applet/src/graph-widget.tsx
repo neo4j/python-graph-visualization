@@ -24,7 +24,13 @@ export type GraphOptions = {
   pan?: { x: number; y: number };
   layoutOptions?: Record<string, unknown>;
   showLayoutButton: boolean;
+  showSearchButton?: boolean;
   selectionMode?: Gesture;
+};
+
+export type SearchResults = {
+  nodeIds?: string[];
+  relationshipIds?: string[];
 };
 
 export type InteractionEventType =
@@ -193,8 +199,16 @@ function GraphWidget() {
   const [selected, setSelected] = useModelState<WidgetData["selected"]>("selected");
   const [, setLastEvent] = useModelState<WidgetData["last_event"]>("last_event");
   const [legend] = useModelState<WidgetData["legend"]>("legend");
-  const { layout, nvlOptions, zoom, pan, layoutOptions, showLayoutButton, selectionMode } =
-    options ?? {};
+  const {
+    layout,
+    nvlOptions,
+    zoom,
+    pan,
+    layoutOptions,
+    showLayoutButton,
+    showSearchButton,
+    selectionMode,
+  } = options ?? {};
   // `gesture` is locally controlled so the GestureSelectButton stays interactive, but it is
   // seeded from (and re-synced to) the Python-provided `selectionMode` when that changes.
   const [gesture, setGesture] = useState<Gesture>(selectionMode ?? "single");
@@ -319,6 +333,17 @@ function GraphWidget() {
   }, [legend]);
   const legendAvailable = hasLegendContent(legend ?? EMPTY_LEGEND);
 
+  // Search highlights: undefined = no highlight, empty arrays = no matches (dims all).
+  const [searchResults, setSearchResults] = useState<SearchResults>();
+  // Avoid a stuck dimmed graph when the search button is toggled off mid-search.
+  useEffect(() => {
+    if (!showSearchButton) setSearchResults(undefined);
+  }, [showSearchButton]);
+
+  // IconButtonArray sizes itself to min-content and the NDL TextInput has no intrinsic
+  // width, so the expanded search input collapses unless we give it room ourselves.
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
   return (
     <NeedleThemeProvider theme={resolvedTheme} wrapperProps={{ isWrappingChildren: false }}>
       <div
@@ -332,6 +357,8 @@ function GraphWidget() {
         <GraphVisualization
           nodes={neoNodes}
           rels={neoRelationships}
+          highlightedNodeIds={searchResults?.nodeIds}
+          highlightedRelationshipIds={searchResults?.relationshipIds}
           gesture={gesture}
           setGesture={setGesture}
           selected={selected ?? EMPTY_SELECTION}
@@ -378,6 +405,18 @@ function GraphWidget() {
           topLeftIsland={<GraphVisualization.DownloadButton tooltipPlacement="right" />}
           topRightIsland={
             <IconButtonArray size="small" orientation="horizontal">
+              {showSearchButton && (
+                <div style={{ minWidth: isSearchOpen ? "220px" : undefined }}>
+                  <GraphVisualization.SearchButton
+                    open={isSearchOpen}
+                    setOpen={setIsSearchOpen}
+                    tooltipPlacement="bottom"
+                    onSearch={(nodeIds, relationshipIds) =>
+                      setSearchResults({ nodeIds, relationshipIds })
+                    }
+                  />
+                </div>
+              )}
               {legendAvailable && (
                 <IconButton
                   size="small"
