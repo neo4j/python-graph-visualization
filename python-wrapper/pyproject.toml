@@ -60,12 +60,14 @@ dev = [
     "ipykernel==7.3.0",
     "palettable==3.3.3",
     "pytest-mock==3.15.1",
+    "playwright==1.63.0",
     "nbconvert==7.17.1",
     "streamlit==1.64.0",
     "matplotlib>=3.9.4",
     "jupyterlab>=4.5.7",
     "anywidget[dev]",
-    "python-dotenv"
+    "python-dotenv",
+    "playwright>=1.63.0",
 ]
 docs = [
     # Sphinx is capped at 8.1.x: 8.2+ requires Python >=3.11 and Sphinx 9 requires >=3.12
