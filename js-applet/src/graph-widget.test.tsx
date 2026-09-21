@@ -36,6 +36,7 @@ type WidgetState = {
     layout: "d3Force" | "hierarchical";
     showLayoutButton: boolean;
     showSearchButton?: boolean;
+    selectionMode?: "single" | "box" | "lasso";
   };
   height: string;
   width: string;
@@ -283,6 +284,45 @@ describe("graph-widget button testing", () => {
         nodeIds: ["n1"],
         relationshipIds: [],
       });
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("re-syncs the gesture when the model's selectionMode changes", async () => {
+    const { el, model, teardown } = await renderWidget();
+
+    try {
+      const gestureButton = await waitFor(() =>
+        within(el).getByRole("button", { name: /select gesture/i }),
+      );
+
+      await act(async () => {
+        fireEvent.click(gestureButton);
+      });
+
+      const individualOption = await screen.findByRole("menuitemradio", { name: /Individual/ });
+      expect(individualOption.getAttribute("aria-checked")).toBe("true");
+
+      await act(async () => {
+        model.set("options", {
+          layout: "d3Force",
+          showLayoutButton: true,
+          showSearchButton: true,
+          selectionMode: "box",
+        });
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("menuitemradio", { name: /Box/ }).getAttribute("aria-checked"),
+        ).toBe("true");
+      });
+      expect(
+        screen.getByRole("menuitemradio", { name: /Individual/ }).getAttribute("aria-checked"),
+      ).toBe("false");
     } finally {
       if (typeof teardown === "function") {
         await teardown();

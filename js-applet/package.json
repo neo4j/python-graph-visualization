@@ -1,6 +1,7 @@
 {
   "name": "nvl-python-wrapper",
   "version": "0.3.7",
+  "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "concurrently -n widget,html,jupyter -c cyan,magenta,green \"npm:dev:widget\" \"npm:dev:html\" \"npm:dev:jupyter\"",

@@ -2,6 +2,7 @@ import logging
 import os
 import random
 import re
+import time
 
 from graphdatascience import GdsSessions, GraphDataScience
 from graphdatascience.arrow_client.arrow_authentication import UsernamePasswordAuthentication
@@ -101,13 +102,34 @@ def create_auradb_instance(api: AuraApi) -> InstanceCreateDetails:
 
 
 def wait_for_instance(api: AuraApi, instance_details: InstanceCreateDetails) -> DbmsConnectionInfo:
-    wait_result = api.wait_for_instance_running(instance_id=instance_details.id, max_wait_time=600)
-    if wait_result.error:
-        raise Exception(f"Error while waiting for instance to be running: {wait_result.error}")
+    logger = logging.getLogger(__name__)
 
-    return DbmsConnectionInfo(
-        username="neo4j",
-        password=instance_details.password,
-        aura_instance_id=instance_details.id,
-        uri=wait_result.connection_url,
-    )
+    waited_time = 0.0
+    sleep_time = 2.0
+    max_sleep_time = 10.0
+    max_wait_time = 600.0
+
+    while waited_time < max_wait_time:
+        instance = api.list_instance(instance_details.id)
+        if instance is None:
+            logger.warning(f"Waiting for instance `{instance_details.id}` to be running - instance not found (yet).")
+        elif instance.status in ["deleting", "destroying"]:
+            raise Exception(f"Instance `{instance_details.id}` is being deleted or destroyed")
+        elif instance.status == "running":
+            return DbmsConnectionInfo(
+                username="neo4j",
+                password=instance_details.password,
+                aura_instance_id=instance_details.id,
+                uri=instance.connection_url,
+            )
+        else:
+            logger.info(
+                f"Instance `{instance_details.id}` is not yet running. "
+                f"Current status: {instance.status}. Retrying in {sleep_time} seconds..."
+            )
+
+        waited_time += sleep_time
+        time.sleep(sleep_time)
+        sleep_time = min(sleep_time * 2, max_sleep_time, max_wait_time - waited_time)
+
+    raise Exception(f"Instance `{instance_details.id}` did not reach status `running` within {max_wait_time} seconds")

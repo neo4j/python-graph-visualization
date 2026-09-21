@@ -121,32 +121,23 @@ function detectTheme(): "light" | "dark" {
   return brightness < 128 ? "dark" : "light";
 }
 
-function resolveTheme(theme: Theme): "light" | "dark" {
-  return theme === "auto" ? detectTheme() : theme;
-}
-
 function useResolvedTheme(theme: Theme | undefined): "light" | "dark" {
   const normalizedTheme = theme ?? "auto";
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() =>
-    resolveTheme(normalizedTheme),
-  );
+  const [detectedTheme, setDetectedTheme] = useState<"light" | "dark">(detectTheme);
 
+  // The effect only synchronizes with the external system (DOM theme classes) via the
+  // observer's async callbacks, so nothing is set synchronously inside it. The observer
+  // stays attached even for explicit themes, keeping the detection fresh for when (or if)
+  // the theme switches back to "auto".
   useEffect(() => {
-    if (normalizedTheme !== "auto") {
-      setResolvedTheme(normalizedTheme);
+    if (typeof MutationObserver === "undefined") {
       return;
     }
 
     const updateTheme = () => {
       const nextTheme = detectTheme();
-      setResolvedTheme((currentTheme) => (currentTheme === nextTheme ? currentTheme : nextTheme));
+      setDetectedTheme((currentTheme) => (currentTheme === nextTheme ? currentTheme : nextTheme));
     };
-
-    updateTheme();
-
-    if (typeof MutationObserver === "undefined") {
-      return;
-    }
 
     const observer = new MutationObserver(updateTheme);
     const observerOptions = {
@@ -158,9 +149,9 @@ function useResolvedTheme(theme: Theme | undefined): "light" | "dark" {
     observer.observe(document.body, observerOptions);
 
     return () => observer.disconnect();
-  }, [normalizedTheme]);
+  }, []);
 
-  return resolvedTheme;
+  return normalizedTheme === "auto" ? detectedTheme : normalizedTheme;
 }
 
 // @font-face rules in shadow DOM adopted stylesheets don't register fonts at the
@@ -271,9 +262,11 @@ function GraphWidget() {
   // `gesture` is locally controlled so the GestureSelectButton stays interactive, but it is
   // seeded from (and re-synced to) the Python-provided `selectionMode` when that changes.
   const [gesture, setGesture] = useState<Gesture>(selectionMode ?? "single");
-  useEffect(() => {
+  const [lastSelectionMode, setLastSelectionMode] = useState(selectionMode);
+  if (selectionMode !== lastSelectionMode) {
+    setLastSelectionMode(selectionMode);
     if (selectionMode) setGesture(selectionMode);
-  }, [selectionMode]);
+  }
   const setLayout = (layout: Layout) => {
     setOptions({ ...options, layout });
   };
@@ -398,22 +391,24 @@ function GraphWidget() {
 
   // The legend is a floating overlay toggled by its own island button, independent of the side
   // panel (which holds the results overview / selection details). Show it automatically whenever a
-  // legend becomes available so it is discoverable without a click. Runs only when the `legend`
-  // trait changes, so it won't fight a user who has closed it.
-  const [isLegendOpen, setIsLegendOpen] = useState(false);
-  useEffect(() => {
-    if (hasLegendContent(legend ?? EMPTY_LEGEND)) {
-      setIsLegendOpen(true);
-    }
-  }, [legend]);
+  // legend becomes available so it is discoverable without a click. Only transitions into
+  // availability re-open it, so legend updates never fight a user who has closed it.
   const legendAvailable = hasLegendContent(legend ?? EMPTY_LEGEND);
+  const [isLegendOpen, setIsLegendOpen] = useState(legendAvailable);
+  const [legendWasAvailable, setLegendWasAvailable] = useState(legendAvailable);
+  if (legendAvailable !== legendWasAvailable) {
+    setLegendWasAvailable(legendAvailable);
+    if (legendAvailable) setIsLegendOpen(true);
+  }
 
   // Search highlights: undefined = no highlight, empty arrays = no matches (dims all).
   const [searchResults, setSearchResults] = useState<SearchResults>();
   // Avoid a stuck dimmed graph when the search button is toggled off mid-search.
-  useEffect(() => {
+  const [searchButtonWasShown, setSearchButtonWasShown] = useState(showSearchButton);
+  if (searchButtonWasShown !== showSearchButton) {
+    setSearchButtonWasShown(showSearchButton);
     if (!showSearchButton) setSearchResults(undefined);
-  }, [showSearchButton]);
+  }
 
   // IconButtonArray sizes itself to min-content and the NDL TextInput has no intrinsic
   // width, so the expanded search input collapses unless we give it room ourselves.

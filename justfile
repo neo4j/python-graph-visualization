@@ -28,7 +28,7 @@ py-style:
 # scoped to `src` because the test helpers import v2-only modules (covered by the default
 # v2 gate); ruff runs on the whole tree as usual.
 # example: just py-style-gds 1.22
-py-style-gds version="1.22":
+py-style-gds version="2.0":
     #!/usr/bin/env bash
     set -e
     just py-sync

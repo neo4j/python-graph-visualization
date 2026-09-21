@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        gds-version: ["1.22", "2.0.0a4"]
+        gds-version: ["1.22", "2.0"]
     defaults:
       run:
         working-directory: python-wrapper
