@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 import re
 
 from graphdatascience import GdsSessions, GraphDataScience
@@ -33,6 +34,19 @@ def parse_version(version: str) -> SemanticVersion:
 
 
 GDS_VERSION = parse_version(__version__)
+
+
+def run_id() -> str:
+    """Per-run token making session names unique across CI runs.
+
+    Includes the run attempt so that re-run jobs (which reuse GITHUB_RUN_ID) do not
+    collide with sessions leaked by a failed attempt.
+    """
+    gh_run_id = os.environ.get("GITHUB_RUN_ID")
+    if gh_run_id:
+        attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "1")
+        return f"{gh_run_id}-{attempt}"
+    return str(random.randint(0, 10**6))
 
 
 def connect_to_plugin_gds(uri: str, auth: tuple[str, str]) -> GraphDataScience:
