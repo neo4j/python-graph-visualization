@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -37,6 +38,7 @@ from playwright.sync_api import (
 _SERVER_START_TIMEOUT = 60
 _LAB_LOAD_TIMEOUT = 40
 _CELL_RUN_TIMEOUT = 15
+_CELL_COMPLETE_TIMEOUT = 90
 _WIDGET_MOUNT_TIMEOUT = 30
 _NOTEBOOK_RUN_TIMEOUT = 120
 
@@ -171,6 +173,11 @@ def _run_cell(page: Page, index: int) -> None:
             f"cell {index} did not start executing after Shift+Enter (prompt is still "
             f"{prompt.text_content()!r}; a dialog may be blocking keyboard input)"
         ) from exc
+    # Also wait for the cell to finish (its prompt gets an execution count): a slow
+    # kernel — e.g. cold imports on a loaded CI runner — would otherwise eat into
+    # the widget-mount timeout below, which is only meant to cover the frontend
+    # rendering the already-displayed widget.
+    expect(prompt).to_have_text(re.compile(r"^\[\d+\]:$"), timeout=_CELL_COMPLETE_TIMEOUT * 1000)
 
 
 def _execute_notebook_in_browser(page: Page, cells: Sequence[str]) -> None:
