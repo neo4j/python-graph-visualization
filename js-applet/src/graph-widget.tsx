@@ -1,4 +1,4 @@
-import { createRender, useModelState } from "@anywidget/react";
+import { createRender, useModel, useModelState } from "@anywidget/react";
 import ndlCssText from "@neo4j-ndl/base/lib/neo4j-ds-styles.css?inline";
 import { Gesture, GraphSelection, GraphVisualization } from "@neo4j-ndl/react-graph";
 import type NVL from "@neo4j-nvl/base";
@@ -47,6 +47,25 @@ export type InteractionEventType =
 export type InteractionEvent = {
   type: InteractionEventType;
   id: string | null;
+};
+
+/**
+ * Request from Python `GraphWidget.save()`: the image is rendered by NVL in
+ * the browser, so Python sends a `save_request` over the anywidget custom
+ * message channel and awaits the matching `save_response` reply.
+ */
+export type SaveRequest = {
+  kind: "save_request";
+  id: string;
+  format: "png" | "svg";
+  backgroundColor?: string;
+};
+
+export type SaveResponse = {
+  kind: "save_response";
+  id: string;
+  dataUrl?: string;
+  error?: string;
 };
 
 export type WidgetData = {
@@ -189,6 +208,46 @@ function injectNdlCss(el: HTMLElement) {
   }
 }
 
+/**
+ * Handles a `save_request` custom message from Python `GraphWidget.save()`.
+ *
+ * PNG captures the current view (`getImageDataUrl`), SVG the entire graph
+ * (`getSvgDataUrl`, asynchronous). The reply carries the data URL back to
+ * Python, or an error message when rendering failed.
+ */
+export function handleSaveRequest(
+  msg: unknown,
+  nvl: NVL | null,
+  reply: (id: string, payload: { dataUrl?: string; error?: string }) => void,
+): void {
+  if (typeof msg !== "object" || msg === null) return;
+  const request = msg as Partial<SaveRequest>;
+  if (request.kind !== "save_request" || typeof request.id !== "string") return;
+  const { id } = request;
+
+  if (!nvl) {
+    reply(id, { error: "The graph is not rendered yet; display the widget before saving." });
+    return;
+  }
+  const options =
+    typeof request.backgroundColor === "string" ? { backgroundColor: request.backgroundColor } : {};
+
+  if (request.format === "png") {
+    try {
+      reply(id, { dataUrl: nvl.getImageDataUrl(options) });
+    } catch (error) {
+      reply(id, { error: `Failed to generate the PNG image: ${String(error)}` });
+    }
+  } else if (request.format === "svg") {
+    nvl
+      .getSvgDataUrl(options)
+      .then((dataUrl) => reply(id, { dataUrl }))
+      .catch((error) => reply(id, { error: `Failed to generate the SVG image: ${String(error)}` }));
+  } else {
+    reply(id, { error: `Unknown save format: ${String(request.format)}` });
+  }
+}
+
 function GraphWidget() {
   const [nodes] = useModelState<WidgetData["nodes"]>("nodes");
   const [relationships] = useModelState<WidgetData["relationships"]>("relationships");
@@ -303,6 +362,22 @@ function GraphWidget() {
       mo.disconnect();
     };
   }, []);
+
+  // Python `GraphWidget.save()` support. NVL renders the graph in the browser,
+  // so Python sends a `save_request` custom message and awaits the matching
+  // `save_response` (a data URL or an error) sent back over the comm. The
+  // kernel-less model shims (static HTML, Streamlit) never emit "msg:custom",
+  // so this listener is inert outside a notebook kernel.
+  const model = useModel();
+  useEffect(() => {
+    const onSaveRequest = (msg: unknown) =>
+      handleSaveRequest(msg, nvlRef.current, (id, payload) =>
+        model.send({ kind: "save_response", id, ...payload } satisfies SaveResponse),
+      );
+
+    model.on("msg:custom", onSaveRequest);
+    return () => model.off("msg:custom", onSaveRequest);
+  }, [model]);
 
   const [neoNodes, neoRelationships] = useMemo(
     () => [transformNodes(nodes ?? []), transformRelationships(relationships ?? [])],

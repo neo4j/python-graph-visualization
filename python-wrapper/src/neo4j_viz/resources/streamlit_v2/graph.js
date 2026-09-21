@@ -95693,7 +95693,24 @@ function Mre(e) {
 	}
 	document.head.querySelector(kre) || Z9(document.head, "data-neo4j-viz-ndl-main", O);
 }
-function Nre() {
+function Nre(e, t, n) {
+	if (typeof e != "object" || !e) return;
+	let r = e;
+	if (r.kind !== "save_request" || typeof r.id != "string") return;
+	let { id: i } = r;
+	if (!t) {
+		n(i, { error: "The graph is not rendered yet; display the widget before saving." });
+		return;
+	}
+	let a = typeof r.backgroundColor == "string" ? { backgroundColor: r.backgroundColor } : {};
+	if (r.format === "png") try {
+		n(i, { dataUrl: t.getImageDataUrl(a) });
+	} catch (e) {
+		n(i, { error: `Failed to generate the PNG image: ${String(e)}` });
+	}
+	else r.format === "svg" ? t.getSvgDataUrl(a).then((e) => n(i, { dataUrl: e })).catch((e) => n(i, { error: `Failed to generate the SVG image: ${String(e)}` })) : n(i, { error: `Unknown save format: ${String(r.format)}` });
+}
+function Pre() {
 	let [e] = E("nodes"), [t] = E("relationships"), [n, r] = E("options"), [i] = E("height"), [a] = E("width"), [o] = E("theme"), [s, c] = E("selected"), [, l] = E("last_event"), [u] = E("legend"), { layout: d, nvlOptions: f, zoom: p, pan: m, layoutOptions: h, showLayoutButton: g, showSearchButton: _, selectionMode: v } = n ?? {}, [y, b] = (0, x.useState)(v ?? "single");
 	(0, x.useEffect)(() => {
 		v && b(v);
@@ -95703,7 +95720,7 @@ function Nre() {
 			...n,
 			layout: e
 		});
-	}, C = (0, x.useRef)(null), w = (0, x.useRef)(null), T = Ore(o);
+	}, C = (0, x.useRef)(null), w = (0, x.useRef)(null), D = Ore(o);
 	(0, x.useEffect)(() => {
 		C.current && Mre(C.current);
 	}, []), (0, x.useEffect)(() => {
@@ -95733,22 +95750,31 @@ function Nre() {
 			i = !0, cancelAnimationFrame(n), e?.disconnect(), c.disconnect();
 		};
 	}, []);
-	let [D, O] = (0, x.useMemo)(() => [bre(e ?? []), xre(t ?? [])], [e, t]), k = (0, x.useMemo)(() => ({
+	let O = T();
+	(0, x.useEffect)(() => {
+		let e = (e) => Nre(e, w.current, (e, t) => O.send({
+			kind: "save_response",
+			id: e,
+			...t
+		}));
+		return O.on("msg:custom", e), () => O.off("msg:custom", e);
+	}, [O]);
+	let [k, A] = (0, x.useMemo)(() => [bre(e ?? []), xre(t ?? [])], [e, t]), j = (0, x.useMemo)(() => ({
 		...f,
 		minZoom: 0,
 		maxZoom: 1e3,
 		disableWebWorkers: !0
-	}), [f]), [A, j] = (0, x.useState)(!1), [M, N] = (0, x.useState)(300), [P, F] = (0, x.useState)(!1);
+	}), [f]), [M, N] = (0, x.useState)(!1), [P, F] = (0, x.useState)(300), [I, L] = (0, x.useState)(!1);
 	(0, x.useEffect)(() => {
-		q9(u ?? J9) && F(!0);
+		q9(u ?? J9) && L(!0);
 	}, [u]);
-	let I = q9(u ?? J9), [L, R] = (0, x.useState)();
+	let R = q9(u ?? J9), [B, V] = (0, x.useState)();
 	(0, x.useEffect)(() => {
-		_ || R(void 0);
+		_ || V(void 0);
 	}, [_]);
-	let [B, V] = (0, x.useState)(!1);
+	let [U, W] = (0, x.useState)(!1);
 	return /* @__PURE__ */ (0, z.jsx)(qa, {
-		theme: T,
+		theme: D,
 		wrapperProps: { isWrappingChildren: !1 },
 		children: /* @__PURE__ */ (0, z.jsxs)("div", {
 			ref: C,
@@ -95758,10 +95784,10 @@ function Nre() {
 				width: a ?? "100%"
 			},
 			children: [/* @__PURE__ */ (0, z.jsx)(W9, {
-				nodes: D,
-				rels: O,
-				highlightedNodeIds: L?.nodeIds,
-				highlightedRelationshipIds: L?.relationshipIds,
+				nodes: k,
+				rels: A,
+				highlightedNodeIds: B?.nodeIds,
+				highlightedRelationshipIds: B?.relationshipIds,
 				gesture: y,
 				setGesture: b,
 				selected: s ?? Ere,
@@ -95806,16 +95832,16 @@ function Nre() {
 				},
 				layout: d,
 				setLayout: S,
-				nvlOptions: k,
+				nvlOptions: j,
 				nvlRef: w,
 				zoom: p,
 				pan: m,
 				layoutOptions: h,
 				sidepanel: {
-					isSidePanelOpen: A,
-					setIsSidePanelOpen: j,
-					onSidePanelResize: N,
-					sidePanelWidth: M,
+					isSidePanelOpen: M,
+					setIsSidePanelOpen: N,
+					onSidePanelResize: F,
+					sidePanelWidth: P,
 					children: /* @__PURE__ */ (0, z.jsx)(W9.SingleSelectionSidePanelContents, {})
 				},
 				topLeftIsland: /* @__PURE__ */ (0, z.jsx)(W9.DownloadButton, { tooltipPlacement: "right" }),
@@ -95824,23 +95850,23 @@ function Nre() {
 					orientation: "horizontal",
 					children: [
 						_ && /* @__PURE__ */ (0, z.jsx)("div", {
-							style: { minWidth: B ? "220px" : void 0 },
+							style: { minWidth: U ? "220px" : void 0 },
 							children: /* @__PURE__ */ (0, z.jsx)(W9.SearchButton, {
-								open: B,
-								setOpen: V,
+								open: U,
+								setOpen: W,
 								tooltipPlacement: "bottom",
-								onSearch: (e, t) => R({
+								onSearch: (e, t) => V({
 									nodeIds: e,
 									relationshipIds: t
 								})
 							})
 						}),
-						I && /* @__PURE__ */ (0, z.jsx)(RE, {
+						R && /* @__PURE__ */ (0, z.jsx)(RE, {
 							size: "small",
 							isFloating: !0,
-							isActive: P,
-							description: P ? "Hide legend" : "Show legend",
-							onClick: () => F((e) => !e),
+							isActive: I,
+							description: I ? "Hide legend" : "Show legend",
+							onClick: () => L((e) => !e),
 							htmlAttributes: { "aria-label": "Toggle legend" },
 							tooltipProps: { root: {
 								placement: "bottom",
@@ -95869,18 +95895,18 @@ function Nre() {
 						})] })
 					]
 				})
-			}), P && /* @__PURE__ */ (0, z.jsx)(wre, { legend: u ?? J9 })]
+			}), I && /* @__PURE__ */ (0, z.jsx)(wre, { legend: u ?? J9 })]
 		})
 	});
 }
-function Pre() {
-	return /* @__PURE__ */ (0, z.jsx)(Tre, { children: /* @__PURE__ */ (0, z.jsx)(Nre, {}) });
+function Fre() {
+	return /* @__PURE__ */ (0, z.jsx)(Tre, { children: /* @__PURE__ */ (0, z.jsx)(Pre, {}) });
 }
-var Fre = { render: D(Pre) }, Ire = [
+var Ire = { render: D(Fre) }, Lre = [
 	"selected",
 	"options",
 	"last_event"
-], Lre = class {
+], Rre = class {
 	setStateValue;
 	state = {};
 	listeners = /* @__PURE__ */ new Map();
@@ -95892,7 +95918,7 @@ var Fre = { render: D(Pre) }, Ire = [
 		return this.state[e];
 	}
 	set(e, t) {
-		this.state[e] = t, Ire.includes(e) && this.pending.add(e), this.emit(e);
+		this.state[e] = t, Lre.includes(e) && this.pending.add(e), this.emit(e);
 	}
 	save_changes() {
 		for (let e of this.pending) this.setStateValue(e, this.state[e]);
@@ -95919,31 +95945,31 @@ var Fre = { render: D(Pre) }, Ire = [
 		}
 	}
 };
-function Rre(e) {
+function zre(e) {
 	return e instanceof ShadowRoot ? e.host : e;
 }
-function zre(e) {
+function Bre(e) {
 	let t = getComputedStyle(e).getPropertyValue("--st-background-color").trim().match(/\d+/g);
 	return !t || t.length < 3 ? null : Number(t[0]) * .2126 + Number(t[1]) * .7152 + Number(t[2]) * .0722 < 128 ? "dark" : "light";
 }
 function Q9(e, t) {
 	if ((e.theme ?? "auto") !== "auto") return e;
-	let n = zre(t);
+	let n = Bre(t);
 	return n ? {
 		...e,
 		theme: n
 	} : e;
 }
 var $9 = /* @__PURE__ */ new WeakMap();
-function Bre(e) {
-	let { data: t, parentElement: n, setStateValue: r } = e, i = Rre(n), a = Q9(t ?? {}, i), o = a.width ?? "100%", s = a.height ?? "600px", c = $9.get(n);
+function Vre(e) {
+	let { data: t, parentElement: n, setStateValue: r } = e, i = zre(n), a = Q9(t ?? {}, i), o = a.width ?? "100%", s = a.height ?? "600px", c = $9.get(n);
 	if (c && (c.width !== o || c.height !== s) && (c.dispose(), c = void 0), c) c.model.applyIncoming(a);
 	else {
-		let e = new Lre(r);
+		let e = new Rre(r);
 		e.initialize(a);
 		let t = document.createElement("div");
 		t.style.width = o, t.style.height = s, n.appendChild(t);
-		let l = Fre.render({
+		let l = Ire.render({
 			model: e,
 			el: t
 		}), u = new MutationObserver(() => {
@@ -95966,4 +95992,4 @@ function Bre(e) {
 	return c.dispose;
 }
 //#endregion
-export { Bre as default };
+export { Vre as default };
