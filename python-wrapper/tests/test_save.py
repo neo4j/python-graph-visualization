@@ -132,6 +132,30 @@ class TestSave:
         assert requests[0]["backgroundColor"] == "#ffffff"
         assert isinstance(requests[0]["id"], str)
 
+    def test_save_normalizes_background_color(self, tmp_path: pathlib.Path) -> None:
+        requests: list[dict[str, Any]] = []
+
+        def respond(request: dict[str, Any]) -> dict[str, Any]:
+            requests.append(request)
+            return {"kind": "save_response", "dataUrl": "data:image/png;base64," + base64.b64encode(b"x").decode()}
+
+        widget = _fake_frontend(_make_widget(), respond)
+
+        asyncio.run(widget.save(tmp_path / "graph.png", background_color="red"))
+        asyncio.run(widget.save(tmp_path / "graph.png", background_color=(255, 0, 0)))
+        asyncio.run(widget.save(tmp_path / "graph.png"))
+
+        assert requests[0]["backgroundColor"] == "#ff0000"
+        assert requests[1]["backgroundColor"] == "#ff0000"
+        assert requests[2]["backgroundColor"] is None
+
+    def test_save_rejects_invalid_background_color(self, tmp_path: pathlib.Path) -> None:
+        # No live frontend needed: the color must be validated before the frontend check.
+        widget = _make_widget()
+
+        with pytest.raises(ValueError, match="Invalid background_color"):
+            asyncio.run(widget.save(tmp_path / "graph.png", background_color="not-a-color"))
+
     def test_save_defaults_to_svg(self, tmp_path: pathlib.Path) -> None:
         requests: list[dict[str, Any]] = []
 

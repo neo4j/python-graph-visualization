@@ -13,11 +13,12 @@ import anywidget
 import pydantic
 import traitlets
 from comm import DummyComm
+from pydantic_extra_types.color import ColorType
 
 from ._events import _to_full_event_type
 from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
 from ._validation import OnDangling, OnDuplicate, check_dangling_relationships, merge_on_duplicate
-from .colors import ColorSpace, ColorsType
+from .colors import ColorSpace, ColorsType, to_hex
 from .node import Node, NodeIdType
 from .node_size import RealNumber
 from .options import (
@@ -368,7 +369,7 @@ class GraphWidget(anywidget.AnyWidget):
         file: str | pathlib.Path,
         *,
         format: Literal["png", "svg"] | None = None,
-        background_color: str | None = None,
+        background_color: ColorType | None = None,
         timeout: float = 30.0,
     ) -> pathlib.Path:
         """Save the current visualization as a PNG or SVG file.
@@ -393,8 +394,10 @@ class GraphWidget(anywidget.AnyWidget):
             The file format, "png" or "svg". If given together with a suffixed `file`,
             the two must match.
         background_color:
-            The background color of the image, for example "#ffffff" or "red". A PNG
-            defaults to the canvas' background, an SVG to transparent.
+            The background color of the image. Allowed input is for example "#ffffff",
+            "red" or (255, 0, 0)
+            (full list: https://docs.pydantic.dev/2.0/usage/types/extra_types/color_types/).
+            A PNG defaults to the canvas' background, an SVG to transparent.
         timeout:
             How long to wait for the frontend to render the image, in seconds.
 
@@ -411,6 +414,15 @@ class GraphWidget(anywidget.AnyWidget):
         """
         path = pathlib.Path(file)
         save_format = _resolve_save_format(path, format)
+
+        if background_color is None:
+            background_color_hex = None
+        else:
+            try:
+                background_color_hex = to_hex(background_color)
+            except ValueError as exc:
+                raise ValueError(f"Invalid background_color {background_color!r}: {exc}") from exc
+
         self._check_save_frontend()
 
         request_id = uuid.uuid4().hex
@@ -422,7 +434,7 @@ class GraphWidget(anywidget.AnyWidget):
                 "kind": "save_request",
                 "id": request_id,
                 "format": save_format,
-                "backgroundColor": background_color,
+                "backgroundColor": background_color_hex,
             }
         )
 

@@ -3070,7 +3070,6 @@ dev = [
     { name = "nbconvert", specifier = "==7.17.1" },
     { name = "palettable", specifier = "==3.3.3" },
     { name = "playwright", specifier = "==1.63.0" },
-    { name = "playwright", specifier = ">=1.63.0" },
     { name = "pytest", specifier = "==9.1.1" },
     { name = "pytest-mock", specifier = "==3.15.1" },
     { name = "python-dotenv" },

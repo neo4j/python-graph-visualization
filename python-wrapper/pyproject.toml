@@ -67,7 +67,6 @@ dev = [
     "jupyterlab>=4.5.7",
     "anywidget[dev]",
     "python-dotenv",
-    "playwright>=1.63.0",
 ]
 docs = [
     # Sphinx is capped at 8.1.x: 8.2+ requires Python >=3.11 and Sphinx 9 requires >=3.12

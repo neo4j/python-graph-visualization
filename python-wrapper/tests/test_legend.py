@@ -14,11 +14,11 @@ from neo4j_viz import (
     Relationship,
     VisualizationGraph,
 )
-from neo4j_viz.colors import ColorSpace
+from neo4j_viz.colors import ColorSpace, to_hex
 
 
 def _hex(color: str) -> str:
-    return Color(color).as_hex(format="long")
+    return to_hex(color)
 
 
 def test_default_legend_is_empty() -> None:

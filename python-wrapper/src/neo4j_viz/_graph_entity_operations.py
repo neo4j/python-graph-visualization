@@ -7,7 +7,14 @@ from typing import Any, Callable, Protocol, Union
 from pydantic.alias_generators import to_snake
 from pydantic_extra_types.color import Color, ColorType
 
-from .colors import NEO4J_COLORS_CONTINUOUS, NEO4J_COLORS_DISCRETE, ColorSpace, ColorsType
+from .colors import (
+    NEO4J_COLORS_CONTINUOUS,
+    NEO4J_COLORS_DISCRETE,
+    ColorSpace,
+    ColorsType,
+    to_color,
+    to_hex,
+)
 from .node import Node, NodeIdType
 from .node_size import RealNumber, verify_radii
 from .options import ContinuousLegendSection, DiscreteLegendSection, Legend, LegendEntry
@@ -402,7 +409,7 @@ class GraphEntityOperations:
             if color is None:
                 continue
 
-            resolved = color if isinstance(color, Color) else Color(color)
+            resolved = to_color(color)
             applied[attr] = resolved
 
             if item.color is not None and not override:
@@ -437,7 +444,7 @@ class GraphEntityOperations:
                     exhausted_colors = True
                     colors_iter = iter(colors)
                     next_color = next(colors_iter)
-                prop_to_color[prop] = next_color if isinstance(next_color, Color) else Color(next_color)
+                prop_to_color[prop] = to_color(next_color)
 
             color = prop_to_color[prop]
 
@@ -527,21 +534,21 @@ class GraphEntityOperations:
         if color_space == ColorSpace.CONTINUOUS:
             return ContinuousLegendSection(
                 title=title,
-                gradient=[cls._to_hex(color) for color in (gradient or [])],
+                gradient=[to_hex(color) for color in (gradient or [])],
                 min_value=None if min_value is None else str(min_value),
                 max_value=None if max_value is None else str(max_value),
             )
 
-        entries = [LegendEntry(label=cls._label_of(prop), color=cls._to_hex(color)) for prop, color in applied.items()]
+        entries = [LegendEntry(label=cls._label_of(prop), color=to_hex(color)) for prop, color in applied.items()]
         return DiscreteLegendSection(title=title, entries=entries)
 
-    @classmethod
-    def _coerce_section(cls, value: LegendSectionInput) -> LegendSectionValue:
+    @staticmethod
+    def _coerce_section(value: LegendSectionInput) -> LegendSectionValue:
         if isinstance(value, (DiscreteLegendSection, ContinuousLegendSection)):
             return value
 
         if isinstance(value, dict):
-            entries = [LegendEntry(label=str(label), color=cls._to_hex(color)) for label, color in value.items()]
+            entries = [LegendEntry(label=str(label), color=to_hex(color)) for label, color in value.items()]
             return DiscreteLegendSection(entries=entries)
 
         entries = []
@@ -550,13 +557,8 @@ class GraphEntityOperations:
                 entries.append(item)
             else:
                 label, color = item
-                entries.append(LegendEntry(label=str(label), color=cls._to_hex(color)))
+                entries.append(LegendEntry(label=str(label), color=to_hex(color)))
         return DiscreteLegendSection(entries=entries)
-
-    @staticmethod
-    def _to_hex(color: ColorType) -> str:
-        resolved = color if isinstance(color, Color) else Color(color)
-        return resolved.as_hex(format="long")
 
     @staticmethod
     def _label_of(prop: Hashable) -> str:
