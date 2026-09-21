@@ -3,9 +3,17 @@ from enum import Enum
 from typing import Any, Union
 
 import enum_tools
-from pydantic_extra_types.color import ColorType
+from pydantic_extra_types.color import Color, ColorType
 
 ColorsType = Union[dict[Any, ColorType], Iterable[ColorType]]
+
+
+def to_color(color: ColorType) -> Color:
+    return color if isinstance(color, Color) else Color(color)
+
+
+def to_hex(color: ColorType) -> str:
+    return to_color(color).as_hex(format="long")
 
 
 @enum_tools.documentation.document_enum

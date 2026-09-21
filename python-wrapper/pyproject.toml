@@ -53,19 +53,20 @@ streamlit = ["streamlit<2,>=1.58"]
 
 [dependency-groups]
 dev = [
-    "ruff==0.16.3",
-    "mypy==2.3.0",
+    "ruff==0.16.8",
+    "mypy==2.3.1",
     "pytest==9.1.1",
-    "selenium==4.47.0",
+    "selenium==4.49.0",
     "ipykernel==7.3.0",
     "palettable==3.3.3",
     "pytest-mock==3.15.1",
+    "playwright==1.63.0",
     "nbconvert==7.17.1",
-    "streamlit==1.61.1",
+    "streamlit==1.64.0",
     "matplotlib>=3.9.4",
     "jupyterlab>=4.5.7",
     "anywidget[dev]",
-    "python-dotenv"
+    "python-dotenv",
 ]
 docs = [
     # Sphinx is capped at 8.1.x: 8.2+ requires Python >=3.11 and Sphinx 9 requires >=3.12
@@ -83,7 +84,7 @@ notebook = [
     "ipywidgets>=8.0.0",
     "palettable>=3.3.3",
     "matplotlib>=3.9.4",
-    "snowflake-snowpark-python==1.54.0",
+    "snowflake-snowpark-python==1.55.0",
     "requests",
     "marimo",
     "python-dotenv"

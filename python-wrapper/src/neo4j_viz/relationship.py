@@ -7,6 +7,7 @@ from pydantic import AliasChoices, AliasGenerator, BaseModel, Field, field_seria
 from pydantic.alias_generators import to_camel
 from pydantic_extra_types.color import Color, ColorType
 
+from .colors import to_color, to_hex
 from .options import CaptionAlignment
 
 RelationshipIdType = str | int
@@ -76,7 +77,7 @@ class Relationship(
 
     @field_serializer("color")
     def serialize_color(self, color: Color) -> str:
-        return color.as_hex(format="long")
+        return to_hex(color)
 
     @field_serializer("id")
     def serialize_id(self, id: Union[str, int]) -> str:
@@ -93,10 +94,7 @@ class Relationship(
     @field_validator("color")
     @classmethod
     def cast_color(cls, color: ColorType) -> Color:
-        if not isinstance(color, Color):
-            return Color(color)
-
-        return color
+        return to_color(color)
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True, by_alias=True)

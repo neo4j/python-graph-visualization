@@ -1,4 +1,4 @@
-import { createRender, useModelState } from "@anywidget/react";
+import { createRender, useModel, useModelState } from "@anywidget/react";
 import ndlCssText from "@neo4j-ndl/base/lib/neo4j-ds-styles.css?inline";
 import { Gesture, GraphSelection, GraphVisualization } from "@neo4j-ndl/react-graph";
 import type NVL from "@neo4j-nvl/base";
@@ -24,7 +24,13 @@ export type GraphOptions = {
   pan?: { x: number; y: number };
   layoutOptions?: Record<string, unknown>;
   showLayoutButton: boolean;
+  showSearchButton?: boolean;
   selectionMode?: Gesture;
+};
+
+export type SearchResults = {
+  nodeIds?: string[];
+  relationshipIds?: string[];
 };
 
 export type InteractionEventType =
@@ -41,6 +47,25 @@ export type InteractionEventType =
 export type InteractionEvent = {
   type: InteractionEventType;
   id: string | null;
+};
+
+/**
+ * Request from Python `GraphWidget.save()`: the image is rendered by NVL in
+ * the browser, so Python sends a `save_request` over the anywidget custom
+ * message channel and awaits the matching `save_response` reply.
+ */
+export type SaveRequest = {
+  kind: "save_request";
+  id: string;
+  format: "png" | "svg";
+  backgroundColor?: string;
+};
+
+export type SaveResponse = {
+  kind: "save_response";
+  id: string;
+  dataUrl?: string;
+  error?: string;
 };
 
 export type WidgetData = {
@@ -96,32 +121,23 @@ function detectTheme(): "light" | "dark" {
   return brightness < 128 ? "dark" : "light";
 }
 
-function resolveTheme(theme: Theme): "light" | "dark" {
-  return theme === "auto" ? detectTheme() : theme;
-}
-
 function useResolvedTheme(theme: Theme | undefined): "light" | "dark" {
   const normalizedTheme = theme ?? "auto";
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() =>
-    resolveTheme(normalizedTheme),
-  );
+  const [detectedTheme, setDetectedTheme] = useState<"light" | "dark">(detectTheme);
 
+  // The effect only synchronizes with the external system (DOM theme classes) via the
+  // observer's async callbacks, so nothing is set synchronously inside it. The observer
+  // stays attached even for explicit themes, keeping the detection fresh for when (or if)
+  // the theme switches back to "auto".
   useEffect(() => {
-    if (normalizedTheme !== "auto") {
-      setResolvedTheme(normalizedTheme);
+    if (typeof MutationObserver === "undefined") {
       return;
     }
 
     const updateTheme = () => {
       const nextTheme = detectTheme();
-      setResolvedTheme((currentTheme) => (currentTheme === nextTheme ? currentTheme : nextTheme));
+      setDetectedTheme((currentTheme) => (currentTheme === nextTheme ? currentTheme : nextTheme));
     };
-
-    updateTheme();
-
-    if (typeof MutationObserver === "undefined") {
-      return;
-    }
 
     const observer = new MutationObserver(updateTheme);
     const observerOptions = {
@@ -133,9 +149,9 @@ function useResolvedTheme(theme: Theme | undefined): "light" | "dark" {
     observer.observe(document.body, observerOptions);
 
     return () => observer.disconnect();
-  }, [normalizedTheme]);
+  }, []);
 
-  return resolvedTheme;
+  return normalizedTheme === "auto" ? detectedTheme : normalizedTheme;
 }
 
 // @font-face rules in shadow DOM adopted stylesheets don't register fonts at the
@@ -183,6 +199,46 @@ function injectNdlCss(el: HTMLElement) {
   }
 }
 
+/**
+ * Handles a `save_request` custom message from Python `GraphWidget.save()`.
+ *
+ * PNG captures the current view (`getImageDataUrl`), SVG the entire graph
+ * (`getSvgDataUrl`, asynchronous). The reply carries the data URL back to
+ * Python, or an error message when rendering failed.
+ */
+export function handleSaveRequest(
+  msg: unknown,
+  nvl: NVL | null,
+  reply: (id: string, payload: { dataUrl?: string; error?: string }) => void,
+): void {
+  if (typeof msg !== "object" || msg === null) return;
+  const request = msg as Partial<SaveRequest>;
+  if (request.kind !== "save_request" || typeof request.id !== "string") return;
+  const { id } = request;
+
+  if (!nvl) {
+    reply(id, { error: "The graph is not rendered yet; display the widget before saving." });
+    return;
+  }
+  const options =
+    typeof request.backgroundColor === "string" ? { backgroundColor: request.backgroundColor } : {};
+
+  if (request.format === "png") {
+    try {
+      reply(id, { dataUrl: nvl.getImageDataUrl(options) });
+    } catch (error) {
+      reply(id, { error: `Failed to generate the PNG image: ${String(error)}` });
+    }
+  } else if (request.format === "svg") {
+    nvl
+      .getSvgDataUrl(options)
+      .then((dataUrl) => reply(id, { dataUrl }))
+      .catch((error) => reply(id, { error: `Failed to generate the SVG image: ${String(error)}` }));
+  } else {
+    reply(id, { error: `Unknown save format: ${String(request.format)}` });
+  }
+}
+
 function GraphWidget() {
   const [nodes] = useModelState<WidgetData["nodes"]>("nodes");
   const [relationships] = useModelState<WidgetData["relationships"]>("relationships");
@@ -193,14 +249,24 @@ function GraphWidget() {
   const [selected, setSelected] = useModelState<WidgetData["selected"]>("selected");
   const [, setLastEvent] = useModelState<WidgetData["last_event"]>("last_event");
   const [legend] = useModelState<WidgetData["legend"]>("legend");
-  const { layout, nvlOptions, zoom, pan, layoutOptions, showLayoutButton, selectionMode } =
-    options ?? {};
+  const {
+    layout,
+    nvlOptions,
+    zoom,
+    pan,
+    layoutOptions,
+    showLayoutButton,
+    showSearchButton,
+    selectionMode,
+  } = options ?? {};
   // `gesture` is locally controlled so the GestureSelectButton stays interactive, but it is
   // seeded from (and re-synced to) the Python-provided `selectionMode` when that changes.
   const [gesture, setGesture] = useState<Gesture>(selectionMode ?? "single");
-  useEffect(() => {
+  const [lastSelectionMode, setLastSelectionMode] = useState(selectionMode);
+  if (selectionMode !== lastSelectionMode) {
+    setLastSelectionMode(selectionMode);
     if (selectionMode) setGesture(selectionMode);
-  }, [selectionMode]);
+  }
   const setLayout = (layout: Layout) => {
     setOptions({ ...options, layout });
   };
@@ -290,6 +356,22 @@ function GraphWidget() {
     };
   }, []);
 
+  // Python `GraphWidget.save()` support. NVL renders the graph in the browser,
+  // so Python sends a `save_request` custom message and awaits the matching
+  // `save_response` (a data URL or an error) sent back over the comm. The
+  // kernel-less model shims (static HTML, Streamlit) never emit "msg:custom",
+  // so this listener is inert outside a notebook kernel.
+  const model = useModel();
+  useEffect(() => {
+    const onSaveRequest = (msg: unknown) =>
+      handleSaveRequest(msg, nvlRef.current, (id, payload) =>
+        model.send({ kind: "save_response", id, ...payload } satisfies SaveResponse),
+      );
+
+    model.on("msg:custom", onSaveRequest);
+    return () => model.off("msg:custom", onSaveRequest);
+  }, [model]);
+
   const [neoNodes, neoRelationships] = useMemo(
     () => [transformNodes(nodes ?? []), transformRelationships(relationships ?? [])],
     [nodes, relationships],
@@ -309,15 +391,28 @@ function GraphWidget() {
 
   // The legend is a floating overlay toggled by its own island button, independent of the side
   // panel (which holds the results overview / selection details). Show it automatically whenever a
-  // legend becomes available so it is discoverable without a click. Runs only when the `legend`
-  // trait changes, so it won't fight a user who has closed it.
-  const [isLegendOpen, setIsLegendOpen] = useState(false);
-  useEffect(() => {
-    if (hasLegendContent(legend ?? EMPTY_LEGEND)) {
-      setIsLegendOpen(true);
-    }
-  }, [legend]);
+  // legend becomes available so it is discoverable without a click. Only transitions into
+  // availability re-open it, so legend updates never fight a user who has closed it.
   const legendAvailable = hasLegendContent(legend ?? EMPTY_LEGEND);
+  const [isLegendOpen, setIsLegendOpen] = useState(legendAvailable);
+  const [legendWasAvailable, setLegendWasAvailable] = useState(legendAvailable);
+  if (legendAvailable !== legendWasAvailable) {
+    setLegendWasAvailable(legendAvailable);
+    if (legendAvailable) setIsLegendOpen(true);
+  }
+
+  // Search highlights: undefined = no highlight, empty arrays = no matches (dims all).
+  const [searchResults, setSearchResults] = useState<SearchResults>();
+  // Avoid a stuck dimmed graph when the search button is toggled off mid-search.
+  const [searchButtonWasShown, setSearchButtonWasShown] = useState(showSearchButton);
+  if (searchButtonWasShown !== showSearchButton) {
+    setSearchButtonWasShown(showSearchButton);
+    if (!showSearchButton) setSearchResults(undefined);
+  }
+
+  // IconButtonArray sizes itself to min-content and the NDL TextInput has no intrinsic
+  // width, so the expanded search input collapses unless we give it room ourselves.
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   return (
     <NeedleThemeProvider theme={resolvedTheme} wrapperProps={{ isWrappingChildren: false }}>
@@ -332,6 +427,8 @@ function GraphWidget() {
         <GraphVisualization
           nodes={neoNodes}
           rels={neoRelationships}
+          highlightedNodeIds={searchResults?.nodeIds}
+          highlightedRelationshipIds={searchResults?.relationshipIds}
           gesture={gesture}
           setGesture={setGesture}
           selected={selected ?? EMPTY_SELECTION}
@@ -378,6 +475,18 @@ function GraphWidget() {
           topLeftIsland={<GraphVisualization.DownloadButton tooltipPlacement="right" />}
           topRightIsland={
             <IconButtonArray size="small" orientation="horizontal">
+              {showSearchButton && (
+                <div style={{ minWidth: isSearchOpen ? "220px" : undefined }}>
+                  <GraphVisualization.SearchButton
+                    open={isSearchOpen}
+                    setOpen={setIsSearchOpen}
+                    tooltipPlacement="bottom"
+                    onSearch={(nodeIds, relationshipIds) =>
+                      setSearchResults({ nodeIds, relationshipIds })
+                    }
+                  />
+                </div>
+              )}
               {legendAvailable && (
                 <IconButton
                   size="small"

@@ -119,3 +119,29 @@ html = VG.render(...)
 with open("my_graph.html", "w") as f:
     f.write(html.data)
 ----
+
+== Saving as PNG or SVG
+
+The interactive widget can save the current visualization as a PNG or SVG image file.
+The image is rendered by the widget frontend in the browser, so the widget must be displayed in a notebook cell first:
+
+[source, python]
+----
+widget = VG.render_widget()
+widget
+----
+
+Then the current visualization can be saved from a later cell:
+
+[source, python]
+----
+await widget.save("my_graph.svg")
+await widget.save("my_graph.png", background_color="#ffffff")
+----
+
+The format is inferred from the file extension (`.png` or `.svg`) and defaults to SVG when the file has no extension; any other extension is rejected.
+An explicit `format="png"`/`format="svg"` argument must match the extension.
+
+A PNG captures the current view (the canvas at its rendered size, including the current zoom and pan), while an SVG always contains the entire graph.
+
+NOTE: The image is rendered by the widget frontend in the browser, so `save` must be `await`-ed while the widget is displayed in a live notebook (JupyterLab, Notebook, VS Code, Colab, or marimo). Outside a running kernel, for example in a plain Python script, there is no renderer and saving raises an error — use xref:rendering.adoc#exporting-to-html[Exporting to HTML] there instead.
