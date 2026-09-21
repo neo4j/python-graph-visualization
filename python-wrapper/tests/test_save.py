@@ -218,3 +218,16 @@ class TestSave:
             asyncio.run(widget.save(tmp_path / "graph.png", timeout=0.05))
 
         assert widget._pending_save_requests == {}
+
+    def test_save_cleans_up_pending_request_when_send_fails(self, tmp_path: pathlib.Path) -> None:
+        widget = _fake_frontend(_make_widget(), lambda request: None)
+
+        def failing_send(content: dict[str, Any], buffers: Any = None) -> None:
+            raise RuntimeError("comm closed")
+
+        widget.send = failing_send
+
+        with pytest.raises(RuntimeError, match="comm closed"):
+            asyncio.run(widget.save(tmp_path / "graph.png"))
+
+        assert widget._pending_save_requests == {}

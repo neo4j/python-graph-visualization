@@ -122,17 +122,25 @@ with open("my_graph.html", "w") as f:
 
 == Saving as PNG or SVG
 
-The interactive widget can save the current visualization as a PNG or SVG image file from a notebook cell:
+The interactive widget can save the current visualization as a PNG or SVG image file.
+The image is rendered by the widget frontend in the browser, so the widget must be displayed in a notebook cell first:
 
 [source, python]
 ----
 widget = VG.render_widget()
+widget
+----
 
+Then the current visualization can be saved from a later cell:
+
+[source, python]
+----
 await widget.save("my_graph.svg")
 await widget.save("my_graph.png", background_color="#ffffff")
 ----
 
-The format is inferred from the file extension (`.png` or `.svg`) and defaults to SVG when the file has no recognized extension; an explicit `format="png"`/`format="svg"` argument must match the extension.
+The format is inferred from the file extension (`.png` or `.svg`) and defaults to SVG when the file has no extension; any other extension is rejected.
+An explicit `format="png"`/`format="svg"` argument must match the extension.
 
 A PNG captures the current view (the canvas at its rendered size, including the current zoom and pan), while an SVG always contains the entire graph.
 

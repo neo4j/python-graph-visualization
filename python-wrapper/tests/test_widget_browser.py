@@ -86,16 +86,19 @@ def jupyter_server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Jupyter
                 # server would reject that PUT with 403 (CSRF check on non-GET
                 # requests). Fine on an ephemeral localhost-only test server.
                 "--ServerApp.disable_check_xsrf=True",
-                # Saved Lab workspaces are NOT covered by JUPYTERDIR. Their ids
-                # only hash the URL, so every test server would map to the same
-                # workspace in ~/.jupyter and try to reopen the previous run's
+                # Saved Lab workspaces are NOT covered by JUPYTER_CONFIG_DIR either.
+                # Their ids only hash the URL, so every test server would map to the
+                # same workspace in ~/.jupyter and try to reopen the previous run's
                 # (now missing) notebook.
                 f"--LabApp.workspaces_dir={jupyter_dir / 'lab-workspaces'}",
                 f"--ServerApp.root_dir={root}",
             ],
             stdout=log_file,
             stderr=subprocess.STDOUT,
-            env={**os.environ, "JUPYTERDIR": str(jupyter_dir)},
+            # Isolate the server from the host user's Jupyter config (~/.jupyter);
+            # without this, locally installed extensions or settings would leak into
+            # the test server.
+            env={**os.environ, "JUPYTER_CONFIG_DIR": str(jupyter_dir)},
         )
     server = JupyterServer(url=f"http://127.0.0.1:{port}", root=root, process=process, log_path=log_path)
     try:

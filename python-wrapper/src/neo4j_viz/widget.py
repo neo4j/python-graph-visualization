@@ -78,9 +78,10 @@ def _resolve_save_format(
 ) -> Literal["png", "svg"]:
     """Resolve the format for `GraphWidget.save` from the explicit argument or the file suffix.
 
-    The suffix is used for inference when no explicit format is given; without a recognized
-    suffix the format defaults to "svg". An explicit format that contradicts the suffix is an
-    error, so SVG data is never silently written into a "*.png" file (or vice versa).
+    The suffix is used for inference when no explicit format is given; a path without a
+    suffix defaults to "svg", while a nonempty unrecognized suffix is an error. An
+    explicit format that contradicts the suffix is an error, so SVG data is never
+    silently written into a "*.png" file (or vice versa).
     """
     if format is None:
         suffix = path.suffix.lower().lstrip(".")
@@ -389,7 +390,8 @@ class GraphWidget(anywidget.AnyWidget):
         ----------
         file:
             Path of the file to write. The format is inferred from the suffix (".png" or
-            ".svg"); without a recognized suffix it defaults to SVG.
+            ".svg"); a path without a suffix defaults to SVG, while any other suffix is
+            rejected.
         format:
             The file format, "png" or "svg". If given together with a suffixed `file`,
             the two must match.
@@ -429,16 +431,16 @@ class GraphWidget(anywidget.AnyWidget):
         future: asyncio.Future[dict[str, Any]] = asyncio.get_running_loop().create_future()
         self._ensure_save_dispatcher()
         self._pending_save_requests[request_id] = future
-        self.send(
-            {
-                "kind": "save_request",
-                "id": request_id,
-                "format": save_format,
-                "backgroundColor": background_color_hex,
-            }
-        )
 
         try:
+            self.send(
+                {
+                    "kind": "save_request",
+                    "id": request_id,
+                    "format": save_format,
+                    "backgroundColor": background_color_hex,
+                }
+            )
             response = await asyncio.wait_for(future, timeout=timeout)
         except asyncio.TimeoutError as exc:
             raise TimeoutError(
