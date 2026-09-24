@@ -158,11 +158,11 @@ render-docs:
     wait
 
 # Regenerate the documentation images (README + getting-started guide) from the
-# example graphs via GraphWidget.save() in a headless browser. The README image
-# needs a Neo4j instance, e.g. `just local-neo4j-setup`; it is skipped without
-# NEO4J_URI. Optionally restrict to named images: `just docs-images graph_2120034f`
+# example graphs via GraphWidget.save() in a headless browser. All images are
+# built locally without a database. Optionally restrict to named images:
+# `just docs-images getting-started-graph`
 docs-images *names:
     #!/usr/bin/env bash
     set -e
-    cd {{py_dir}} && uv sync --extra neo4j --group dev --group notebook
+    cd {{py_dir}} && uv sync --group dev --group notebook
     cd {{py_dir}} && uv run --group dev --group notebook python {{root_dir}}/scripts/regenerate_docs_images.py {{names}}

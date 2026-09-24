@@ -2,24 +2,23 @@
 """Regenerate the documentation images from the example graphs.
 
 For each image, a disposable JupyterLab server is booted, a distilled cell
-sequence reproducing the corresponding example notebook's data and styling is
-run in headless Chrome, and the rendered graph is saved via
-``GraphWidget.save()``. The images are copied back to their repository locations:
+sequence reproducing the corresponding example's data and styling is run in
+headless Chrome, and the rendered graph is saved via ``GraphWidget.save()``.
+The images are copied back to their repository locations:
 
 * ``docs/antora/modules/ROOT/images/getting-started-graph.svg``         - getting-started toy graph
 * ``docs/antora/modules/ROOT/images/getting-started-graph-colored.svg`` - same graph, colored by caption
-* ``examples/example_graph.png``                                        - README graph (neo4j-example)
+* ``examples/example_graph.png``                                        - README graph (neo4j-example data)
 
-The antora guide images are SVGs (the entire graph, resolution independent);
-the README image is a PNG of the current view. The README image needs a Neo4j
-instance (e.g. ``just local-neo4j-setup``) and is skipped when ``NEO4J_URI``
-is not set. Run from anywhere inside the repo.
+All graphs are built locally without a database: the antora guide images are
+SVGs of the entire graph (resolution independent, transparent background),
+and the README image is a PNG built from the neo4j-example's CREATE query via
+the ``from_gql_create`` GQL integration. Run from anywhere inside the repo.
 """
 
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
 import struct
 import sys
@@ -59,48 +58,12 @@ relationships = [
 VG = VisualizationGraph(nodes=nodes, relationships=relationships)
 """
 
+# The example graph from examples/neo4j-example.ipynb, built without a
+# database via the GQL CREATE integration.
+_EXAMPLE_CREATE_CELLS = """\
+from neo4j_viz.gql_create import from_gql_create
 
-@dataclass(frozen=True)
-class ImageSpec:
-    """One docs image: how to build it and where it lives in the repository."""
-
-    name: str
-    target: Path
-    # Widget canvas size in pixels; for PNG output this is also the expected
-    # image size. SVG output covers the entire graph, so the widget size only
-    # needs to be large enough to mount the widget.
-    size: tuple[int, int]
-    fmt: str = "png"
-    required_env: tuple[str, ...] = ()
-    # Cells up to and including the one that displays the widget. The harness
-    # waits for the widget's canvas before running the generated save cell.
-    cells: tuple[str, ...] = ()
-    # Extra code lines run inside the save cell after the image was written
-    # (e.g. database cleanup); a failure also fails the spec.
-    teardown: tuple[str, ...] = ()
-
-    @property
-    def filename(self) -> str:
-        return f"{self.name}.{self.fmt}"
-
-
-def _neo4j_graph_cells() -> str:
-    return """\
-import os
-
-from neo4j import GraphDatabase, Result, RoutingControl
-from neo4j_viz.neo4j import from_neo4j
-
-URI = os.environ['NEO4J_URI']
-auth = (os.environ.get('NEO4J_USERNAME', 'neo4j'), os.environ.get('NEO4J_PASSWORD', 'password'))
-db = os.environ.get('NEO4J_DB', 'neo4j')
-
-driver = GraphDatabase.driver(URI, auth=auth)
-driver.verify_connectivity()
-
-# Start from a clean slate so repeated runs do not duplicate the example graph.
-driver.execute_query('MATCH (n:Person|Product) DETACH DELETE n RETURN count(n)', database_=db)
-driver.execute_query(
+VG = from_gql_create(
     \"\"\"
     CREATE
      (dan:Person {name: 'Dan'}),
@@ -141,20 +104,29 @@ driver.execute_query(
 
      (elsa)-[:BUYS {amount: 3}]->(chocolate),
      (elsa)-[:BUYS {amount: 3}]->(milk)
-    \"\"\",
-    database_=db,
+    \"\"\"
 )
-
-result = driver.execute_query(
-    'MATCH (n)-[r]->(m) RETURN n,r,m',
-    database_=db,
-    routing_=RoutingControl.READ,
-    result_transformer_=Result.graph,
-)
-print(f'Result graph has: {len(result.nodes)} nodes, {len(result.relationships)} relationships')
-
-VG = from_neo4j(result)
 """
+
+
+@dataclass(frozen=True)
+class ImageSpec:
+    """One docs image: how to build it and where it lives in the repository."""
+
+    name: str
+    target: Path
+    # Widget canvas size in pixels; for PNG output this is also the expected
+    # image size. SVG output covers the entire graph, so the widget size only
+    # needs to be large enough to mount the widget.
+    size: tuple[int, int]
+    fmt: str = "png"
+    # Cells up to and including the one that displays the widget. The harness
+    # waits for the widget's canvas before running the generated save cell.
+    cells: tuple[str, ...] = ()
+
+    @property
+    def filename(self) -> str:
+        return f"{self.name}.{self.fmt}"
 
 
 def _render_cell(size: tuple[int, int]) -> str:
@@ -165,9 +137,6 @@ def _render_cell(size: tuple[int, int]) -> str:
 
 
 def _save_cell(spec: ImageSpec) -> str:
-    teardown = "\n".join(f"    {line}" for line in spec.teardown)
-    if teardown:
-        teardown += "\n"
     filename = spec.filename
     if spec.fmt == "svg":
         # SVG export covers the entire graph and defaults to a transparent
@@ -187,7 +156,7 @@ from pathlib import Path
 try:
     {save_call}
     {output_check}
-{teardown}    Path('{DONE_MARKER}').write_text('ok')
+    Path('{DONE_MARKER}').write_text('ok')
 except Exception:
     Path('{ERROR_MARKER}').write_text(traceback.format_exc())
 """
@@ -241,12 +210,7 @@ def _specs() -> list[ImageSpec]:
             name="example_graph",
             target=GIT_ROOT / "examples" / "example_graph.png",
             size=readme_size,
-            required_env=("NEO4J_URI",),
-            cells=(_neo4j_graph_cells(), _render_cell(readme_size)),
-            teardown=(
-                "driver.execute_query('MATCH (n:Person|Product) DETACH DELETE n RETURN count(n)', database_=db)",
-                "driver.close()",
-            ),
+            cells=(_EXAMPLE_CREATE_CELLS, _render_cell(readme_size)),
         ),
     ]
 
@@ -278,14 +242,6 @@ def main() -> int:
         jupyter_server(Path(tmp)) as server,
     ):
         for spec in specs:
-            missing = [var for var in spec.required_env if not os.environ.get(var)]
-            if missing:
-                print(
-                    f"SKIP {spec.name}: missing environment variables {missing}",
-                    flush=True,
-                )
-                continue
-
             print(f"Regenerating {spec.target.relative_to(GIT_ROOT)} ...", flush=True)
             try:
                 run_notebook_in_browser(server, [*spec.cells, _save_cell(spec)])
