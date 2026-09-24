@@ -69,11 +69,14 @@ class TestInterpolateGradient:
     def test_single_stop_is_constant(self) -> None:
         assert interpolate_gradient(["#01ABCD"], 0.3) == Color("#01abcd")
 
-    def test_clamps_out_of_range_positions(self) -> None:
+    def test_rejects_out_of_range_positions(self) -> None:
         gradient = ["#E0E0E0", "#000000"]
 
-        assert interpolate_gradient(gradient, -1) == Color("#e0e0e0")
-        assert interpolate_gradient(gradient, 1.5) == Color("#000000")
+        with pytest.raises(ValueError, match="The gradient position must be between 0 and 1"):
+            interpolate_gradient(gradient, -1)
+
+        with pytest.raises(ValueError, match="The gradient position must be between 0 and 1"):
+            interpolate_gradient(gradient, 1.5)
 
     def test_rejects_empty_gradient(self) -> None:
         with pytest.raises(ValueError, match="At least one color is needed to interpolate a gradient"):

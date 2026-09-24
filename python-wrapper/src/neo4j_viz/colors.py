@@ -36,11 +36,12 @@ def interpolate_gradient(colors: Sequence[ColorType], t: RealNumber) -> Color:
         The color stops of the gradient, from the color of the lowest value to the color of the highest value.
     t:
         The position along the gradient, between 0 (the first color stop) and 1 (the last color stop).
+        Callers are expected to min-max scale their values to this range upfront.
 
     Raises
     ------
     ValueError
-        If `colors` is empty.
+        If `colors` is empty, or if `t` is not between 0 and 1.
     """
     resolved = [to_color(color) for color in colors]
     if not resolved:
@@ -50,7 +51,7 @@ def interpolate_gradient(colors: Sequence[ColorType], t: RealNumber) -> Color:
         return resolved[0]
 
     if not 0 <= t <= 1:
-        t = min(max(t, 0.0), 1.0)
+        raise ValueError(f"The gradient position must be between 0 and 1, but was {t}")
 
     scaled = t * (len(resolved) - 1)
     lower = floor(scaled)
