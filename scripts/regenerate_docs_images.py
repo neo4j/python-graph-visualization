@@ -3,15 +3,17 @@
 
 For each image, a disposable JupyterLab server is booted, a distilled cell
 sequence reproducing the corresponding example notebook's data and styling is
-run in headless Chrome, and the rendered graph is saved as a PNG via
-``GraphWidget.save()``. The PNGs are copied back to their repository locations:
+run in headless Chrome, and the rendered graph is saved via
+``GraphWidget.save()``. The images are copied back to their repository locations:
 
-* ``docs/antora/modules/ROOT/images/graph_2120034f.png`` - getting-started toy graph
-* ``docs/antora/modules/ROOT/images/graph_00ff5513.png`` - same graph, colored by caption
-* ``examples/example_graph.png``                          - README graph (neo4j-example)
+* ``docs/antora/modules/ROOT/images/getting-started-graph.svg``         - getting-started toy graph
+* ``docs/antora/modules/ROOT/images/getting-started-graph-colored.svg`` - same graph, colored by caption
+* ``examples/example_graph.png``                                        - README graph (neo4j-example)
 
-The README image needs a Neo4j instance (e.g. ``just local-neo4j-setup``) and
-is skipped when ``NEO4J_URI`` is not set. Run from anywhere inside the repo.
+The antora guide images are SVGs (the entire graph, resolution independent);
+the README image is a PNG of the current view. The README image needs a Neo4j
+instance (e.g. ``just local-neo4j-setup``) and is skipped when ``NEO4J_URI``
+is not set. Run from anywhere inside the repo.
 """
 
 from __future__ import annotations
@@ -64,7 +66,11 @@ class ImageSpec:
 
     name: str
     target: Path
+    # Widget canvas size in pixels; for PNG output this is also the expected
+    # image size. SVG output covers the entire graph, so the widget size only
+    # needs to be large enough to mount the widget.
     size: tuple[int, int]
+    fmt: str = "png"
     required_env: tuple[str, ...] = ()
     # Cells up to and including the one that displays the widget. The harness
     # waits for the widget's canvas before running the generated save cell.
@@ -72,6 +78,10 @@ class ImageSpec:
     # Extra code lines run inside the save cell after the image was written
     # (e.g. database cleanup); a failure also fails the spec.
     teardown: tuple[str, ...] = ()
+
+    @property
+    def filename(self) -> str:
+        return f"{self.name}.{self.fmt}"
 
 
 def _neo4j_graph_cells() -> str:
@@ -147,23 +157,36 @@ VG = from_neo4j(result)
 """
 
 
-def _render_cell(size: tuple[int, int], initial_zoom: int | None = None) -> str:
+def _render_cell(size: tuple[int, int]) -> str:
     width, height = size
-    zoom = f", initial_zoom={initial_zoom}" if initial_zoom is not None else ""
-    return f"widget = VG.render_widget(width='{width}px', height='{height}px'{zoom})\nwidget\n"
+    return (
+        f"widget = VG.render_widget(width='{width}px', height='{height}px')\nwidget\n"
+    )
 
 
 def _save_cell(spec: ImageSpec) -> str:
     teardown = "\n".join(f"    {line}" for line in spec.teardown)
     if teardown:
         teardown += "\n"
-    filename = spec.name + ".png"
+    filename = spec.filename
+    if spec.fmt == "svg":
+        # SVG export covers the entire graph and defaults to a transparent
+        # background, so it blends with the docs page.
+        save_call = f"await widget.save({filename!r})"
+        output_check = (
+            f"assert Path({filename!r}).read_text().lstrip().startswith('<svg')"
+        )
+    else:
+        save_call = f"await widget.save({filename!r}, background_color='#ffffff')"
+        output_check = (
+            f"assert Path({filename!r}).read_bytes()[:8] == b'\\x89PNG\\r\\n\\x1a\\n'"
+        )
     return f"""\
 import traceback
 from pathlib import Path
 try:
-    await widget.save({filename!r}, background_color='#ffffff')
-    assert Path({filename!r}).read_bytes()[:8] == b'\\x89PNG\\r\\n\\x1a\\n'
+    {save_call}
+    {output_check}
 {teardown}    Path('{DONE_MARKER}').write_text('ok')
 except Exception:
     Path('{ERROR_MARKER}').write_text(traceback.format_exc())
@@ -178,26 +201,40 @@ def _png_size(path: Path) -> tuple[int, int]:
     return struct.unpack(">II", header[16:24])
 
 
+def _validate_produced(spec: ImageSpec, produced: Path) -> str | None:
+    """Return an error message when the produced image does not look right."""
+    if spec.fmt == "svg":
+        text = produced.read_text(encoding="utf-8", errors="replace").lstrip()
+        if not text.startswith("<svg"):
+            return "the file does not start with '<svg'"
+        return None
+    actual_size = _png_size(produced)
+    if actual_size != spec.size:
+        return f"expected a {spec.size[0]}x{spec.size[1]} image, got {actual_size[0]}x{actual_size[1]}"
+    return None
+
+
 def _specs() -> list[ImageSpec]:
-    toy_plain_size = (3176, 2400)
-    toy_colored_size = (3176, 2400)
+    guide_size = (1588, 1200)
     readme_size = (1392, 1200)
 
     return [
         ImageSpec(
-            name="graph_2120034f",
-            target=_ANTORA_IMAGES / "graph_2120034f.png",
-            size=toy_plain_size,
-            cells=(_TOY_GRAPH_CELLS, _render_cell(toy_plain_size, initial_zoom=2)),
+            name="getting-started-graph",
+            target=_ANTORA_IMAGES / "getting-started-graph.svg",
+            size=guide_size,
+            fmt="svg",
+            cells=(_TOY_GRAPH_CELLS, _render_cell(guide_size)),
         ),
         ImageSpec(
-            name="graph_00ff5513",
-            target=_ANTORA_IMAGES / "graph_00ff5513.png",
-            size=toy_colored_size,
+            name="getting-started-graph-colored",
+            target=_ANTORA_IMAGES / "getting-started-graph-colored.svg",
+            size=guide_size,
+            fmt="svg",
             cells=(
                 _TOY_GRAPH_CELLS,
                 "VG.color_nodes(field='caption')\n",
-                _render_cell(toy_colored_size, initial_zoom=2),
+                _render_cell(guide_size),
             ),
         ),
         ImageSpec(
@@ -262,15 +299,11 @@ def main() -> int:
                 failures.append(spec.name)
                 continue
 
-            filename = spec.name + ".png"
+            filename = spec.filename
             produced = server.root / filename
-            actual_size = _png_size(produced)
-            if actual_size != spec.size:
-                print(
-                    f"ERROR {spec.name}: expected a {spec.size[0]}x{spec.size[1]} image, "
-                    f"got {actual_size[0]}x{actual_size[1]}",
-                    flush=True,
-                )
+            error = _validate_produced(spec, produced)
+            if error:
+                print(f"ERROR {spec.name}: {error}", flush=True)
                 failures.append(spec.name)
                 continue
 
