@@ -124,3 +124,20 @@ ref-docs:
 
 api-docs:
     ./scripts/render_host_api_docs.sh
+
+# Render the full documentation locally: the Sphinx API reference and the
+# Antora manual, with the manual's links pointing at the locally served API
+# docs. Manual -> http://localhost:8000 ; API reference -> http://localhost:9000
+# Press Ctrl-C to stop both servers.
+render-docs:
+    ./scripts/render_docs.sh
+
+# Regenerate the documentation images (README + getting-started guide) from the
+# example graphs via GraphWidget.save() in a headless browser. All images are
+# built locally without a database. Optionally restrict to named images:
+# `just generate-docs-images getting-started-graph`
+generate-docs-images *names:
+    #!/usr/bin/env bash
+    set -e
+    cd {{py_dir}} && uv sync --group dev --group notebook
+    cd {{py_dir}} && uv run --group dev --group notebook python {{root_dir}}/scripts/regenerate_docs_images.py {{names}}
