@@ -16,6 +16,9 @@ export function transformNodes(nodes: SerializedNode[]): NeoNode[] {
       id: node.id,
       // This is done so that the overview panel breaks down by caption, rather than labels
       labels: node.caption ? [node.caption] : labelProperty,
+      // Explicit `captions` (also when empty) overrides the NLG style engine's
+      // auto-picked caption from node properties.
+      captions: node.caption ? [{ value: node.caption }] : [],
       properties: Object.entries(node.properties).reduce<Record<string, PortableProperty>>(
         (acc, [key, value]) => {
           if (key === "labels") return acc;

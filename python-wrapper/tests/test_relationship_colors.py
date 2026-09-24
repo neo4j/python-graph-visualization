@@ -2,7 +2,7 @@ import pytest
 from pydantic_extra_types.color import Color
 
 from neo4j_viz import Node, Relationship, VisualizationGraph
-from neo4j_viz.colors import NEO4J_COLORS_CONTINUOUS, NEO4J_COLORS_DISCRETE, ColorSpace
+from neo4j_viz.colors import NEO4J_COLORS_CONTINUOUS, NEO4J_COLORS_DISCRETE, ColorSpace, interpolate_gradient
 
 
 @pytest.mark.parametrize("override", [True, False])
@@ -101,7 +101,7 @@ def test_color_relationships_continuous_default() -> None:
     VG.color_relationships(property="weight", color_space=ColorSpace.CONTINUOUS)
 
     assert VG.relationships[0].color == Color(NEO4J_COLORS_CONTINUOUS[0])
-    assert VG.relationships[1].color == Color(NEO4J_COLORS_CONTINUOUS[128])
+    assert VG.relationships[1].color == interpolate_gradient(NEO4J_COLORS_CONTINUOUS, 0.5)
     assert VG.relationships[2].color == Color(NEO4J_COLORS_CONTINUOUS[255])
 
 
@@ -118,7 +118,7 @@ def test_color_relationships_continuous_custom() -> None:
     VG.color_relationships(property="weight", colors=colors, color_space=ColorSpace.CONTINUOUS)
 
     assert VG.relationships[0].color == Color("black")
-    assert VG.relationships[1].color == Color((85, 85, 85))
+    assert VG.relationships[1].color == Color((102, 102, 102))
     assert VG.relationships[2].color == Color("white")
 
 

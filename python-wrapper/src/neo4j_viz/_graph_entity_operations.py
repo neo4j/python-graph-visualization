@@ -12,6 +12,7 @@ from .colors import (
     NEO4J_COLORS_DISCRETE,
     ColorSpace,
     ColorsType,
+    interpolate_gradient,
     to_color,
     to_hex,
 )
@@ -306,9 +307,8 @@ class GraphEntityOperations:
                 values = list(node_map.values())
                 legend_min, legend_max = min(values), max(values)
 
-            num_colors = len(colors)
             colors = {
-                node_to_attr(node): colors[round(normalized_map[node.id] * (num_colors - 1))]
+                node_to_attr(node): interpolate_gradient(gradient, normalized_map[node.id])
                 for node in self.nodes
                 if node_to_attr(node) is not None
             }
@@ -375,9 +375,8 @@ class GraphEntityOperations:
                 values = list(rel_map.values())
                 legend_min, legend_max = min(values), max(values)
 
-            num_colors = len(colors)
             colors = {
-                rel_to_attr(rel): colors[round(normalized_map[rel.id] * (num_colors - 1))]
+                rel_to_attr(rel): interpolate_gradient(gradient, normalized_map[rel.id])
                 for rel in self.relationships
                 if rel_to_attr(rel) is not None
             }
