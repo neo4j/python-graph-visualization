@@ -125,6 +125,38 @@ ref-docs:
 api-docs:
     ./scripts/render_host_api_docs.sh
 
+# Render the full documentation locally: the Sphinx API reference and the
+# Antora manual, with the manual's links pointing at the locally served API
+# docs. Manual -> http://localhost:8000 ; API reference -> http://localhost:9000
+# Press Ctrl-C to stop both servers.
+render-docs:
+    #!/usr/bin/env bash
+    set -e
+    cd {{py_dir}} && uv sync --group dev --group docs --extra pandas --extra neo4j --extra gds --extra snowflake
+    # Build the Sphinx API reference (the same build CI runs).
+    uv run --project {{py_dir}} bash {{root_dir}}/scripts/render_api_docs.sh
+    # Build the Antora manual for preview (bypassing the `postbuild` server hook).
+    cd {{root_dir}}/docs/antora
+    npm install
+    npx antora preview.yml --stacktrace --log-format=pretty
+
+    cleanup() {
+        trap - INT TERM EXIT
+        kill "${api_pid:-}" "${manual_pid:-}" 2>/dev/null || true
+    }
+    trap cleanup INT TERM EXIT
+
+    (exec node server.js) &
+    manual_pid=$!
+    (cd {{root_dir}}/docs/build && exec python3 -m http.server 9000) &
+    api_pid=$!
+
+    echo ""
+    echo "Manual:        http://localhost:8000"
+    echo "API reference: http://localhost:9000"
+    echo "Press Ctrl-C to stop both."
+    wait
+
 # Regenerate the documentation images (README + getting-started guide) from the
 # example graphs via GraphWidget.save() in a headless browser. The README image
 # needs a Neo4j instance, e.g. `just local-neo4j-setup`; it is skipped without
