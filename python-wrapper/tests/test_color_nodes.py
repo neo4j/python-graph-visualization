@@ -142,7 +142,6 @@ def test_color_nodes_continuous_custom() -> None:
 
 
 def test_color_nodes_continuous_two_stops_is_a_gradient() -> None:
-    # GDS-355: two colors must interpolate a real gradient, not quantize to the two stops
     nodes = [
         Node(id="0", caption="Person", properties={"labels": ["Person"], "centrality": 0.1}),
         Node(id="1", caption="Movie", properties={"labels": ["Movie"], "centrality": 0.5}),
@@ -184,7 +183,6 @@ def test_color_nodes_continuous_single_color() -> None:
 
 
 def test_color_nodes_does_not_change_captions() -> None:
-    # GDS-355: coloring by a property must leave node captions untouched
     nodes = [
         Node(id="0", caption="Person", properties={"labels": ["Person"], "centrality": 0.1}),
         Node(id="1", caption="Movie", properties={"labels": ["Movie"], "centrality": 0.9}),
@@ -198,7 +196,6 @@ def test_color_nodes_does_not_change_captions() -> None:
 
 
 def test_color_nodes_continuous_serialized_payload() -> None:
-    # The payload handed to the frontend: colors are long hex, captions survive
     nodes = [
         Node(id="0", caption="Person", properties={"labels": ["Person"], "centrality": 0.1}),
         Node(id="1", caption="Movie", properties={"labels": ["Movie"], "centrality": 0.9}),

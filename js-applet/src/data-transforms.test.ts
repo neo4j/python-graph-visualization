@@ -71,8 +71,6 @@ describe("data-transforms", () => {
   });
 
   it("should emit captions from the caption, not from properties", () => {
-    // GDS-355: an explicit `captions` entry prevents the NLG style engine from
-    // auto-picking a caption (e.g. the first node property) over the wrapper's
     const nodes: SerializedNode[] = [
       {
         id: "0",
