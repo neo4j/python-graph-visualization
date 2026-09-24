@@ -4,16 +4,12 @@
 For each image, a disposable JupyterLab server is booted, a distilled cell
 sequence reproducing the corresponding example's data and styling is run in
 headless Chrome, and the rendered graph is saved via ``GraphWidget.save()``.
-The images are copied back to their repository locations:
+The images are copied back to their repository locations. The output format
+(PNG or SVG) is derived from each target's file ending.
 
-* ``docs/antora/modules/ROOT/images/getting-started-graph.svg``         - getting-started toy graph
-* ``docs/antora/modules/ROOT/images/getting-started-graph-colored.svg`` - same graph, colored by caption
-* ``examples/example_graph.png``                                        - README graph (neo4j-example data)
-
-All graphs are built locally without a database: the antora guide images are
-SVGs of the entire graph (resolution independent, transparent background),
-and the README image is a PNG built from the neo4j-example's CREATE query via
-the ``from_gql_create`` GQL integration. Run from anywhere inside the repo.
+All graphs are built locally without a database, via the toy graph from the
+getting-started guide and the neo4j-example's CREATE query through the
+``from_gql_create`` GQL integration. Run from anywhere inside the repo.
 """
 
 from __future__ import annotations
@@ -119,14 +115,18 @@ class ImageSpec:
     # image size. SVG output covers the entire graph, so the widget size only
     # needs to be large enough to mount the widget.
     size: tuple[int, int]
-    fmt: str = "png"
     # Cells up to and including the one that displays the widget. The harness
     # waits for the widget's canvas before running the generated save cell.
     cells: tuple[str, ...] = ()
 
     @property
+    def fmt(self) -> str:
+        """The output format, derived from the target's file ending."""
+        return self.target.suffix.lstrip(".")
+
+    @property
     def filename(self) -> str:
-        return f"{self.name}.{self.fmt}"
+        return self.target.name
 
 
 def _render_cell(size: tuple[int, int]) -> str:
@@ -192,14 +192,12 @@ def _specs() -> list[ImageSpec]:
             name="getting-started-graph",
             target=_ANTORA_IMAGES / "getting-started-graph.svg",
             size=guide_size,
-            fmt="svg",
             cells=(_TOY_GRAPH_CELLS, _render_cell(guide_size)),
         ),
         ImageSpec(
             name="getting-started-graph-colored",
             target=_ANTORA_IMAGES / "getting-started-graph-colored.svg",
             size=guide_size,
-            fmt="svg",
             cells=(
                 _TOY_GRAPH_CELLS,
                 "VG.color_nodes(field='caption')\n",
@@ -208,7 +206,7 @@ def _specs() -> list[ImageSpec]:
         ),
         ImageSpec(
             name="example_graph",
-            target=GIT_ROOT / "examples" / "example_graph.png",
+            target=GIT_ROOT / "examples" / "example_graph.svg",
             size=readme_size,
             cells=(_EXAMPLE_CREATE_CELLS, _render_cell(readme_size)),
         ),
@@ -235,6 +233,12 @@ def main() -> int:
                 f"unknown image names: {sorted(unknown)}; available: {[s.name for s in specs]}"
             )
         specs = [spec for spec in specs if spec.name in set(args.names)]
+
+    unsupported = [spec.name for spec in specs if spec.fmt not in ("png", "svg")]
+    if unsupported:
+        parser.error(
+            f"unsupported image file ending for: {unsupported} (expected .png or .svg)"
+        )
 
     failures: list[str] = []
     with (

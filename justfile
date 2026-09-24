@@ -135,8 +135,8 @@ render-docs:
 # Regenerate the documentation images (README + getting-started guide) from the
 # example graphs via GraphWidget.save() in a headless browser. All images are
 # built locally without a database. Optionally restrict to named images:
-# `just docs-images getting-started-graph`
-docs-images *names:
+# `just generate-docs-images getting-started-graph`
+generate-docs-images *names:
     #!/usr/bin/env bash
     set -e
     cd {{py_dir}} && uv sync --group dev --group notebook
