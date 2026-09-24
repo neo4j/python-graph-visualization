@@ -42,6 +42,7 @@ from playwright.sync_api import (
 SERVER_START_TIMEOUT = 60
 LAB_LOAD_TIMEOUT = 40
 CELL_RUN_TIMEOUT = 15
+CELL_RUN_ATTEMPTS = 3
 CELL_COMPLETE_TIMEOUT = 90
 WIDGET_MOUNT_TIMEOUT = 30
 NOTEBOOK_RUN_TIMEOUT = 120
@@ -188,15 +189,28 @@ def _accept_visible_dialogs(page: Page) -> None:
 def _run_cell(page: Page, index: int) -> None:
     cell = page.locator(".jp-Cell").nth(index)
     prompt = cell.locator(".jp-InputArea-prompt")
-    cell.click()
-    page.keyboard.press("Shift+Enter")
-    try:
-        expect(prompt).not_to_have_text("[ ]:", timeout=CELL_RUN_TIMEOUT * 1000)
-    except AssertionError as exc:
+
+    # The run command can be swallowed while JupyterLab is still settling —
+    # e.g. a kernel-picker dialog grabbing keyboard focus after the dialog
+    # sweep, or a kernel that has not finished starting on a slow runner. If
+    # the prompt is still "[ ]:" nothing was queued, so re-pressing is safe.
+    start_error: AssertionError | None = None
+    for _ in range(CELL_RUN_ATTEMPTS):
+        _accept_visible_dialogs(page)
+        cell.click()
+        page.keyboard.press("Shift+Enter")
+        try:
+            # A queued or running cell shows [*]:, a finished one [n]:
+            expect(prompt).not_to_have_text("[ ]:", timeout=CELL_RUN_TIMEOUT * 1000)
+            start_error = None
+            break
+        except AssertionError as exc:
+            start_error = exc
+    if start_error is not None:
         raise AssertionError(
             f"cell {index} did not start executing after Shift+Enter (prompt is still "
             f"{prompt.text_content()!r}; a dialog may be blocking keyboard input)"
-        ) from exc
+        ) from start_error
     # Also wait for the cell to finish (its prompt gets an execution count): a slow
     # kernel — e.g. cold imports on a loaded CI runner — would otherwise eat into
     # the widget-mount timeout below, which is only meant to cover the frontend
