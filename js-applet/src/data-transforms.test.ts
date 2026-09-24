@@ -48,6 +48,7 @@ describe("data-transforms", () => {
       caption: "5",
       captionAlign: "top",
       captionSize: 12,
+      captions: [{ value: "5" }],
       color: "red",
       disabled: true,
       hovered: true,
@@ -67,6 +68,34 @@ describe("data-transforms", () => {
       x: 1,
       y: 10,
     });
+  });
+
+  it("should emit captions from the caption, not from properties", () => {
+    // GDS-355: an explicit `captions` entry prevents the NLG style engine from
+    // auto-picking a caption (e.g. the first node property) over the wrapper's
+    const nodes: SerializedNode[] = [
+      {
+        id: "0",
+        caption: "Person",
+        color: "#e0e0e0",
+        properties: { labels: ["Person"], centrality: 0.42 },
+      },
+    ];
+
+    const result = transformNodes(nodes);
+
+    expect(result[0]?.captions).toEqual([{ value: "Person" }]);
+    expect(result[0]?.color).toBe("#e0e0e0");
+  });
+
+  it("should emit empty captions when no caption is set", () => {
+    const nodes: SerializedNode[] = [
+      { id: "0", properties: { labels: ["Person"], centrality: 0.42 } },
+    ];
+
+    const result = transformNodes(nodes);
+
+    expect(result[0]?.captions).toEqual([]);
   });
 
   it("should transform a relationship with a caption", () => {
@@ -149,6 +178,7 @@ describe("data-transforms", () => {
     const result = transformNodes(nodes);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
+      captions: [],
       id: "35",
       labels: [],
       properties: {},

@@ -25,7 +25,12 @@ import widget from "./graph-widget";
 import { createLocalModel } from "./local-model";
 
 type WidgetState = {
-  nodes: Array<{ id: string; caption?: string; properties: Record<string, unknown> }>;
+  nodes: Array<{
+    id: string;
+    caption?: string;
+    color?: string;
+    properties: Record<string, unknown>;
+  }>;
   relationships: Array<{
     id: string;
     from: string;
@@ -500,6 +505,140 @@ describe("graph-widget button testing", () => {
       if (typeof teardown === "function") {
         await teardown();
       }
+    }
+  });
+});
+
+describe("graph-widget rendering", () => {
+  it("draws node colors and captions from the widget data (GDS-355)", async () => {
+    // jsdom reports 0x0 for every element, which makes NVL skip drawing entirely,
+    // so element sizes are forced while the widget is mounted.
+    const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      return {
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        right: 600,
+        bottom: 400,
+        width: 600,
+        height: 400,
+        toJSON: () => ({}),
+      };
+    };
+    const sizeProperties = ["offsetWidth", "offsetHeight", "clientWidth", "clientHeight"] as const;
+    const originalDescriptors = sizeProperties.map(
+      (prop) => [prop, Object.getOwnPropertyDescriptor(HTMLElement.prototype, prop)] as const,
+    );
+    for (const prop of sizeProperties) {
+      Object.defineProperty(HTMLElement.prototype, prop, {
+        configurable: true,
+        get: () => (prop.endsWith("Width") ? 600 : 400),
+      });
+    }
+
+    // The synchronous requestAnimationFrame stub from the setup makes NVL's
+    // layout/draw loop stall, so frames are scheduled asynchronously instead.
+    let frameCount = 0;
+    const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      if (++frameCount > 400) {
+        return 0;
+      }
+      setTimeout(() => callback(Date.now()), 0);
+      return frameCount;
+    }) as typeof globalThis.requestAnimationFrame;
+
+    const fillStyles: string[] = [];
+    const measuredTexts: string[] = [];
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (
+      this: HTMLCanvasElement,
+    ): CanvasRenderingContext2D {
+      if (!this.width) {
+        this.width = 600;
+      }
+      if (!this.height) {
+        this.height = 400;
+      }
+      const target: Record<string, unknown> = {
+        canvas: this,
+        measureText: (text: string) => {
+          measuredTexts.push(text);
+          return { width: String(text).length * 6 };
+        },
+      };
+      return new Proxy(target, {
+        get(t, prop) {
+          const key = prop as string;
+          if (key === "fillStyle" || key === "strokeStyle") {
+            return t[key];
+          }
+          if (typeof t[key] !== "undefined") {
+            return t[key];
+          }
+          return () => {
+            if (key === "fill" || key === "stroke") {
+              fillStyles.push(String(t.fillStyle));
+            }
+            return undefined;
+          };
+        },
+        set(t, prop, value) {
+          t[prop as string] = value;
+          if (prop === "fillStyle" && typeof value === "string") {
+            fillStyles.push(value);
+          }
+          return true;
+        },
+      }) as unknown as CanvasRenderingContext2D;
+    } as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    const { teardown } = await renderWidget({
+      nodes: [
+        {
+          id: "0",
+          caption: "Person",
+          color: "#e0e0e0",
+          properties: { labels: ["Person"], centrality: 0.1 },
+        },
+        {
+          id: "1",
+          caption: "Movie",
+          color: "#000000",
+          properties: { labels: ["Movie"], centrality: 0.9 },
+        },
+      ],
+      relationships: [{ id: "r0", from: "0", to: "1", properties: {} }],
+    });
+
+    try {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      expect(fillStyles.length).toBeGreaterThan(0);
+      expect(fillStyles).toContain("#e0e0e0");
+      expect(fillStyles).toContain("#000000");
+
+      expect(measuredTexts).toContain("Person");
+      expect(measuredTexts).toContain("Movie");
+      expect(measuredTexts).not.toContain("0.1");
+      expect(measuredTexts).not.toContain("0.9");
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+
+      globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+      Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+      for (const [prop, descriptor] of originalDescriptors) {
+        if (descriptor) {
+          Object.defineProperty(HTMLElement.prototype, prop, descriptor);
+        }
+      }
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
     }
   });
 });

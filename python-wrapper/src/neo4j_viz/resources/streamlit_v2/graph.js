@@ -95421,6 +95421,7 @@ function bre(e) {
 			...e,
 			id: e.id,
 			labels: e.caption ? [e.caption] : t,
+			captions: e.caption ? [{ value: e.caption }] : [],
 			properties: Object.entries(e.properties).reduce((e, [t, n]) => {
 				if (t === "labels") return e;
 				let r = typeof n;
