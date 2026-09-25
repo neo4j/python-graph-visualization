@@ -13,6 +13,7 @@
     "postbuild": "node server.js",
     "build:preview": "antora preview.yml --stacktrace --log-format=pretty",
     "build:publish": "npm run clean && antora publish.yml --stacktrace --log-format=pretty",
+    "verify": "antora --stacktrace preview.yml --log-failure-level=warn",
     "verify:preview": "antora --stacktrace --fetch preview.yml --log-format=json --log-level=info --log-file ./build/log/log.json",
     "verify:publish": "antora --stacktrace --fetch publish.yml --log-format=json --log-level=info --log-file ./build/log/log.json"
   },
