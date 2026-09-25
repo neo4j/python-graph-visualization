@@ -1,0 +1,129 @@
+name: Release
+
+# Manual release workflow. Order of operations:
+#   1. prerelease  - fail fast unless the version is unreleased, main CI is
+#                    green, and changelog.md has entries.
+#   2. draft       - create a draft GitHub release so the notes can be reviewed.
+#   3. publish     - gated behind the `pypi` environment (required reviewer).
+#                    Once approved it builds the tag, uploads to PyPI, and
+#                    publishes the GitHub release.
+#
+# After the run finishes, run `just release-finalize` locally: it syncs the
+# 1.x branch, bumps the version, resets the changelog, and opens the PR.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      actions: read
+
+    outputs:
+      version: ${{ steps.prerelease.outputs.version }}
+      sha: ${{ steps.prerelease.outputs.sha }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - name: Install uv and set the Python version
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          python-version: "3.11"
+
+      # Same checks as `just prerelease`, writing version/sha as job outputs.
+      - name: Run pre-release checks
+        id: prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run --no-project python scripts/release/prerelease.py
+
+  draft:
+    needs: prerelease
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    outputs:
+      tag: ${{ steps.draft.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - name: Create or update the draft release
+        id: draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.prerelease.outputs.version }}
+          SHA: ${{ needs.prerelease.outputs.sha }}
+        run: |
+          set -euo pipefail
+          TAG="v${VERSION}"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --title "$TAG" --notes-file changelog.md
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft \
+              --target "$SHA" --title "$TAG" --notes-file changelog.md
+          fi
+          URL=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url --jq .url)
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Draft release ready for review: $URL" >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    needs: [prerelease, draft]
+    runs-on: ubuntu-latest
+
+    # Requires manual approval (configured in repo Settings -> Environments).
+    environment: pypi
+
+    permissions:
+      contents: write
+
+    defaults:
+      run:
+        working-directory: python-wrapper
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.prerelease.outputs.sha }}
+
+      - name: Install uv and set the Python version
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Build release distributions
+        run: uv build
+
+      - name: Publish to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.draft.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+          URL=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url --jq .url)
+          echo "Published release: $URL" >> "$GITHUB_STEP_SUMMARY"
