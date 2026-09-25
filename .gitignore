@@ -17,6 +17,10 @@ out/*
 .env.test.local
 .env.production.local
 
+# python
+__pycache__/
+*.py[cod]
+
 # misc
 .DS_Store
 
