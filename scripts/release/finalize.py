@@ -117,7 +117,9 @@ def sync_stable_branch(root: Path, *, base: str, stable: str, assume_yes: bool) 
     tmp = f"release/merge-{base}-into-{stable}"
     run(["git", "checkout", "-B", tmp, f"origin/{stable}"], cwd=root)
     try:
-        run(["git", "merge", "--no-edit", f"origin/{base}"], cwd=root)
+        # `stable` carries the last-released state (pinned version + released
+        # changelog), so conflicted hunks should resolve toward `base`.
+        run(["git", "merge", "-X", "theirs", "--no-edit", f"origin/{base}"], cwd=root)
         run(["git", "push", "origin", f"{tmp}:refs/heads/{stable}"], cwd=root)
     except subprocess.CalledProcessError:
         run(["git", "merge", "--abort"], cwd=root, check=False)
