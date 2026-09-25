@@ -42,3 +42,18 @@ jobs:
 
       - name: Render ref docs
         run: uv run bash ../scripts/render_api_docs.sh
+
+  antora-docs:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: docs/antora
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build Antora docs (fail on warnings)
+        run: |
+          npm ci
+          npm run verify
