@@ -17,6 +17,14 @@ prerelease:
 postrelease part="minor":
     python scripts/release/postrelease.py --part {{part}}
 
+# after the Release workflow has published to PyPI: verify the version is live,
+# sync the 1.x branch, bump the version, reset the changelog, and open the
+# post-release PR. Prints a paste-ready Slack announcement.
+# examples:
+#   just release-finalize          # 1.5.0 -> 1.6.0
+release-finalize part="minor":
+    python scripts/release/finalize.py --part {{part}}
+
 style: py-style js-style
 
 py-style:
@@ -124,3 +132,20 @@ ref-docs:
 
 api-docs:
     ./scripts/render_host_api_docs.sh
+
+# Render the full documentation locally: the Sphinx API reference and the
+# Antora manual, with the manual's links pointing at the locally served API
+# docs. Manual -> http://localhost:8000 ; API reference -> http://localhost:9000
+# Press Ctrl-C to stop both servers.
+render-docs:
+    ./scripts/render_docs.sh
+
+# Regenerate the documentation images (README + getting-started guide) from the
+# example graphs via GraphWidget.save() in a headless browser. All images are
+# built locally without a database. Optionally restrict to named images:
+# `just generate-docs-images getting-started-graph`
+generate-docs-images *names:
+    #!/usr/bin/env bash
+    set -e
+    cd {{py_dir}} && uv sync --group dev --group notebook
+    cd {{py_dir}} && uv run --group dev --group notebook python {{root_dir}}/scripts/regenerate_docs_images.py {{names}}

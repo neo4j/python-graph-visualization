@@ -3,22 +3,35 @@
 
 Verifies that:
   1. The version about to be released is printed.
-  2. That version is not already published on PyPI.
-  3. All GitHub Actions checks passed on the latest commit of the main branch.
+  2. changelog.md has at least one entry.
+  3. That version is not already published on PyPI.
+  4. All GitHub Actions runs on the latest commit of the main branch passed.
 
 Requires: gh (authenticated) on PATH. Run from anywhere inside the repo.
+
+When run inside GitHub Actions (i.e. GITHUB_OUTPUT is set), it also writes
+`version` and `sha` outputs so the release workflow can reuse them.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import urllib.error
 import urllib.request
 from typing import Any
 
-from _common import MAIN_BRANCH, PACKAGE, bold, green, read_version, red
+from _common import (
+    MAIN_BRANCH,
+    PACKAGE,
+    bold,
+    git_root,
+    green,
+    read_version,
+    red,
+)
 
 # Conclusions that do not block a release.
 _OK_CONCLUSIONS = {"success", "neutral", "skipped"}
@@ -42,41 +55,70 @@ def is_on_pypi(version: str) -> bool:
         raise SystemExit(red(f"ERROR: Could not reach PyPI: {exc.reason}"))
 
 
-def _gh_api(endpoint: str, *, paginate: bool = False) -> str:
-    cmd = ["gh", "api", endpoint]
-    if paginate:
-        cmd.append("--paginate")
+def _gh(args: list[str]) -> str:
     try:
-        out = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        out = subprocess.run(["gh", *args], check=True, capture_output=True, text=True)
     except FileNotFoundError:
         raise SystemExit(
             red("ERROR: 'gh' CLI not found. Install it and run 'gh auth login'.")
         )
     except subprocess.CalledProcessError as exc:
-        raise SystemExit(red(f"ERROR: gh api {endpoint} failed:\n{exc.stderr.strip()}"))
+        raise SystemExit(
+            red(f"ERROR: gh {' '.join(args)} failed:\n{exc.stderr.strip()}")
+        )
     return out.stdout
 
 
 def latest_main_sha() -> str:
-    out = _gh_api(f"repos/{{owner}}/{{repo}}/commits/{MAIN_BRANCH}")
-    sha: str = json.loads(out)["sha"]
-    return sha
+    out = _gh(
+        ["api", f"repos/{{owner}}/{{repo}}/commits/{MAIN_BRANCH}", "--jq", ".sha"]
+    )
+    return out.strip()
 
 
-def check_runs(sha: str) -> list[dict[str, Any]]:
-    # --paginate concatenates one JSON object per page; collect every check_run.
-    raw = _gh_api(f"repos/{{owner}}/{{repo}}/commits/{sha}/check-runs", paginate=True)
-    runs: list[dict[str, Any]] = []
-    decoder = json.JSONDecoder()
-    idx = 0
-    text = raw.strip()
-    while idx < len(text):
-        obj, end = decoder.raw_decode(text, idx)
-        runs.extend(obj.get("check_runs", []))
-        idx = end
-        while idx < len(text) and text[idx].isspace():
-            idx += 1
+def workflow_runs(sha: str) -> list[dict[str, Any]]:
+    """Workflow runs for `sha`, excluding the current run when on GitHub Actions."""
+    out = _gh(
+        [
+            "run",
+            "list",
+            "--commit",
+            sha,
+            "--limit",
+            "100",
+            "--json",
+            "databaseId,workflowName,status,conclusion",
+        ]
+    )
+    runs: list[dict[str, Any]] = json.loads(out)
+    current = os.environ.get("GITHUB_RUN_ID")
+    if current:
+        runs = [r for r in runs if str(r.get("databaseId")) != current]
     return runs
+
+
+def check_changelog() -> bool:
+    changelog = git_root() / "changelog.md"
+    if not changelog.exists():
+        print(red("ERROR: changelog.md not found."))
+        return False
+    if not any(line.startswith("- ") for line in changelog.read_text().splitlines()):
+        print(
+            red(
+                "ERROR: changelog.md has no entries; add release notes before releasing."
+            )
+        )
+        return False
+    print(green("OK: changelog.md has entries."))
+    return True
+
+
+def write_github_output(name: str, value: str) -> None:
+    path = os.environ.get("GITHUB_OUTPUT")
+    if not path:
+        return
+    with open(path, "a") as f:
+        f.write(f"{name}={value}\n")
 
 
 def main() -> int:
@@ -84,28 +126,32 @@ def main() -> int:
     version = read_version()
     print(bold(f"Version to be released: {PACKAGE} {version}"))
 
-    # --- 2. Not already on PyPI ---
+    # --- 2. Changelog has entries ---
+    if not check_changelog():
+        return 1
+
+    # --- 3. Not already on PyPI ---
     print(f"Checking PyPI for an existing {PACKAGE} {version} release...")
     if is_on_pypi(version):
         print(red(f"ERROR: {PACKAGE} {version} is already published on PyPI."))
         return 1
     print(green(f"OK: {PACKAGE} {version} is not yet on PyPI."))
 
-    # --- 3. GitHub Actions checks on main ---
+    # --- 4. GitHub Actions runs on the latest main commit ---
     print(f"Fetching latest commit on '{MAIN_BRANCH}'...")
     sha = latest_main_sha()
     short_sha = sha[:7]
     print(f"Latest {MAIN_BRANCH} commit: {short_sha}")
 
-    print(f"Checking GitHub Actions check runs for {short_sha}...")
-    runs = check_runs(sha)
+    print(f"Checking GitHub Actions runs for {short_sha}...")
+    runs = workflow_runs(sha)
     if not runs:
-        print(red(f"ERROR: No check runs found for {short_sha} on {MAIN_BRANCH}."))
+        print(red(f"ERROR: No workflow runs found for {short_sha} on {MAIN_BRANCH}."))
         return 1
 
     failed = False
     for run in runs:
-        name = run.get("name", "<unknown>")
+        name = run.get("workflowName", "<unknown>")
         status = run.get("status")
         conclusion = run.get("conclusion") or ""
         if status != "completed":
@@ -120,13 +166,14 @@ def main() -> int:
     if failed:
         print(
             red(
-                f"ERROR: Not all GitHub Actions checks passed on {MAIN_BRANCH} ({short_sha})."
+                f"ERROR: Not all GitHub Actions runs passed on {MAIN_BRANCH} ({short_sha})."
             )
         )
         return 1
-    print(
-        green(f"OK: All GitHub Actions checks passed on {MAIN_BRANCH} ({short_sha}).")
-    )
+    print(green(f"OK: All GitHub Actions runs passed on {MAIN_BRANCH} ({short_sha})."))
+
+    write_github_output("version", version)
+    write_github_output("sha", sha)
 
     print(bold(f"Pre-release checks passed for {PACKAGE} {version}."))
     return 0

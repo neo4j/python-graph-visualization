@@ -2,7 +2,12 @@ import pytest
 from pydantic_extra_types.color import Color
 
 from neo4j_viz import Node, VisualizationGraph
-from neo4j_viz.colors import NEO4J_COLORS_CONTINUOUS, NEO4J_COLORS_DISCRETE, ColorSpace
+from neo4j_viz.colors import (
+    NEO4J_COLORS_CONTINUOUS,
+    NEO4J_COLORS_DISCRETE,
+    ColorSpace,
+    interpolate_gradient,
+)
 
 
 @pytest.mark.parametrize("override", [True, False])
@@ -116,7 +121,7 @@ def test_color_nodes_continuous_default() -> None:
     VG.color_nodes(property="rank", color_space=ColorSpace.CONTINUOUS)
 
     assert VG.nodes[0].color == Color(NEO4J_COLORS_CONTINUOUS[0])
-    assert VG.nodes[1].color == Color(NEO4J_COLORS_CONTINUOUS[128])
+    assert VG.nodes[1].color == interpolate_gradient(NEO4J_COLORS_CONTINUOUS, 0.5)
     assert VG.nodes[2].color == Color(NEO4J_COLORS_CONTINUOUS[255])
 
 
@@ -132,8 +137,85 @@ def test_color_nodes_continuous_custom() -> None:
     VG.color_nodes(property="rank", colors=colors, color_space=ColorSpace.CONTINUOUS)
 
     assert VG.nodes[0].color == Color("black")
-    assert VG.nodes[1].color == Color((85, 85, 85))
+    assert VG.nodes[1].color == Color((102, 102, 102))
     assert VG.nodes[2].color == Color("white")
+
+
+def test_color_nodes_continuous_two_stops_is_a_gradient() -> None:
+    nodes = [
+        Node(id="0", caption="Person", properties={"labels": ["Person"], "centrality": 0.1}),
+        Node(id="1", caption="Movie", properties={"labels": ["Movie"], "centrality": 0.5}),
+        Node(id="2", caption="Movie", properties={"labels": ["Movie"], "centrality": 0.9}),
+    ]
+    VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+    VG.color_nodes(property="centrality", colors=["#E0E0E0", "#000000"], color_space=ColorSpace.CONTINUOUS)
+
+    assert VG.nodes[0].color == Color("#e0e0e0")
+    assert VG.nodes[1].color == Color("#707070")
+    assert VG.nodes[2].color == Color("#000000")
+
+
+def test_color_nodes_continuous_uniform_values() -> None:
+    nodes = [
+        Node(id="1", properties={"score": 5}),
+        Node(id="2", properties={"score": 5}),
+    ]
+    VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+    VG.color_nodes(property="score", colors=["#E0E0E0", "#000000"], color_space=ColorSpace.CONTINUOUS)
+
+    assert VG.nodes[0].color == Color("#707070")
+    assert VG.nodes[1].color == Color("#707070")
+
+
+def test_color_nodes_continuous_single_color() -> None:
+    nodes = [
+        Node(id="1", properties={"score": 1}),
+        Node(id="2", properties={"score": 2}),
+    ]
+    VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+    VG.color_nodes(property="score", colors=["#01ABCD"], color_space=ColorSpace.CONTINUOUS)
+
+    assert VG.nodes[0].color == Color("#01abcd")
+    assert VG.nodes[1].color == Color("#01abcd")
+
+
+def test_color_nodes_does_not_change_captions() -> None:
+    nodes = [
+        Node(id="0", caption="Person", properties={"labels": ["Person"], "centrality": 0.1}),
+        Node(id="1", caption="Movie", properties={"labels": ["Movie"], "centrality": 0.9}),
+    ]
+    VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+    VG.color_nodes(property="centrality", colors=["#E0E0E0", "#000000"], color_space=ColorSpace.CONTINUOUS)
+
+    assert VG.nodes[0].caption == "Person"
+    assert VG.nodes[1].caption == "Movie"
+
+
+def test_color_nodes_continuous_serialized_payload() -> None:
+    nodes = [
+        Node(id="0", caption="Person", properties={"labels": ["Person"], "centrality": 0.1}),
+        Node(id="1", caption="Movie", properties={"labels": ["Movie"], "centrality": 0.9}),
+    ]
+    VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+    VG.color_nodes(property="centrality", colors=["#E0E0E0", "#000000"], color_space=ColorSpace.CONTINUOUS)
+
+    assert VG.nodes[0].to_dict() == {
+        "id": "0",
+        "caption": "Person",
+        "color": "#e0e0e0",
+        "properties": {"labels": ["Person"], "centrality": 0.1},
+    }
+    assert VG.nodes[1].to_dict() == {
+        "id": "1",
+        "caption": "Movie",
+        "color": "#000000",
+        "properties": {"labels": ["Movie"], "centrality": 0.9},
+    }
 
 
 def test_color_nodes_continuous_forbidden() -> None:

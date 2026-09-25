@@ -1,9 +1,12 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from enum import Enum
+from math import floor
 from typing import Any, Union
 
 import enum_tools
 from pydantic_extra_types.color import Color, ColorType
+
+from .node_size import RealNumber
 
 ColorsType = Union[dict[Any, ColorType], Iterable[ColorType]]
 
@@ -14,6 +17,59 @@ def to_color(color: ColorType) -> Color:
 
 def to_hex(color: ColorType) -> str:
     return to_color(color).as_hex(format="long")
+
+
+def _rgba(color: Color) -> tuple[int, int, int, float]:
+    rgba = color.as_rgb_tuple()
+    if len(rgba) == 3:
+        return rgba[0], rgba[1], rgba[2], 1.0
+    return rgba[0], rgba[1], rgba[2], rgba[3]
+
+
+def interpolate_gradient(colors: Sequence[ColorType], t: RealNumber) -> Color:
+    """
+    Interpolate a color along a gradient of color stops.
+
+    Parameters
+    ----------
+    colors:
+        The color stops of the gradient, from the color of the lowest value to the color of the highest value.
+    t:
+        The position along the gradient, between 0 (the first color stop) and 1 (the last color stop).
+        Callers are expected to min-max scale their values to this range upfront.
+
+    Raises
+    ------
+    ValueError
+        If `colors` is empty, or if `t` is not between 0 and 1.
+    """
+    resolved = [to_color(color) for color in colors]
+    if not resolved:
+        raise ValueError("At least one color is needed to interpolate a gradient")
+
+    if len(resolved) == 1:
+        return resolved[0]
+
+    if not 0 <= t <= 1:
+        raise ValueError(f"The gradient position must be between 0 and 1, but was {t}")
+
+    scaled = t * (len(resolved) - 1)
+    lower = floor(scaled)
+    if lower >= len(resolved) - 1:
+        return resolved[-1]
+
+    r1, g1, b1, a1 = _rgba(resolved[lower])
+    r2, g2, b2, a2 = _rgba(resolved[lower + 1])
+    fraction = scaled - lower
+
+    return Color(
+        (
+            round(r1 + fraction * (r2 - r1)),
+            round(g1 + fraction * (g2 - g1)),
+            round(b1 + fraction * (b2 - b1)),
+            a1 + fraction * (a2 - a1),
+        )
+    )
 
 
 @enum_tools.documentation.document_enum

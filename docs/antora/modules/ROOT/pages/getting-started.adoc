@@ -51,7 +51,7 @@ VG.render(initial_zoom=2)
 See the link:{tutorials-docs-uri}/getting-started/[Jupyter notebook] to interact with the graph.
 ====
 
-image::graph_2120034f.png["Graph"]
+image::getting-started-graph.svg["Graph"]
 
 As we can see in the graph above, the radius of one of the nodes is larger than the others.
 This is because we set the “size” field of the node to 20, while the others are set to 10.
@@ -75,7 +75,7 @@ VG.render(initial_zoom=2)
 See the link:{tutorials-docs-uri}/getting-started/[Jupyter notebook] to interact with the graph.
 ====
 
-image::graph_00ff5513.png["Graph with colors"]
+image::getting-started-graph-colored.svg["Graph with colors"]
 
 We are now easily able to distinguish between the different types of nodes in the graph.
 
