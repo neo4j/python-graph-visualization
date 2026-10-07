@@ -10463,9 +10463,7 @@ var L = /* @__PURE__ */ s(((e, t) => {
 		function i(e, t) {
 			return t ? e ? e + " " + t : e + t : e;
 		}
-		t !== void 0 && t.exports ? (n.default = n, t.exports = n) : typeof define == "function" && typeof define.amd == "object" && define.amd ? define("classnames", [], function() {
-			return n;
-		}) : window.classNames = n;
+		t !== void 0 && t.exports ? (n.default = n, t.exports = n) : window.classNames = n;
 	})();
 })), R = (e) => console.warn(`[🪡 Needle]:  ${e}`), z = A(), B = /* @__PURE__ */ u(L()), V = function(e, t) {
 	var n = {};
@@ -42214,7 +42212,7 @@ rU.use = function(e) {
 //#region node_modules/layout-base/layout-base.js
 var iU = /* @__PURE__ */ s(((e, t) => {
 	(function(n, r) {
-		typeof e == "object" && typeof t == "object" ? t.exports = r() : typeof define == "function" && define.amd ? define([], r) : typeof e == "object" ? e.layoutBase = r() : n.layoutBase = r();
+		typeof e == "object" && typeof t == "object" ? t.exports = r() : typeof e == "object" ? e.layoutBase = r() : n.layoutBase = r();
 	})(e, function() {
 		return (function(e) {
 			var t = {};
@@ -43614,7 +43612,7 @@ var iU = /* @__PURE__ */ s(((e, t) => {
 	});
 })), aU = /* @__PURE__ */ s(((e, t) => {
 	(function(n, r) {
-		typeof e == "object" && typeof t == "object" ? t.exports = r(iU()) : typeof define == "function" && define.amd ? define(["layout-base"], r) : typeof e == "object" ? e.coseBase = r(iU()) : n.coseBase = r(n.layoutBase);
+		typeof e == "object" && typeof t == "object" ? t.exports = r(iU()) : typeof e == "object" ? e.coseBase = r(iU()) : n.coseBase = r(n.layoutBase);
 	})(e, function(e) {
 		return (function(e) {
 			var t = {};
@@ -44077,7 +44075,7 @@ var iU = /* @__PURE__ */ s(((e, t) => {
 	});
 })), oU = /* @__PURE__ */ u((/* @__PURE__ */ s(((e, t) => {
 	(function(n, r) {
-		typeof e == "object" && typeof t == "object" ? t.exports = r(aU()) : typeof define == "function" && define.amd ? define(["cose-base"], r) : typeof e == "object" ? e.cytoscapeCoseBilkent = r(aU()) : n.cytoscapeCoseBilkent = r(n.coseBase);
+		typeof e == "object" && typeof t == "object" ? t.exports = r(aU()) : typeof e == "object" ? e.cytoscapeCoseBilkent = r(aU()) : n.cytoscapeCoseBilkent = r(n.coseBase);
 	})(e, function(e) {
 		return (function(e) {
 			var t = {};
@@ -44274,7 +44272,7 @@ var sU = "cose-bilkent", cU = (e, t) => {
 	close() {}
 }() }, uU = () => new SharedWorker(new URL(
 	/* @vite-ignore */
-	"/assets/CoseBilkentLayout.worker-BFFTT-9O.js",
+	"/assets/CoseBilkentLayout.worker-rfgZgvDf.js",
 	"" + import.meta.url
 ), {
 	type: "module",
@@ -49552,7 +49550,7 @@ var sU = "cose-bilkent", cU = (e, t) => {
 				func: n
 			}], dr.prototype.clone = fr, dr.prototype.reverse = pr, dr.prototype.value = mr, Z.prototype.at = Mc, Z.prototype.chain = Nc, Z.prototype.commit = Pc, Z.prototype.next = Fc, Z.prototype.plant = Lc, Z.prototype.reverse = Rc, Z.prototype.toJSON = Z.prototype.valueOf = Z.prototype.value = zc, Z.prototype.first = Z.prototype.head, pt && (Z.prototype[pt] = Ic), Z;
 		})();
-		typeof define == "function" && typeof define.amd == "object" && define.amd ? (Vt._ = nr, define(function() {
+		typeof define == "function" && typeof n == "object" && n ? (Vt._ = nr, define(function() {
 			return nr;
 		})) : Ut ? ((Ut.exports = nr)._ = nr, Ht._ = nr) : Vt._ = nr;
 	}).call(e);
@@ -51297,7 +51295,7 @@ var sU = "cose-bilkent", cU = (e, t) => {
 	close() {}
 }() }, Iq = () => new SharedWorker(new URL(
 	/* @vite-ignore */
-	"/assets/HierarchicalLayout.worker-xsz90tkg.js",
+	"/assets/HierarchicalLayout.worker-CMncP-Pq.js",
 	"" + import.meta.url
 ), {
 	type: "module",
@@ -90803,7 +90801,7 @@ var H5 = L5, U5 = "NVL_basic-wrapper", W5 = "NVL_interactive-wrapper", G5 = RK()
 	}
 }, g7 = /* @__PURE__ */ s(((e, t) => {
 	(function(n, r) {
-		typeof e == "object" && t !== void 0 ? t.exports = r() : typeof define == "function" && define.amd ? define(r) : (n ||= self).RBush = r();
+		typeof e == "object" && t !== void 0 ? t.exports = r() : (n ||= self).RBush = r();
 	})(e, function() {
 		function e(e, r, i, a, o) {
 			(function e(n, r, i, a, o) {
@@ -91085,7 +91083,7 @@ var _7, Vte = o((() => {
 	}, t.exports.nested = r, t.exports.flat = n;
 })), Gte = /* @__PURE__ */ s(((e, t) => {
 	(function(n, r) {
-		typeof e == "object" && t !== void 0 ? r(e) : typeof define == "function" && define.amd ? define(["exports"], r) : r((n ||= self).predicates = {});
+		r(typeof e == "object" && t !== void 0 ? e : (n ||= self).predicates = {});
 	})(e, function(e) {
 		let t = 134217729;
 		function n(e, t, n, r, i) {
@@ -92275,7 +92273,7 @@ var G7 = 25, Tne = () => {
 	return (0, S.useMemo)(() => e.nodeIds.length > 0 || e.relationshipIds.length > 0, [e]) ? (0, z.jsx)(Sne, {}) : (0, z.jsx)(Tne, {});
 }, K7 = /* @__PURE__ */ u((/* @__PURE__ */ s(((e, t) => {
 	(function(n, r) {
-		typeof e == "object" && t !== void 0 ? t.exports = r() : typeof define == "function" && define.amd ? define(r) : (n = typeof globalThis < "u" ? globalThis : n || self, n.chroma = r());
+		typeof e == "object" && t !== void 0 ? t.exports = r() : (n = typeof globalThis < "u" ? globalThis : n || self, n.chroma = r());
 	})(e, (function() {
 		for (var e = function(e, t, n) {
 			return t === void 0 && (t = 0), n === void 0 && (n = 1), e < t ? t : e > n ? n : e;

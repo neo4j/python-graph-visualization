@@ -11,6 +11,8 @@ export default defineConfig({
   plugins: [react(), viteSingleFile(), cleanWorkerChunks()],
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
+    // See vite.config.ts: neutralize the UMD/AMD `define()` branch of bundled deps.
+    "define.amd": "undefined",
   },
   build: {
     outDir: "../python-wrapper/src/neo4j_viz/resources/nvl_entrypoint",

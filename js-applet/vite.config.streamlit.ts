@@ -12,6 +12,8 @@ export default defineConfig({
   define: {
     // React reads process.env.NODE_ENV at runtime.
     "process.env.NODE_ENV": JSON.stringify("production"),
+    // See vite.config.ts: neutralize the UMD/AMD `define()` branch of bundled deps.
+    "define.amd": "undefined",
   },
   build: {
     outDir: "../python-wrapper/src/neo4j_viz/resources/streamlit_v2",
