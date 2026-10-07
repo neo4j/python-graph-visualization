@@ -1,3 +1,5 @@
+import ndlCssText from "@neo4j-ndl/base/lib/neo4j-ds-styles.css?inline";
+
 import widget, { type Theme, type WidgetData } from "./graph-widget";
 
 /**
@@ -161,7 +163,9 @@ export default function render(component: ComponentArg): () => void {
 
   if (!mounted) {
     const model = new StreamlitModel(setStateValue);
-    model.initialize(incoming);
+    // Streamlit has no `_css` trait; provide the stylesheet so the widget can inject
+    // it into the shadow root and (for portaled overlays) document.head.
+    model.initialize({ ...incoming, _css: ndlCssText });
 
     const el = document.createElement("div");
     // Size the container before mounting so NVL initializes at the correct size.

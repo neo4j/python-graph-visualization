@@ -1,5 +1,4 @@
 import { createRender, useModel, useModelState } from "@anywidget/react";
-import ndlCssText from "@neo4j-ndl/base/lib/neo4j-ds-styles.css?inline";
 import { Gesture, GraphSelection, GraphVisualization } from "@neo4j-ndl/react-graph";
 import type NVL from "@neo4j-nvl/base";
 import type { Layout, NvlOptions } from "@neo4j-nvl/base";
@@ -78,6 +77,11 @@ export type WidgetData = {
   selected: GraphSelection;
   legend: LegendData;
   last_event: InteractionEvent | null;
+  /**
+   * The NDL stylesheet, provided by the host (anywidget syncs the widget's `_css`
+   * trait; Streamlit passes it in the component state). Never bundled into the JS.
+   */
+  _css?: string;
 };
 
 const EMPTY_SELECTION: GraphSelection = { nodeIds: [], relationshipIds: [] };
@@ -154,49 +158,50 @@ function useResolvedTheme(theme: Theme | undefined): "light" | "dark" {
   return normalizedTheme === "auto" ? detectedTheme : normalizedTheme;
 }
 
-// @font-face rules in shadow DOM adopted stylesheets don't register fonts at the
-// document level, so the browser can't find them for rendering. We extract and hoist
-// them into document.head eagerly at module load so fonts begin loading immediately.
-const fontFaceRules = (ndlCssText.match(/@font-face\s*\{[^}]*\}/g) || []).join("\n");
-if (fontFaceRules) {
-  const fontStyle = document.createElement("style");
-  fontStyle.textContent = fontFaceRules;
-  document.head.appendChild(fontStyle);
-}
+const documentStyleAttr = "data-neo4j-viz-ndl-main";
+const overlayStyleAttr = "data-neo4j-viz-ndl-overlays";
+const shadowRootStyleAttr = "data-neo4j-viz-ndl-shadow-root";
+const fontStyleAttr = "data-neo4j-viz-ndl-fonts";
 
-const documentStyleSelector = "[data-neo4j-viz-ndl-main]";
-const overlayStyleSelector = "[data-neo4j-viz-ndl-overlays]";
-const shadowRootStyleSelector = "[data-neo4j-viz-ndl-shadow-root]";
-
-function appendStyle(root: Node & ParentNode, attributeName: string, cssText: string) {
+// The NDL stylesheet is deliberately NOT imported into the JS bundle: it is provided
+// by the host via the model's `_css` trait (anywidget syncs it, Streamlit passes it in
+// the component state). Bundling it here duplicated ~2 MB of CSS into every widget
+// payload. `ensureStyle` keeps the injected copies in sync so `_css` updates (HMR) are
+// reflected without adding duplicate <style> elements.
+function ensureStyle(root: Node & ParentNode, attributeName: string, cssText: string) {
+  const existing = root.querySelector<HTMLStyleElement>(`[${attributeName}]`);
+  if (existing) {
+    if (existing.textContent !== cssText) existing.textContent = cssText;
+    return;
+  }
   const style = document.createElement("style");
   style.setAttribute(attributeName, "true");
   style.textContent = cssText;
   root.appendChild(style);
 }
 
+// @font-face rules in shadow DOM adopted stylesheets don't register fonts at the
+// document level, so the browser can't find them for rendering. We extract and hoist
+// them into document.head so fonts load immediately.
+function hoistFontFaces(cssText: string) {
+  const fontFaceRules = (cssText.match(/@font-face\s*\{[^}]*\}/g) || []).join("\n");
+  if (fontFaceRules) ensureStyle(document.head, fontStyleAttr, fontFaceRules);
+}
+
 /**
- * Injects the full NDL stylesheet into the appropriate scope. In shadow DOM
- * contexts (e.g. Marimo notebooks), widget content stays styled inside the
- * shadow root and portaled overlays get the same stylesheet in document.head.
+ * Injects the NDL stylesheet into the appropriate scope. In shadow DOM contexts
+ * (e.g. Marimo notebooks), widget content stays styled inside the shadow root and
+ * portaled overlays get the same stylesheet in document.head.
  */
-function injectNdlCss(el: HTMLElement) {
+function injectNdlCss(el: HTMLElement, cssText: string) {
   const rootNode = el.getRootNode();
   if (rootNode instanceof ShadowRoot) {
-    if (!rootNode.querySelector(shadowRootStyleSelector)) {
-      appendStyle(rootNode, "data-neo4j-viz-ndl-shadow-root", ndlCssText);
-    }
-
-    if (!document.head.querySelector(overlayStyleSelector)) {
-      appendStyle(document.head, "data-neo4j-viz-ndl-overlays", ndlCssText);
-    }
-
+    ensureStyle(rootNode, shadowRootStyleAttr, cssText);
+    ensureStyle(document.head, overlayStyleAttr, cssText);
     return;
   }
 
-  if (!document.head.querySelector(documentStyleSelector)) {
-    appendStyle(document.head, "data-neo4j-viz-ndl-main", ndlCssText);
-  }
+  ensureStyle(document.head, documentStyleAttr, cssText);
 }
 
 /**
@@ -249,6 +254,9 @@ function GraphWidget() {
   const [selected, setSelected] = useModelState<WidgetData["selected"]>("selected");
   const [, setLastEvent] = useModelState<WidgetData["last_event"]>("last_event");
   const [legend] = useModelState<WidgetData["legend"]>("legend");
+  // The NDL stylesheet is synced by the host as `_css` (see injectNdlCss) instead of
+  // being bundled into the JS payload.
+  const [ndlCss] = useModelState<string>("_css");
   const {
     layout,
     nvlOptions,
@@ -276,9 +284,10 @@ function GraphWidget() {
   const resolvedTheme = useResolvedTheme(theme);
 
   useEffect(() => {
-    if (!wrapperRef.current) return;
-    injectNdlCss(wrapperRef.current);
-  }, []);
+    if (!wrapperRef.current || !ndlCss) return;
+    hoistFontFaces(ndlCss);
+    injectNdlCss(wrapperRef.current, ndlCss);
+  }, [ndlCss]);
 
   // NVL sizes its <canvas> once at mount via an internal `element-resize-event` scroll-sensor
   // polyfill that doesn't fire when the side panel (NDL Drawer, type "push") flex-shrinks its
