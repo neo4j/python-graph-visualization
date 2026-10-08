@@ -95767,6 +95767,7 @@ function jre() {
 		wrapperProps: { isWrappingChildren: !1 },
 		children: /* @__PURE__ */ (0, R.jsxs)("div", {
 			ref: O,
+			"data-neo4j-viz-ndl": "true",
 			style: {
 				position: "relative",
 				height: i ?? "600px",

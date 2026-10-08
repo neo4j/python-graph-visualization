@@ -3,12 +3,13 @@ import { defineConfig } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
 import { cleanWorkerChunks } from "./vite-plugin-clean-worker-chunks.ts";
+import { scopeNdlCssPlugin } from "./vite-plugin-scope-ndl-css.ts";
 
 // HTML build: produces a single self-contained index.html with all JS and
 // CSS inlined. Python injects graph data at runtime as an inert
 // <script type="application/json" id="neo4j-viz-data"> block before serving.
 export default defineConfig({
-  plugins: [react(), viteSingleFile(), cleanWorkerChunks()],
+  plugins: [react(), viteSingleFile(), scopeNdlCssPlugin(), cleanWorkerChunks()],
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
     // See vite.config.ts: neutralize the UMD/AMD `define()` branch of bundled deps.

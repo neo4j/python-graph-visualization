@@ -2,13 +2,14 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 import { cleanWorkerChunks } from "./vite-plugin-clean-worker-chunks.ts";
+import { scopeNdlCssPlugin } from "./vite-plugin-scope-ndl-css.ts";
 
 // Streamlit build: produces an ES module (graph.js + style.css) shipped as package
 // data and passed inline as the `js`/`css` of an st.components.v2.component (see
 // python-wrapper/src/neo4j_viz/streamlit.py). The module's default export is the v2
 // mount function in src/streamlit-entrypoint.ts.
 export default defineConfig({
-  plugins: [react(), cleanWorkerChunks()],
+  plugins: [react(), scopeNdlCssPlugin(), cleanWorkerChunks()],
   define: {
     // React reads process.env.NODE_ENV at runtime.
     "process.env.NODE_ENV": JSON.stringify("production"),

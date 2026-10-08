@@ -427,6 +427,7 @@ function GraphWidget() {
     <NeedleThemeProvider theme={resolvedTheme} wrapperProps={{ isWrappingChildren: false }}>
       <div
         ref={wrapperRef}
+        data-neo4j-viz-ndl="true"
         style={{
           position: "relative",
           height: height ?? "600px",
