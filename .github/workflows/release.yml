@@ -116,6 +116,11 @@ jobs:
       - name: Build release distributions
         run: uv build
 
+      # setuptools silently omits missing package data, so a forgotten JS build
+      # would publish a broken wheel; fail before uploading to PyPI.
+      - name: Verify the distributions ship the built assets
+        run: uv run --no-project python ../scripts/verify_wheel_assets.py dist
+
       - name: Publish to PyPI
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
