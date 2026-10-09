@@ -32,11 +32,6 @@ const ROOT_SELECTORS = new Set(["html", "body", ":root", ":host"]);
 // is not mistaken for a class.
 const CLASS_OR_ID_RE = /(?<![="'*~|^$])[.#][A-Za-z_-]/;
 
-// Leading/trailing whitespace and comments, kept verbatim so a license header
-// on the first selector of a list survives and never leaks into the selector.
-const LEADING_RE = /^(?:\s|\/\*[\s\S]*?\*\/)*/;
-const TRAILING_RE = /(?:\s|\/\*[\s\S]*?\*\/)*$/;
-
 export function scopeNdlCss(css: string, scopeSelector: string = NDL_SCOPE_SELECTOR): string {
   return transformRules(css, scopeSelector);
 }
@@ -185,43 +180,18 @@ function isThemeRootSelector(prelude: string): boolean {
 }
 
 function splitThemeState(body: string): { kept: string; themeState: string } {
+  // Root token blocks are pure custom-property lists whose values never contain
+  // `;`, so a plain split is enough to partition them. Declarations are kept
+  // verbatim (a meaningful trailing space in the lightningcss toggle value must
+  // survive).
   const kept: string[] = [];
   const themeState: string[] = [];
-  for (const declaration of splitDeclarations(body)) {
+  for (const declaration of body.split(";")) {
+    if (!declaration.trim()) continue;
     const name = declaration.split(":", 1)[0]?.trim() ?? "";
     (THEME_STATE_PROPS.has(name) ? themeState : kept).push(declaration);
   }
   return { kept: kept.join(";"), themeState: themeState.join(";") };
-}
-
-/** Splits a declaration block on `;`, ignoring strings and parentheses. */
-function splitDeclarations(body: string): string[] {
-  const parts: string[] = [];
-  let depth = 0;
-  let start = 0;
-  let i = 0;
-  const n = body.length;
-
-  while (i < n) {
-    const ch = body[i];
-    if (ch === '"' || ch === "'") {
-      i = skipString(body, i);
-      continue;
-    }
-    if (ch === "(" || ch === "[") depth += 1;
-    else if (ch === ")" || ch === "]") depth -= 1;
-    else if (ch === ";" && depth === 0) {
-      parts.push(body.slice(start, i));
-      start = i + 1;
-    }
-    i += 1;
-  }
-  const last = body.slice(start);
-  if (last) parts.push(last);
-
-  // Keep declarations verbatim (a meaningful trailing space in the
-  // lightningcss toggle value must survive), dropping empty ones.
-  return parts.filter((part) => part.trim().length > 0);
 }
 
 function scopeSelectorList(list: string, scope: string): string {
@@ -230,10 +200,54 @@ function scopeSelectorList(list: string, scope: string): string {
     .join(",");
 }
 
+/**
+ * Splits a selector into its leading/trailing whitespace-and-comment edges and
+ * the actual selector. Comments are preserved verbatim so a license header on
+ * the first selector of a list survives. Scanned linearly rather than with a
+ * backtracking-prone regex.
+ */
+function selectorEdges(selector: string): { leading: string; core: string; trailing: string } {
+  let start = 0;
+  while (start < selector.length) {
+    const ch = selector[start];
+    if (isCssWhitespace(ch)) {
+      start += 1;
+    } else if (ch === "/" && selector[start + 1] === "*") {
+      const end = selector.indexOf("*/", start + 2);
+      if (end === -1) break;
+      start = end + 2;
+    } else {
+      break;
+    }
+  }
+
+  let end = selector.length;
+  while (end > start) {
+    const ch = selector[end - 1];
+    if (isCssWhitespace(ch)) {
+      end -= 1;
+    } else if (ch === "/" && selector[end - 2] === "*") {
+      const commentStart = selector.lastIndexOf("/*", end - 2);
+      if (commentStart < start) break;
+      end = commentStart;
+    } else {
+      break;
+    }
+  }
+
+  return {
+    leading: selector.slice(0, start),
+    core: selector.slice(start, end),
+    trailing: selector.slice(end),
+  };
+}
+
+function isCssWhitespace(ch: string | undefined): boolean {
+  return ch === " " || ch === "\t" || ch === "\n" || ch === "\r" || ch === "\f";
+}
+
 function scopeSelector(selector: string, scope: string): string {
-  const leading = selector.match(LEADING_RE)?.[0] ?? "";
-  const trailing = selector.match(TRAILING_RE)?.[0] ?? "";
-  const core = selector.slice(leading.length, selector.length - trailing.length);
+  const { leading, core, trailing } = selectorEdges(selector);
 
   if (!core) return selector;
   // Token/theme definitions and NDL-scoped rules cannot match host content.
