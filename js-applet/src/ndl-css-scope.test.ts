@@ -90,7 +90,7 @@ describe("scopeNdlCss", () => {
         "/* ! tailwindcss | https://tailwindcss.com */\n*,\n::before{box-sizing:border-box}",
       ),
     ).toBe(
-      `/* ! tailwindcss | https://tailwindcss.com */\n${W}, ${W} *,\n${W} *::before{box-sizing:border-box}`,
+      `/* ! tailwindcss | https://tailwindcss.com */\n${W}, ${W} *,${W} *::before{box-sizing:border-box}`,
     );
   });
 
