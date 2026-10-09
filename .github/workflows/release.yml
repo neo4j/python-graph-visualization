@@ -110,8 +110,17 @@ jobs:
           python-version: "3.11"
           enable-cache: true
 
+      - name: Build the JS applet
+        uses: ./.github/actions/build-js
+
       - name: Build release distributions
         run: uv build
+
+      # setuptools silently omits missing package data, so a forgotten JS build
+      # would publish a broken wheel; fail before uploading to PyPI. Importing
+      # the built wheel in a clean env reuses the widget's own asset guard.
+      - name: Smoke-test the wheel imports
+        run: uv run --no-project --with "$(ls dist/*.whl)" python -c "import neo4j_viz"
 
       - name: Publish to PyPI
         env:

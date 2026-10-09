@@ -14,3 +14,5 @@
 - Reduce the widget payload.
 
 ## Other changes
+
+- Stop committing the built widget JS/CSS assets; they are now built by `just js-build` and in CI, and the shipped Streamlit stylesheet no longer duplicates the widget's.

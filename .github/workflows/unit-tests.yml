@@ -9,6 +9,9 @@ on:
     paths:
       - "python-wrapper/**" # python code + its resources
       - "python-wrapper/pyproject.toml" # dependencies
+      - "js-applet/**" # built assets are needed to import the widget
+      - "scripts/build_js_applet.sh"
+      - ".github/actions/build-js/**"
     branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab
@@ -38,6 +41,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
+
+      - name: Build the JS applet
+        uses: ./.github/actions/build-js
+
       - run: uv sync --group dev --extra pandas --extra neo4j --extra gds --extra snowflake
 
       - name: Run tests

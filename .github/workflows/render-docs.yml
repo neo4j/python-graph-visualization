@@ -33,6 +33,10 @@ jobs:
         with:
           python-version: "3.11"
           enable-cache: true
+
+      - name: Build the JS applet
+        uses: ./.github/actions/build-js
+
       - run: uv sync --group dev --group docs --extra pandas --extra neo4j --extra gds --extra snowflake
 
       - name: Setup pandoc

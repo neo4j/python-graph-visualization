@@ -64,6 +64,16 @@ just py-sync
 
 This will install all required dev dependencies and install the package in editable mode.
 
+The built widget assets (JS/CSS under `python-wrapper/src/neo4j_viz/resources/`) are
+not committed. Build them with:
+
+```sh
+just js-build
+```
+
+`just py-test` and the CI workflows build them automatically; importing the widget
+without them fails with a reminder to run `just js-build`.
+
 
 ## Specifically for this project
 
