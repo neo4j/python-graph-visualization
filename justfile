@@ -120,12 +120,12 @@ streamlit:
 marimo:
     #!/usr/bin/env bash
     set -e
-    cd {{py_dir}} && uv run --group notebook marimo run {{root_dir}}/examples/marimo-example.py
+    cd {{py_dir}} && uv run marimo run {{root_dir}}/examples/marimo-example.py
 
 marimo-edit:
     #!/usr/bin/env bash
     set -e
-    cd {{py_dir}} && uv run --group notebook marimo edit {{root_dir}}/examples/marimo-example.py
+    cd {{py_dir}} && uv run marimo edit {{root_dir}}/examples/marimo-example.py
 
 ref-docs:
     ./scripts/render_antora_docs.sh

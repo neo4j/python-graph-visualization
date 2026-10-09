@@ -16,6 +16,7 @@ from tests.browser_harness import (
     ERROR_MARKER,
     BrowserUnavailableError,
     JupyterServer,
+    assert_no_ndl_leak,
     jupyter_server,
     run_notebook_in_browser,
 )
@@ -56,3 +57,21 @@ except Exception:
     png = (jupyter_lab_server.root / "out.png").read_bytes()
     assert svg.lstrip().startswith("<svg")
     assert png[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_widget_does_not_restyle_jupyter_page(jupyter_lab_server: JupyterServer) -> None:
+    setup_cell = """\
+from neo4j_viz import Node, Relationship, VisualizationGraph
+nodes = [Node(id='0', caption='Alice'), Node(id='1', caption='Bob')]
+rels = [Relationship(source='0', target='1', caption='KNOWS')]
+widget = VisualizationGraph(nodes=nodes, relationships=rels).render_widget(height='400px')
+widget
+"""
+    finish_cell = f"""\
+from pathlib import Path
+Path('{DONE_MARKER}').write_text('ok')
+"""
+    try:
+        run_notebook_in_browser(jupyter_lab_server, [setup_cell, finish_cell], check=assert_no_ndl_leak)
+    except BrowserUnavailableError as exc:
+        pytest.skip(str(exc))

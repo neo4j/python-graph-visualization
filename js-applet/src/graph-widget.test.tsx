@@ -458,6 +458,22 @@ describe("graph-widget button testing", () => {
     }
   });
 
+  it("marks the widget wrapper as the NDL scope root", async () => {
+    const { el, teardown } = await renderWidget();
+
+    try {
+      await waitFor(() => {
+        // The build scopes the NDL stylesheet under this attribute so it cannot
+        // reset the host page when applied at the document level (see GDS-440).
+        expect(el.querySelector('[data-neo4j-viz-ndl="true"]')).toBeTruthy();
+      });
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
   it("updates the resolved theme when host theme classes change after mount", async () => {
     document.body.className = "light-theme";
 

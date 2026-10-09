@@ -65,6 +65,7 @@ dev = [
     "streamlit==1.64.0",
     "matplotlib>=3.9.4",
     "jupyterlab>=4.5.7",
+    "marimo",
     "anywidget[dev]",
     "python-dotenv",
 ]
@@ -86,7 +87,6 @@ notebook = [
     "matplotlib>=3.9.4",
     "snowflake-snowpark-python==1.55.0",
     "requests",
-    "marimo",
     "python-dotenv"
 ]
 
