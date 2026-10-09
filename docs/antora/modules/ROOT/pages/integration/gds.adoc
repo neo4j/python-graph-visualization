@@ -36,18 +36,19 @@ We use the "pagerank" property to determine the size of the nodes, and the "comp
 from graphdatascience import GraphDataScience
 from neo4j_viz.gds import from_gds
 gds = GraphDataScience(...)
-G = gds.graph.project(...)
+G = gds.graph.project.native(...)
 # Compute the PageRank and Weakly Connected Components
-gds.pageRank.mutate(G, mutateProperty="pagerank")
-gds.wcc.mutate(G, mutateProperty="componentId")
+gds.page_rank.mutate(G, mutate_property="pagerank")
+gds.wcc.mutate(G, mutate_property="componentId")
 # Import the projection into a `VisualizationGraph`
 # Make sure to include `pagerank` and `componentId`
 VG = from_gds(
     gds,
     G,
-    size_property="pagerank",
-    additional_node_properties=["componentId"],
+    node_properties=["pagerank", "componentId"],
 )
+# Size the nodes by their PageRank score
+VG.resize_nodes(property="pagerank")
 # Color the nodes by the `componentId` property, so that the nodes are
 # colored by the connected component they belong to
 VG.color_nodes(property="componentId")
