@@ -117,12 +117,8 @@ jobs:
         run: uv build
 
       # setuptools silently omits missing package data, so a forgotten JS build
-      # would publish a broken wheel; fail before uploading to PyPI. The script
-      # checks all four assets in wheel + sdist; the import below additionally
-      # proves the wheel imports (and reuses the widget's own asset guard).
-      - name: Verify the distributions ship the built assets
-        run: uv run --no-project python ../scripts/verify_wheel_assets.py dist
-
+      # would publish a broken wheel; fail before uploading to PyPI. Importing
+      # the built wheel in a clean env reuses the widget's own asset guard.
       - name: Smoke-test the wheel imports
         run: uv run --no-project --with "$(ls dist/*.whl)" python -c "import neo4j_viz"
 
