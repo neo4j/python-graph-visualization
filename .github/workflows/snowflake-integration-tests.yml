@@ -34,6 +34,10 @@ jobs:
         with:
           python-version: "3.11"
           enable-cache: true
+
+      - name: Build the JS applet
+        uses: ./.github/actions/build-js
+
       - run: uv sync --group dev --extra pandas --extra snowflake
 
       - name: Run tests

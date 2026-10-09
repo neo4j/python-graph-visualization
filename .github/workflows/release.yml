@@ -110,6 +110,9 @@ jobs:
           python-version: "3.11"
           enable-cache: true
 
+      - name: Build the JS applet
+        uses: ./.github/actions/build-js
+
       - name: Build release distributions
         run: uv build
 

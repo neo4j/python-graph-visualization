@@ -1,4 +1,25 @@
+import pathlib
+
 import pytest
+
+# Built by `just js-build`; not committed (see .gitignore). The widget reads
+# them when it is imported, so tests cannot run without them.
+_BUILT_ASSETS = (
+    "resources/nvl_entrypoint/widget.js",
+    "resources/nvl_entrypoint/style.css",
+    "resources/nvl_entrypoint/index.html",
+    "resources/streamlit_v2/graph.js",
+)
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    package_dir = pathlib.Path(__file__).parent.parent / "src" / "neo4j_viz"
+    missing = [asset for asset in _BUILT_ASSETS if not (package_dir / asset).exists()]
+    if missing:
+        pytest.exit(
+            "Missing built widget assets:\n  " + "\n  ".join(missing) + "\nRun `just js-build` to build them.",
+            returncode=2,
+        )
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

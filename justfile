@@ -47,6 +47,7 @@ py-style-gds version="2.0":
     UV_NO_SYNC=1 MYPY_TARGETS=python-wrapper/src ./scripts/checkstyle.sh
 
 py-test:
+    just js-build
     cd python-wrapper && uv sync --all-extras --group dev
     cd python-wrapper && uv run --group dev pytest
 
