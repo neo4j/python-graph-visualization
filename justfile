@@ -34,13 +34,18 @@ py-style:
 # Run Python style checks (ruff + mypy) against a pinned `graphdatascience` version, so
 # the v1/v2 compat surface in _gds_compat is type-checked under that version. mypy is
 # scoped to `src` because the test helpers import v2-only modules (covered by the default
-# v2 gate); ruff runs on the whole tree as usual.
-# example: just py-style-gds 1.22
-py-style-gds version="2.0":
+# v2 gate); ruff runs on the whole tree as usual. Pass `latest` to install the newest
+# client instead of a pin.
+# examples: just py-style-gds 1.22 / just py-style-gds latest
+py-style-gds version="latest":
     #!/usr/bin/env bash
     set -e
     just py-sync
-    uv pip install --python python-wrapper/.venv/bin/python "graphdatascience=={{version}}"
+    if [ "{{version}}" = "latest" ]; then
+        uv pip install --python python-wrapper/.venv/bin/python --upgrade graphdatascience
+    else
+        uv pip install --python python-wrapper/.venv/bin/python "graphdatascience=={{version}}"
+    fi
     # UV_NO_SYNC stops `uv run` inside the style scripts from re-syncing (which would
     # revert the pin back to the latest GDS).
     UV_NO_SYNC=1 ./scripts/makestyle.sh
@@ -51,30 +56,32 @@ py-test:
     cd python-wrapper && uv sync --all-extras --group dev
     cd python-wrapper && uv run --group dev pytest
 
-# install a specific GDS client version and run the GDS integration tests (used by CI)
-# example: just py-ci-test-gds 2.0.0a1
+# install a specific GDS client version (or `latest`) and run the GDS integration tests (used by CI)
+# examples: just py-ci-test-gds 1.22 / just py-ci-test-gds latest
 py-ci-test-gds gds_version:
     #!/usr/bin/env bash
     set -e
     cd {{py_dir}}
     uv sync --group dev --extra pandas --extra neo4j --extra gds
-    uv pip install "graphdatascience=={{gds_version}}"
-    uv run pytest tests/ --include-neo4j-and-gds
+    if [ "{{gds_version}}" = "latest" ]; then
+        uv pip install --upgrade graphdatascience
+    else
+        uv pip install "graphdatascience=={{gds_version}}"
+    fi
+    uv run pytest tests/ --only-neo4j-and-gds
 
 py-test-gds:
     #!/usr/bin/env bash
     set -e
-    ENV_DIR="test-envs/neo4j-gds"
+    ENV_DIR="{{root_dir}}/test-envs/neo4j-gds"
     trap "cd $ENV_DIR && docker compose down" EXIT
     cd $ENV_DIR && docker compose up -d
-    cd -
-    cd python-wrapper && \
+    cd {{py_dir}} && \
     NEO4J_URI=bolt://localhost:7687 \
     NEO4J_USERNAME=neo4j \
     NEO4J_PASSWORD=password \
     NEO4J_DB=neo4j \
-    uv run --group dev --extra gds pytest tests --include-neo4j-and-gds
-    cd ..
+    uv run --group dev --extra gds pytest tests --only-neo4j-and-gds
 
 
 # this expects the local compose setup to be running.
@@ -85,7 +92,7 @@ py-test-gds-sessions filter="":
     NEO4J_URI=bolt://localhost:7687 \
     NEO4J_USERNAME=neo4j \
     NEO4J_PASSWORD=password \
-    uv run --group dev --extra gds pytest tests --include-neo4j-and-gds {{ if filter != "" { "-k '" + filter + "'" } else { "" } }}
+    uv run --group dev --extra gds pytest tests --only-neo4j-and-gds {{ if filter != "" { "-k '" + filter + "'" } else { "" } }}
 
 local-neo4j-setup:
     #!/usr/bin/env bash

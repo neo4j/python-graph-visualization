@@ -1270,7 +1270,7 @@ wheels = [
 
 [[package]]
 name = "graphdatascience"
-version = "2.0"
+version = "2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "multimethod", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -1287,9 +1287,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f3/3e/04ec09f9bbe62ae04e295e6a59d06acc2a55cba13e355a7db8e026f65667/graphdatascience-2.0.tar.gz", hash = "sha256:f583677a0fe1d10346381a45a6f06a259bf9ce7d82ff40d9c42c793e1b9045aa", size = 1774568, upload-time = "2026-09-18T12:18:11.004Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/19/a5/4ff0502b014a9c86965e6edeef96a2c59d65ae7d56c553a1c259cbdb11bf/graphdatascience-2.1.tar.gz", hash = "sha256:cde3743357c478d6e562ac7c52d82cd378550b855b41c1f40868060eb4ffaf9e", size = 1781016, upload-time = "2026-09-28T14:37:11.201Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/b4/904997df96df66c85f371cca7d129bfa71ded6cfc9f10de4e3c37eedb57b/graphdatascience-2.0-py3-none-any.whl", hash = "sha256:5c19253cb04776e65e48ed88837c113f047bdf2416f6377d68de5b65ae445dec", size = 2084309, upload-time = "2026-09-18T12:18:08.905Z" },
+    { url = "https://files.pythonhosted.org/packages/22/64/f05cfdc6595d5b8bc80547026d345bad7bec4fbcb46369387524d395734b/graphdatascience-2.1-py3-none-any.whl", hash = "sha256:bf93b3ea9869247a3affdb0355efb66e036673c0a7f7cba30431ce8ae34c90f8", size = 2097484, upload-time = "2026-09-28T14:37:09.405Z" },
 ]
 
 [[package]]

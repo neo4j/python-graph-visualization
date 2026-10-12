@@ -16,3 +16,4 @@
 ## Other changes
 
 - Stop committing the built widget JS/CSS assets; they are now built by `just js-build` and in CI, and the shipped Streamlit stylesheet no longer duplicates the widget's.
+- Update the GDS example notebook to the GDS client 2.x API and exercise it against the latest client in the integration tests.

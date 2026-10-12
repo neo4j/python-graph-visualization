@@ -121,7 +121,7 @@ This will spinup a Neo4j container with the GDS plugin installed.
 To run tests requiring a Snowflake connection, execute:
 ```sh
 cd python-wrapper/
-pytest tests/ --include-snowflake
+pytest tests/ --only-snowflake
 ```
 
 ### Project structure
