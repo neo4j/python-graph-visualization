@@ -58,10 +58,14 @@ def _component_renderer() -> ComponentRenderer:
     ``asset_dir``, which requires a package manifest that is unreliable for installed
     wheels); Streamlit's ForwardMsg cache dedupes the payload across reruns.
     """
-    resources = files("neo4j_viz") / "resources" / "streamlit_v2"
+    resources = files("neo4j_viz") / "resources"
+    # The Streamlit stylesheet is identical to the widget's, so read it from the
+    # nvl_entrypoint resources to avoid shipping a second copy.
     # Prepend a marker comment to not confuse with file path
-    js = "// neo4j-viz streamlit component\n" + (resources / "graph.js").read_text(encoding="utf-8")
-    css = "/* neo4j-viz streamlit component */\n" + (resources / "style.css").read_text(encoding="utf-8")
+    js = "// neo4j-viz streamlit component\n" + (resources / "streamlit_v2" / "graph.js").read_text(encoding="utf-8")
+    css = "/* neo4j-viz streamlit component */\n" + (resources / "nvl_entrypoint" / "style.css").read_text(
+        encoding="utf-8"
+    )
     return component("neo4j_viz_graph", js=js, css=css)
 
 

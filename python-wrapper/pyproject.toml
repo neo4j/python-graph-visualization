@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neo4j-viz"
-version = "1.10.0"
+version = "1.11.0"
 description = "A simple graph visualization tool"
 readme = "README.md"
 authors = [{ name = "Neo4j", email = "team-gds@neo4j.org" }]
@@ -65,6 +65,7 @@ dev = [
     "streamlit==1.64.0",
     "matplotlib>=3.9.4",
     "jupyterlab>=4.5.7",
+    "marimo",
     "anywidget[dev]",
     "python-dotenv",
 ]
@@ -86,7 +87,6 @@ notebook = [
     "matplotlib>=3.9.4",
     "snowflake-snowpark-python==1.55.0",
     "requests",
-    "marimo",
     "python-dotenv"
 ]
 
@@ -112,7 +112,6 @@ neo4j_viz = [
     "resources/nvl_entrypoint/style.css",
     "resources/nvl_entrypoint/index.html",
     "resources/streamlit_v2/graph.js",
-    "resources/streamlit_v2/style.css",
     "py.typed"
 ]
 

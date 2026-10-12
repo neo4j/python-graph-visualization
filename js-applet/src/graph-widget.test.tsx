@@ -60,6 +60,7 @@ type WidgetState = {
     } | null;
     visible?: boolean;
   };
+  _css?: string;
 };
 
 // The static HTML render path uses the real `createLocalModel` shim, so tests
@@ -137,6 +138,9 @@ async function renderWidgetInShadowRoot(
     theme: "light",
     selected: { nodeIds: [], relationshipIds: [] },
     legend: { nodes: null, relationships: null, visible: true },
+    // The stylesheet is host-provided (`_css`); a stub is enough to assert the
+    // shadow-root/document.head bridging.
+    _css: ".nvl-test-ndl { color: red; }",
   });
 
   let teardown: RenderedWidget["teardown"] = undefined;
@@ -447,6 +451,22 @@ describe("graph-widget button testing", () => {
       expect(shadowRoot.querySelector("[data-neo4j-viz-ndl-shadow-root]")).toBeTruthy();
 
       expect(document.head.querySelector("[data-neo4j-viz-ndl-overlays]")).toBeTruthy();
+    } finally {
+      if (typeof teardown === "function") {
+        await teardown();
+      }
+    }
+  });
+
+  it("marks the widget wrapper as the NDL scope root", async () => {
+    const { el, teardown } = await renderWidget();
+
+    try {
+      await waitFor(() => {
+        // The build scopes the NDL stylesheet under this attribute so it cannot
+        // reset the host page when applied at the document level (see GDS-440).
+        expect(el.querySelector('[data-neo4j-viz-ndl="true"]')).toBeTruthy();
+      });
     } finally {
       if (typeof teardown === "function") {
         await teardown();

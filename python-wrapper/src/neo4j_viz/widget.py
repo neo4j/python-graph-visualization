@@ -65,6 +65,20 @@ def _serialize_entity(entity: Union[Node, Relationship]) -> dict[str, Any]:
 _STATIC = pathlib.Path(__file__).parent / "resources" / "nvl_entrypoint"
 
 
+def _ensure_built_assets() -> None:
+    # The built assets are not committed; anywidget reads them when the widget
+    # class is defined, so fail with an actionable message instead of a bare
+    # FileNotFoundError.
+    missing = [path.name for path in (_STATIC / "widget.js", _STATIC / "style.css") if not path.exists()]
+    if missing:
+        raise ImportError(
+            f"Missing built widget assets in {_STATIC}: {', '.join(missing)}. Run `just js-build` to build them."
+        )
+
+
+_ensure_built_assets()
+
+
 def entity_to_json(entity_list: list[Node | Relationship], widget: anywidget.AnyWidget) -> list[dict[str, Any]]:
     return [_serialize_entity(entity) for entity in entity_list]
 

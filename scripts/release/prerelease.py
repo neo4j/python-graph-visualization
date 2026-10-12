@@ -5,7 +5,8 @@ Verifies that:
   1. The version about to be released is printed.
   2. changelog.md has at least one entry.
   3. That version is not already published on PyPI.
-  4. All GitHub Actions runs on the latest commit of the main branch passed.
+  4. The release-gating GitHub Actions runs on the latest commit of the main
+     branch passed.
 
 Requires: gh (authenticated) on PATH. Run from anywhere inside the repo.
 
@@ -21,6 +22,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from typing import Any
 
 from _common import (
@@ -35,6 +37,44 @@ from _common import (
 
 # Conclusions that do not block a release.
 _OK_CONCLUSIONS = {"success", "neutral", "skipped"}
+
+# Workflow runs that must not gate a release:
+#   * "Release" is the workflow running this check; a previous attempt (e.g. a
+#     cancelled or failed re-run) must not block a new one.
+#   * The `dynamic` event covers GitHub-managed runs (Dependabot Updates,
+#     Dependency Graph, CodeQL) which are unrelated to release readiness.
+_IGNORED_WORKFLOWS = {"Release"}
+_IGNORED_EVENTS = {"dynamic"}
+
+
+@dataclass(frozen=True)
+class WorkflowRun:
+    """A GitHub Actions workflow run on the commit being released."""
+
+    database_id: int
+    workflow_name: str
+    status: str
+    conclusion: str | None
+    event: str
+    url: str
+
+    @classmethod
+    def from_json(cls, data: dict[str, Any]) -> WorkflowRun:
+        return cls(
+            database_id=data["databaseId"],
+            workflow_name=data["workflowName"],
+            status=data["status"],
+            conclusion=data["conclusion"],
+            event=data["event"],
+            url=data["url"],
+        )
+
+    def gates_release(self) -> bool:
+        """Whether this run should be checked before releasing."""
+        return (
+            self.workflow_name not in _IGNORED_WORKFLOWS
+            and self.event not in _IGNORED_EVENTS
+        )
 
 
 def is_on_pypi(version: str) -> bool:
@@ -76,8 +116,12 @@ def latest_main_sha() -> str:
     return out.strip()
 
 
-def workflow_runs(sha: str) -> list[dict[str, Any]]:
-    """Workflow runs for `sha`, excluding the current run when on GitHub Actions."""
+def workflow_runs(sha: str) -> list[WorkflowRun]:
+    """Release-gating workflow runs for `sha`.
+
+    Excludes the run currently executing on GitHub Actions and runs that do not
+    gate a release (see `_IGNORED_WORKFLOWS` / `_IGNORED_EVENTS`).
+    """
     out = _gh(
         [
             "run",
@@ -87,14 +131,16 @@ def workflow_runs(sha: str) -> list[dict[str, Any]]:
             "--limit",
             "100",
             "--json",
-            "databaseId,workflowName,status,conclusion",
+            "databaseId,workflowName,status,conclusion,event,url",
         ]
     )
-    runs: list[dict[str, Any]] = json.loads(out)
-    current = os.environ.get("GITHUB_RUN_ID")
-    if current:
-        runs = [r for r in runs if str(r.get("databaseId")) != current]
-    return runs
+    all_runs = [WorkflowRun.from_json(raw) for raw in json.loads(out)]
+    gating_runs = [run for run in all_runs if run.gates_release()]
+
+    current_run_id = os.environ.get("GITHUB_RUN_ID")
+    if current_run_id is None:
+        return gating_runs
+    return [run for run in gating_runs if str(run.database_id) != current_run_id]
 
 
 def check_changelog() -> bool:
@@ -151,17 +197,14 @@ def main() -> int:
 
     failed = False
     for run in runs:
-        name = run.get("workflowName", "<unknown>")
-        status = run.get("status")
-        conclusion = run.get("conclusion") or ""
-        if status != "completed":
-            print(red(f"  ✗ {name}: still {status}"))
+        if run.status != "completed":
+            print(red(f"  ✗ {run.workflow_name}: still {run.status}"))
             failed = True
-        elif conclusion not in _OK_CONCLUSIONS:
-            print(red(f"  ✗ {name}: {conclusion}"))
+        elif run.conclusion not in _OK_CONCLUSIONS:
+            print(red(f"  ✗ {run.workflow_name}: {run.conclusion} ({run.url})"))
             failed = True
         else:
-            print(green(f"  ✓ {name}: {conclusion}"))
+            print(green(f"  ✓ {run.workflow_name}: {run.conclusion}"))
 
     if failed:
         print(

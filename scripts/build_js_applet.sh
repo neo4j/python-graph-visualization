@@ -9,3 +9,8 @@ set -o pipefail
     yarn
     yarn build
 )
+
+# The Streamlit build emits a style.css identical to the widget's
+# (nvl_entrypoint/style.css); the Python side reads that copy instead, so drop
+# the duplicate the build produces.
+rm -f "${GIT_ROOT}/python-wrapper/src/neo4j_viz/resources/streamlit_v2/style.css"

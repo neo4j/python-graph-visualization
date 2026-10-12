@@ -6,9 +6,14 @@
 
 ## Bug fixes
 
-- Fix rendered node captions showing node property values (e.g. algorithm scores) instead of the actual captions.
-- Fix `color_nodes`/`color_relationships` with `ColorSpace.CONTINUOUS` snapping to the given color stops: values are now interpolated into an actual gradient between them.
+- Fix the graph widget failing to render in PyCharm and VS Code
+- Fix the graph widget restyling the surrounding page in Marimo notebooks
 
 ## Improvements
 
+- Reduce the widget payload.
+
 ## Other changes
+
+- Stop committing the built widget JS/CSS assets; they are now built by `just js-build` and in CI, and the shipped Streamlit stylesheet no longer duplicates the widget's.
+- Update the GDS example notebook to the GDS client 2.x API and exercise it against the latest client in the integration tests.

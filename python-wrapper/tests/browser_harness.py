@@ -21,7 +21,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -65,6 +65,14 @@ class BrowserUnavailableError(RuntimeError):
 
 @dataclass
 class JupyterServer:
+    url: str
+    root: Path
+    process: subprocess.Popen[bytes]
+    log_path: Path
+
+
+@dataclass
+class MarimoServer:
     url: str
     root: Path
     process: subprocess.Popen[bytes]
@@ -121,7 +129,45 @@ def jupyter_server(root: Path) -> Iterator[JupyterServer]:
         )
     server = JupyterServer(url=f"http://127.0.0.1:{port}", root=root, process=process, log_path=log_path)
     try:
-        _wait_until_ready(server)
+        _wait_until_ready(server, "/api")
+        yield server
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
+
+
+@contextmanager
+def marimo_server(root: Path, app: Path) -> Iterator[MarimoServer]:
+    """Boot a disposable, tokenless Marimo server running ``app``.
+
+    The server process is terminated when the context exits. Marimo executes
+    every cell of the app on load, so the app must be self-contained (no
+    kernel-side interaction needed from the test).
+    """
+    log_path = root / "marimo-server.log"
+    port = _free_port()
+    with log_path.open("wb") as log_file:
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "marimo",
+                "run",
+                str(app),
+                "--headless",
+                "--no-token",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(port),
+            ],
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            cwd=root,
+        )
+    server = MarimoServer(url=f"http://127.0.0.1:{port}", root=root, process=process, log_path=log_path)
+    try:
+        _wait_until_ready(server, "/health")
         yield server
     finally:
         process.terminate()
@@ -147,15 +193,17 @@ def create_notebook(server: JupyterServer, cells: Sequence[str]) -> str:
     return name
 
 
-def _wait_until_ready(server: JupyterServer) -> None:
+def _wait_until_ready(server: JupyterServer | MarimoServer, path: str) -> None:
     deadline = time.monotonic() + SERVER_START_TIMEOUT
     while time.monotonic() < deadline:
         try:
-            with urllib.request.urlopen(f"{server.url}/api", timeout=2):
+            with urllib.request.urlopen(f"{server.url}{path}", timeout=2):
                 return
         except (urllib.error.URLError, OSError):
             time.sleep(0.25)
-    raise RuntimeError(f"JupyterLab did not start within {SERVER_START_TIMEOUT}s; log:\n{server.log_path.read_text()}")
+    raise RuntimeError(
+        f"server at {server.url} did not start within {SERVER_START_TIMEOUT}s; log:\n{server.log_path.read_text()}"
+    )
 
 
 def _launch_chromium(playwright: Playwright) -> Browser:
@@ -243,20 +291,92 @@ def _await_notebook_markers(server: JupyterServer) -> None:
     raise RuntimeError(f"notebook did not finish within {NOTEBOOK_RUN_TIMEOUT}s; log:\n{server.log_path.read_text()}")
 
 
-def _dump_debug_artifacts(server: JupyterServer, page: Page, console_messages: Sequence[str]) -> None:
+def _dump_debug_artifacts(server: JupyterServer | MarimoServer, page: Page, console_messages: Sequence[str]) -> None:
     page.screenshot(path=str(server.root / "debug-screenshot.png"))
     (server.root / "debug-page.html").write_text(page.content())
     (server.root / "debug-console.log").write_text("\n".join(console_messages))
 
 
-def run_notebook_in_browser(server: JupyterServer, cells: Sequence[str]) -> None:
+# Finds the NDL stylesheet among the document's stylesheets by a marker only it
+# defines, then reports any rule whose selector is a bare host element. The
+# host's own stylesheets (JupyterLab's / Marimo's) legitimately contain bare
+# selectors, so they are ignored. Used to assert the widget's stylesheet is
+# scoped to the widget wrapper (GDS-440).
+NDL_BARE_SELECTOR_SCRIPT = """\
+() => {
+  const NDL_MARKER = "--theme-color-primary";
+  const BARE = new Set([
+    "h1", "h2", "h3", "h4", "h5", "h6", "a", "ul", "ol", "li", "p", "body",
+    "html", "table", "button", "input", "select", "textarea", "img", "svg",
+    "strong", "em", "pre", "code", "hr", "blockquote", "dl", "dd", "fieldset",
+    "legend", "summary", "dialog", "*",
+  ]);
+  const THEME_PROPS = ["color-scheme", "--lightningcss-light", "--lightningcss-dark"];
+  const offenders = [];
+  const themeOffenders = [];
+  const scan = (rules) => {
+    for (const rule of rules) {
+      if (rule.selectorText) {
+        const parts = rule.selectorText.split(",").map((s) => s.trim());
+        for (const sel of parts) {
+          if (BARE.has(sel)) offenders.push(sel);
+        }
+        // NDL's `color-scheme`/lightningcss toggles on the document root would
+        // flip the host's own light/dark resolution.
+        const isRootSel = (p) =>
+          p === "html" || p === "body" || p.includes(":root") || p.includes(":host");
+        if (rule.style && parts.some(isRootSel)) {
+          for (const prop of THEME_PROPS) {
+            if (rule.style.getPropertyValue(prop)) themeOffenders.push(`${rule.selectorText.trim()} {${prop}}`);
+          }
+        }
+      } else if (rule.cssRules) {
+        scan(rule.cssRules);
+      }
+    }
+  };
+  const sheets = [...document.styleSheets, ...(document.adoptedStyleSheets || [])];
+  let ndlSheets = 0;
+  for (const sheet of sheets) {
+    let rules;
+    try {
+      rules = [...sheet.cssRules];
+    } catch {
+      continue;
+    }
+    const isNdl = rules.some((rule) => (rule.cssText || "").includes(NDL_MARKER));
+    if (!isNdl) continue;
+    ndlSheets += 1;
+    scan(rules);
+  }
+  return { ndlSheets, offenders: [...new Set(offenders)], themeOffenders: [...new Set(themeOffenders)] };
+}
+"""
+
+
+def assert_no_ndl_leak(page: Page) -> None:
+    """Assert the NDL stylesheet applied to the host document cannot restyle it."""
+    result = page.evaluate(NDL_BARE_SELECTOR_SCRIPT)
+    assert result["ndlSheets"] >= 1, "the NDL stylesheet was never applied to the document"
+    assert result["offenders"] == [], (
+        f"the NDL stylesheet leaks bare-element selectors to the host page: {result['offenders']}"
+    )
+    assert result["themeOffenders"] == [], (
+        f"the NDL stylesheet leaks theme state to the host page: {result['themeOffenders']}"
+    )
+
+
+def run_notebook_in_browser(
+    server: JupyterServer, cells: Sequence[str], check: Callable[[Page], None] | None = None
+) -> None:
     """Create a notebook from ``cells`` on ``server`` and run it in headless Chrome.
 
     The last cell must write the ``_done.txt``/``_error.txt`` markers (see
     ``DONE_MARKER``/``ERROR_MARKER``); the second-to-last is expected to display
-    a widget, which is awaited via its canvas before the last cell runs. Any
-    browser console error fails the run, and failures dump debug artifacts
-    (screenshot, page HTML, console log) into the server root.
+    a widget, which is awaited via its canvas before the last cell runs. When
+    ``check`` is given it runs after the widget has mounted. Any browser console
+    error fails the run, and failures dump debug artifacts (screenshot, page
+    HTML, console log) into the server root.
     """
     for marker in (DONE_MARKER, ERROR_MARKER):
         (server.root / marker).unlink(missing_ok=True)
@@ -283,6 +403,8 @@ def run_notebook_in_browser(server: JupyterServer, cells: Sequence[str]) -> None
                 workspace = uuid.uuid4().hex[:8]
                 page.goto(f"{server.url}/lab/workspaces/{workspace}/tree/{notebook_name}")
                 _execute_notebook_in_browser(page, cells)
+                if check is not None:
+                    check(page)
                 _await_notebook_markers(server)
             except Exception:
                 _dump_debug_artifacts(server, page, console_messages)
@@ -291,3 +413,32 @@ def run_notebook_in_browser(server: JupyterServer, cells: Sequence[str]) -> None
             browser.close()
     if console_errors:
         raise RuntimeError(f"browser console errors: {console_errors}")
+
+
+def run_marimo_app_in_browser(server: MarimoServer, check: Callable[[Page], None]) -> None:
+    """Open the Marimo app served by ``server`` in headless Chrome and run ``check``.
+
+    Waits for the graph widget to mount (its canvas inside the scope wrapper)
+    before invoking ``check``, which performs the assertions. Failures dump
+    debug artifacts (screenshot, page HTML, console log) into the server root.
+    """
+    console_messages: list[str] = []
+
+    def record_console(message: ConsoleMessage) -> None:
+        console_messages.append(f"{message.type}: {message.text}")
+
+    with sync_playwright() as playwright:
+        browser = _launch_chromium(playwright)
+        try:
+            page = browser.new_page(viewport={"width": 1280, "height": 900})
+            page.on("console", record_console)
+            page.on("pageerror", lambda error: console_messages.append(f"uncaught page error: {error}"))
+            try:
+                page.goto(server.url, wait_until="load")
+                page.wait_for_selector("[data-neo4j-viz-ndl] canvas", timeout=WIDGET_MOUNT_TIMEOUT * 1000)
+                check(page)
+            except Exception:
+                _dump_debug_artifacts(server, page, console_messages)
+                raise
+        finally:
+            browser.close()
