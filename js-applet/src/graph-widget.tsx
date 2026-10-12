@@ -2,7 +2,7 @@ import { createRender, useModel, useModelState } from "@anywidget/react";
 import { Gesture, GraphSelection, GraphVisualization } from "@neo4j-ndl/react-graph";
 import type NVL from "@neo4j-nvl/base";
 import type { Layout, NvlOptions } from "@neo4j-nvl/base";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   SerializedNode,
   SerializedRelationship,
@@ -79,8 +79,8 @@ export type SnapshotMessage = {
   dataUrl: string;
 };
 
-/** How long to wait after the first layout for the zoom-to-fit transition to finish. */
-const SNAPSHOT_FIT_DELAY_MS = 500;
+/** How long to wait after the last change before taking a snapshot. */
+const SNAPSHOT_DELAY_MS = 500;
 
 export type WidgetData = {
   nodes: SerializedNode[];
@@ -419,31 +419,33 @@ function GraphWidget() {
     return () => model.off("msg:custom", onSaveRequest);
   }, [model]);
 
-  const snapshotTakenRef = useRef(false);
   const [snapshotUrl, setSnapshotUrl] = useState<string>();
+  const snapshotTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const scheduleSnapshot = useCallback(() => {
+    if (typeof model.send !== "function") return;
+    clearTimeout(snapshotTimerRef.current);
+    snapshotTimerRef.current = setTimeout(() => {
+      const background = wrapperRef.current?.querySelector(".ndl-graph-visualization");
+      const dataUrl = nvlRef.current?.getImageDataUrl({
+        backgroundColor: background ? getComputedStyle(background).backgroundColor : undefined,
+      });
+      if (!dataUrl) return;
+      model.send({ kind: "snapshot", dataUrl } satisfies SnapshotMessage);
+      setSnapshotUrl(dataUrl);
+    }, SNAPSHOT_DELAY_MS);
+  }, [model]);
 
-  // NVL only reads its callbacks when it is created, so this fires for the first layout only.
-  const canSendSnapshot = typeof model.send === "function";
-  const nvlCallbacks = useMemo(
-    () => ({
-      onLayoutDone: () => {
-        if (!canSendSnapshot || snapshotTakenRef.current) return;
-        snapshotTakenRef.current = true;
+  useEffect(() => () => clearTimeout(snapshotTimerRef.current), []);
 
-        setTimeout(() => {
-          // NVL's canvas is transparent; the visible background is NDL's CSS on this element.
-          const background = wrapperRef.current?.querySelector(".ndl-graph-visualization");
-          const dataUrl = nvlRef.current?.getImageDataUrl({
-            backgroundColor: background ? getComputedStyle(background).backgroundColor : undefined,
-          });
-          if (!dataUrl) return;
-          model.send({ kind: "snapshot", dataUrl } satisfies SnapshotMessage);
-          setSnapshotUrl(dataUrl);
-        }, SNAPSHOT_FIT_DELAY_MS);
-      },
-    }),
-    [canSendSnapshot, model, resolvedTheme],
-  );
+  const nvlCallbacks = useMemo(() => ({ onLayoutDone: scheduleSnapshot }), [scheduleSnapshot]);
+  const isFirstRenderRef = useRef(true);
+  useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      return;
+    }
+    scheduleSnapshot();
+  }, [nodes, relationships, options, scheduleSnapshot]);
 
   useEffect(() => {
     if (!snapshotUrl || !wrapperRef.current) return;
