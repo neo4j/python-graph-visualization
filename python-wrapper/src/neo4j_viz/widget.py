@@ -130,6 +130,9 @@ def _decode_data_url(data_url: str) -> bytes:
     return urllib.parse.unquote(payload).encode("utf-8")
 
 
+_PNG_DATA_URL_PREFIX = "data:image/png;base64,"
+
+
 _ModelT = TypeVar("_ModelT", bound=pydantic.BaseModel)
 
 
@@ -497,8 +500,44 @@ class GraphWidget(anywidget.AnyWidget):
             self._pending_save_requests = {}
             self.on_msg(self._on_frontend_msg)
 
+    _image_slot_ids: list[str]
+
+    def _ipython_display_(self, **kwargs: Any) -> None:
+        from IPython.display import display
+
+        bundle = self._repr_mimebundle_(**kwargs)
+        data, metadata = bundle if isinstance(bundle, tuple) else (bundle, None)
+        if not data:
+            return
+
+        slot_id = f"neo4j-viz-image-{uuid.uuid4().hex}"
+        self._ensure_save_dispatcher()
+        if not hasattr(self, "_image_slot_ids"):
+            self._image_slot_ids = []
+        self._image_slot_ids.append(slot_id)
+        display({"text/plain": ""}, raw=True, display_id=slot_id)
+
+        display(data, raw=True, metadata=metadata)
+
+    def _on_snapshot(self, content: dict[str, Any]) -> None:
+        """Fill the image slot(s) of this widget with a PNG snapshot sent by the frontend."""
+        from IPython.display import update_display
+
+        data_url = content.get("dataUrl")
+        if not isinstance(data_url, str) or not data_url.startswith(_PNG_DATA_URL_PREFIX):
+            return
+        png_base64 = data_url[len(_PNG_DATA_URL_PREFIX) :]
+
+        for slot_id in getattr(self, "_image_slot_ids", []):
+            update_display(
+                {"image/png": png_base64, "text/plain": "Graph visualization"}, raw=True, display_id=slot_id
+            )
+
     def _on_frontend_msg(self, widget: object, content: object, buffers: object) -> None:
-        """Route `save_response` messages from the frontend to their awaiting :meth:`save` call."""
+        """Route messages from the frontend: `save_response` to the awaiting :meth:`save` call, `snapshot` to the output."""
+        if isinstance(content, dict) and content.get("kind") == "snapshot":
+            self._on_snapshot(content)
+            return
         if not isinstance(content, dict) or content.get("kind") != "save_response":
             return
         request_id = content.get("id")

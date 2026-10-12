@@ -67,6 +67,21 @@ export type SaveResponse = {
   error?: string;
 };
 
+/**
+ * A PNG snapshot of the rendered graph, sent to Python once after the first layout.
+ *
+ * A saved notebook only stores outputs the kernel emitted, so Python stores the snapshot as an
+ * `image/png` output next to the widget. Viewers that cannot run widgets (GitHub, nbviewer, PDF
+ * export) then show the image instead of nothing.
+ */
+export type SnapshotMessage = {
+  kind: "snapshot";
+  dataUrl: string;
+};
+
+/** How long to wait after the first layout for the zoom-to-fit transition to finish. */
+const SNAPSHOT_FIT_DELAY_MS = 500;
+
 export type WidgetData = {
   nodes: SerializedNode[];
   relationships: SerializedRelationship[];
@@ -244,6 +259,29 @@ export function handleSaveRequest(
   }
 }
 
+export function hideSnapshotImage(widgetEl: HTMLElement, src: string): () => void {
+  const root = widgetEl.closest(".jp-OutputArea") ?? document.body;
+  let target: HTMLElement | undefined;
+
+  // The image only reaches the DOM after a round trip through Python, so poll briefly.
+  const hide = () => {
+    const img = [...root.querySelectorAll("img")].find((el) => el.getAttribute("src") === src);
+    if (!img) return false;
+    target = img.closest<HTMLElement>(".jp-OutputArea-child") ?? img;
+    target.style.display = "none";
+    return true;
+  };
+
+  let attempts = 0;
+  const timer = setInterval(() => {
+    if (hide() || ++attempts >= 50) clearInterval(timer);
+  }, 100);
+
+  return () => {
+    clearInterval(timer);
+  };
+}
+
 function GraphWidget() {
   const [nodes] = useModelState<WidgetData["nodes"]>("nodes");
   const [relationships] = useModelState<WidgetData["relationships"]>("relationships");
@@ -381,6 +419,37 @@ function GraphWidget() {
     return () => model.off("msg:custom", onSaveRequest);
   }, [model]);
 
+  const snapshotTakenRef = useRef(false);
+  const [snapshotUrl, setSnapshotUrl] = useState<string>();
+
+  // NVL only reads its callbacks when it is created, so this fires for the first layout only.
+  const canSendSnapshot = typeof model.send === "function";
+  const nvlCallbacks = useMemo(
+    () => ({
+      onLayoutDone: () => {
+        if (!canSendSnapshot || snapshotTakenRef.current) return;
+        snapshotTakenRef.current = true;
+
+        setTimeout(() => {
+          // NVL's canvas is transparent; the visible background is NDL's CSS on this element.
+          const background = wrapperRef.current?.querySelector(".ndl-graph-visualization");
+          const dataUrl = nvlRef.current?.getImageDataUrl({
+            backgroundColor: background ? getComputedStyle(background).backgroundColor : undefined,
+          });
+          if (!dataUrl) return;
+          model.send({ kind: "snapshot", dataUrl } satisfies SnapshotMessage);
+          setSnapshotUrl(dataUrl);
+        }, SNAPSHOT_FIT_DELAY_MS);
+      },
+    }),
+    [canSendSnapshot, model, resolvedTheme],
+  );
+
+  useEffect(() => {
+    if (!snapshotUrl || !wrapperRef.current) return;
+    return hideSnapshotImage(wrapperRef.current, snapshotUrl);
+  }, [snapshotUrl]);
+
   const [neoNodes, neoRelationships] = useMemo(
     () => [transformNodes(nodes ?? []), transformRelationships(relationships ?? [])],
     [nodes, relationships],
@@ -471,6 +540,7 @@ function GraphWidget() {
           layout={layout}
           setLayout={setLayout}
           nvlOptions={nvlOptionsWithoutWorkers}
+          nvlCallbacks={nvlCallbacks}
           nvlRef={nvlRef}
           zoom={zoom}
           pan={pan}
