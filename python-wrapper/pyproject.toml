@@ -97,7 +97,8 @@ Issues = "https://github.com/neo4j/python-graph-visualization/issues"
 Documentation = "https://neo4j.com/docs/python-graph-visualization/"
 
 [tool.setuptools]
-include-package-data = true
+# use the explicit package-data list below instead.
+include-package-data = false
 
 [tool.setuptools.packages.find]
 where = ["src"] # list of folders that contain the packages (["."] by default)
