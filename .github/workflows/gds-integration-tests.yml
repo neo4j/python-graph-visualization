@@ -28,6 +28,13 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Patch eMudhra CA compromise (CVE-2026-111943)
+        shell: bash
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install --only-upgrade -y ca-certificates
+          sudo update-ca-certificates --fresh
 
       - name: Install uv and set the Python version
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0

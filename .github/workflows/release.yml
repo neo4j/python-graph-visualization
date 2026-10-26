@@ -37,6 +37,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
+      - name: Patch eMudhra CA compromise (CVE-2026-111943)
+        shell: bash
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install --only-upgrade -y ca-certificates
+          sudo update-ca-certificates --fresh
 
       - name: Install uv and set the Python version
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
@@ -64,6 +71,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
+      - name: Patch eMudhra CA compromise (CVE-2026-111943)
+        shell: bash
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install --only-upgrade -y ca-certificates
+          sudo update-ca-certificates --fresh
 
       - name: Create or update the draft release
         id: draft
@@ -103,6 +117,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.prerelease.outputs.sha }}
+      - name: Patch eMudhra CA compromise (CVE-2026-111943)
+        shell: bash
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install --only-upgrade -y ca-certificates
+          sudo update-ca-certificates --fresh
 
       - name: Install uv and set the Python version
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
