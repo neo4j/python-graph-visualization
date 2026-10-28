@@ -3,6 +3,9 @@
   "version": "0.3.7",
   "license": "GPL-3.0-only",
   "type": "module",
+  "engines": {
+    "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
+  },
   "scripts": {
     "dev": "concurrently -n widget,html,jupyter -c cyan,magenta,green \"npm:dev:widget\" \"npm:dev:html\" \"npm:dev:jupyter\"",
     "dev:widget": "vite build --watch",
