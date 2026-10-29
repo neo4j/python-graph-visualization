@@ -81,7 +81,7 @@ In this section, we will provide some more specific information about how to wor
 
 ### Python development environment
 
-- Install Python 3.10+
+- Install Python 3.11+
 - We recommend installing [just](https://github.com/casey/just) for running commands
 
 Install the project's Python dependencies:
