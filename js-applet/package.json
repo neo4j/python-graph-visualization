@@ -27,7 +27,7 @@
     "@neo4j-nvl/base": "^2.0.0",
     "@neo4j-nvl/interaction-handlers": "^2.0.0",
     "@neo4j-nvl/react": "^2.0.0",
-    "@tanstack/react-table": "^9.3.1",
+    "@tanstack/react-table": "^8.21.3",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
