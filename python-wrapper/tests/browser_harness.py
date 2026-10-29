@@ -30,6 +30,7 @@ import nbformat
 from playwright.sync_api import (
     Browser,
     ConsoleMessage,
+    Locator,
     Page,
     Playwright,
     expect,
@@ -41,9 +42,10 @@ from playwright.sync_api import (
 
 SERVER_START_TIMEOUT = 60
 LAB_LOAD_TIMEOUT = 40
-CELL_RUN_TIMEOUT = 15
-CELL_RUN_ATTEMPTS = 3
-CELL_COMPLETE_TIMEOUT = 90
+KERNEL_START_TIMEOUT = 60
+CELL_RUN_TIMEOUT = 20
+CELL_RUN_ATTEMPTS = 4
+CELL_COMPLETE_TIMEOUT = 180
 WIDGET_MOUNT_TIMEOUT = 30
 NOTEBOOK_RUN_TIMEOUT = 120
 
@@ -57,6 +59,10 @@ ERROR_MARKER = "_error.txt"
 # it in the next, so waiting for the canvas before the last cell generically
 # covers "the widget is mounted before we interact with it".
 WIDGET_CANVAS_SELECTOR = ".jp-OutputArea canvas"
+
+# Runs the selected cell. Unlike Shift+Enter this cannot be swallowed by a
+# dialog that grabbed keyboard focus.
+RUN_CELL_COMMAND = "notebook:run-cell-and-select-next"
 
 
 class BrowserUnavailableError(RuntimeError):
@@ -206,6 +212,41 @@ def _wait_until_ready(server: JupyterServer | MarimoServer, path: str) -> None:
     )
 
 
+def _wait_for_kernel_idle(server: JupyterServer, notebook: str) -> None:
+    """Wait until Lab has started the notebook's kernel.
+
+    JupyterLab starts the kernel asynchronously when the notebook opens. Pressing
+    Shift+Enter before it is ready is silently dropped, which on a loaded runner
+    surfaces later as "cell did not start executing". Poll the sessions REST API
+    (version-independent, unlike Lab's DOM) until the kernel reports idle.
+    """
+    deadline = time.monotonic() + KERNEL_START_TIMEOUT
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(f"{server.url}/api/sessions", timeout=2) as response:
+                sessions = json.loads(response.read().decode("utf-8"))
+        except (urllib.error.URLError, OSError):
+            sessions = []
+        for session in sessions:
+            kernel = session.get("kernel") or {}
+            if session.get("path") == notebook and kernel.get("execution_state") == "idle":
+                return
+        time.sleep(0.25)
+    raise RuntimeError(
+        f"the kernel for {notebook} did not become idle within {KERNEL_START_TIMEOUT}s; "
+        f"log:\n{_tail_text(server.log_path)}"
+    )
+
+
+def _tail_text(path: Path, lines: int = 40) -> str:
+    """Return the last ``lines`` of ``path``, for inlining into CI failure output."""
+    try:
+        content = path.read_text(errors="replace").splitlines()
+    except OSError:
+        return "<no server log>"
+    return "\n".join(content[-lines:])
+
+
 def _launch_chromium(playwright: Playwright) -> Browser:
     # Prefer the system Chrome (also preinstalled on CI runners) so that no
     # `playwright install` download is needed; fall back to Playwright's
@@ -234,30 +275,43 @@ def _accept_visible_dialogs(page: Page) -> None:
         page.wait_for_timeout(300)
 
 
+def _cell_start_error(prompt: Locator) -> AssertionError | None:
+    """Return the timeout error if the prompt still shows an unqueued cell."""
+    try:
+        # A queued or running cell shows [*]:, a finished one [n]:
+        expect(prompt).not_to_have_text("[ ]:", timeout=CELL_RUN_TIMEOUT * 1000)
+    except AssertionError as exc:
+        return exc
+    return None
+
+
 def _run_cell(page: Page, index: int) -> None:
     cell = page.locator(".jp-Cell").nth(index)
     prompt = cell.locator(".jp-InputArea-prompt")
 
-    # The run command can be swallowed while JupyterLab is still settling —
-    # e.g. a kernel-picker dialog grabbing keyboard focus after the dialog
-    # sweep, or a kernel that has not finished starting on a slow runner. If
-    # the prompt is still "[ ]:" nothing was queued, so re-pressing is safe.
+    # The run command can be swallowed while JupyterLab is still settling — e.g.
+    # a kernel-picker dialog grabbing keyboard focus after the dialog sweep. If
+    # the prompt is still "[ ]:" nothing was queued, so re-trying is safe. Each
+    # attempt tries the keyboard first, then the toolbar's Run button, which a
+    # focus-stealing dialog cannot swallow.
     start_error: AssertionError | None = None
     for _ in range(CELL_RUN_ATTEMPTS):
         _accept_visible_dialogs(page)
         cell.click()
         page.keyboard.press("Shift+Enter")
-        try:
-            # A queued or running cell shows [*]:, a finished one [n]:
-            expect(prompt).not_to_have_text("[ ]:", timeout=CELL_RUN_TIMEOUT * 1000)
-            start_error = None
+        start_error = _cell_start_error(prompt)
+        if start_error is None:
             break
-        except AssertionError as exc:
-            start_error = exc
+        run_button = page.locator(f'.jp-NotebookPanel-toolbar [data-command="{RUN_CELL_COMMAND}"]')
+        if run_button.count():
+            run_button.first.click()
+            start_error = _cell_start_error(prompt)
+            if start_error is None:
+                break
     if start_error is not None:
         raise AssertionError(
-            f"cell {index} did not start executing after Shift+Enter (prompt is still "
-            f"{prompt.text_content()!r}; a dialog may be blocking keyboard input)"
+            f"cell {index} did not start executing (prompt is still {prompt.text_content()!r}; "
+            f"a dialog may be blocking input and the kernel may not have started)"
         ) from start_error
     # Also wait for the cell to finish (its prompt gets an execution count): a slow
     # kernel — e.g. cold imports on a loaded CI runner — would otherwise eat into
@@ -402,7 +456,15 @@ def run_notebook_in_browser(
                 # notebook as an extra tab (and extra .jp-Cell elements).
                 workspace = uuid.uuid4().hex[:8]
                 page.goto(f"{server.url}/lab/workspaces/{workspace}/tree/{notebook_name}")
-                _execute_notebook_in_browser(page, cells)
+                _wait_for_kernel_idle(server, notebook_name)
+                try:
+                    _execute_notebook_in_browser(page, cells)
+                except Exception as exc:
+                    # Cell-execution failures are usually kernel-side, and the
+                    # pytest tmp artifacts never reach CI logs — inline the log.
+                    raise RuntimeError(
+                        f"{exc}\n--- jupyter-server.log tail ---\n{_tail_text(server.log_path)}"
+                    ) from exc
                 if check is not None:
                     check(page)
                 _await_notebook_markers(server)
