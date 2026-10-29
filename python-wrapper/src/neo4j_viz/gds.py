@@ -153,8 +153,7 @@ def from_gds(
             gds, G_fetched, node_properties_by_label, node_properties_by_label.keys(), db_node_properties
         )
         if property_name is not None:
-            for df in node_dfs.values():
-                df.drop(columns=[property_name], inplace=True)
+            node_dfs = {lbl: df.drop(columns=[property_name]) for lbl, df in node_dfs.items()}
 
         rel_dfs = _fetch_rel_dfs(gds, G_fetched)
     finally:
@@ -163,16 +162,19 @@ def from_gds(
         elif property_name is not None:
             _catalog(gds).node_properties.drop(G_fetched, node_properties=[property_name])
 
-    for df in node_dfs.values():
-        if property_name is not None and property_name in df.columns:
-            df.drop(columns=[property_name], inplace=True)
+    if property_name is not None:
+        node_dfs = {
+            lbl: df.drop(columns=[property_name]) if property_name in df.columns else df for lbl, df in node_dfs.items()
+        }
 
     node_props_df = pd.concat(node_dfs.values(), ignore_index=True, axis=0).drop_duplicates(subset=["nodeId"])
 
-    for lbl, df in node_dfs.items():
+    for lbl in node_dfs:
+        df = node_dfs[lbl]
         if "labels" in all_gds_properties:
-            df.rename(columns={"labels": "__labels"}, inplace=True)
+            df = df.rename(columns={"labels": "__labels"})
         df["labels"] = lbl
+        node_dfs[lbl] = df
 
     node_labels_df = pd.concat([df[["nodeId", "labels"]] for df in node_dfs.values()], ignore_index=True, axis=0)
     node_labels_df = node_labels_df.groupby("nodeId").agg({"labels": list})
