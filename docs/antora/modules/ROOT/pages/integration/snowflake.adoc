@@ -1,7 +1,7 @@
 = Snowflake tables
 
 The `neo4j-viz` library provides a convenience method for importing data from link:https://docs.snowflake.com/[Snowflake tables].
-It requires and additional dependency to be installed, which you can do by running:
+It requires an additional dependency to be installed, which you can do by running:
 
 [source, console]
 ----
@@ -17,7 +17,7 @@ The `from_snowflake` method takes two mandatory positional parameters:
 * A link:https://neo4j.com/docs/snowflake-graph-analytics/current/jobs/#jobs-project[project configuration] as a dictionary, that specifies how you want your tables to be projected as a graph.
 This configuration is the same as the project configuration of the link:https://neo4j.com/docs/snowflake-graph-analytics/current/[Neo4j Snowflake Graph Analytics application].
 
-You can further customize the visualization after the _VisualizationGraph_ has been created, by using the methods described in the link:{api-docs-uri}/customizing/[Customizing the visualization] section.
+You can further customize the visualization after the _VisualizationGraph_ has been created, by using the methods described in the xref:customizing.adoc[Customizing the visualization] section.
 
 == Default behavior
 
@@ -31,6 +31,8 @@ as an interactive widget using link:{api-docs-uri}/visualization-graph/#neo4j_vi
 
 [source, python]
 ----
+import os
+
 from snowflake.snowpark import Session
 from neo4j_viz.snowflake import from_snowflake
 
@@ -42,6 +44,8 @@ connection_parameters = {
     "role": os.environ.get("SNOWFLAKE_ROLE"),
     "warehouse": os.environ.get("SNOWFLAKE_WAREHOUSE"),
 }
+
+session = Session.builder.configs(connection_parameters).create()
 
 session.sql(
     "CREATE OR REPLACE TABLE EXAMPLE_DB.DATA_SCHEMA.PERSONS (NODEID VARCHAR);"
