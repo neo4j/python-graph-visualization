@@ -3,18 +3,22 @@
 
 For each image, a disposable JupyterLab server is booted, a distilled cell
 sequence reproducing the corresponding example's data and styling is run in
-headless Chrome, and the rendered graph is saved via ``GraphWidget.save()``.
-The images are copied back to their repository locations. The output format
-(PNG or SVG) is derived from each target's file ending.
+headless Chrome, and the whole widget element (graph canvas plus its UI chrome:
+toolbar, search, legend) is screenshotted. The images are copied back to their
+repository locations.
 
-All graphs are built locally without a database, via the toy graph from the
-getting-started guide and the neo4j-example's CREATE query through the
-``from_gql_create`` GQL integration. Run from anywhere inside the repo.
+Most graphs are built locally without a database, via the toy graph from the
+getting-started guide and the examples' CREATE queries through the
+``from_gql_create`` GQL integration. The GDS image needs a running Graph Data
+Science instance: set ``NEO4J_URI`` (see ``just local-neo4j-setup``) to include
+it, otherwise that spec is skipped. Run from anywhere inside the repo.
 """
 
 from __future__ import annotations
 
 import argparse
+import functools
+import os
 import shutil
 import struct
 import sys
@@ -22,18 +26,32 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from playwright.sync_api import Page
+
 GIT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(GIT_ROOT / "python-wrapper"))
 
 from tests.browser_harness import (
     DONE_MARKER,
-    ERROR_MARKER,
     BrowserUnavailableError,
     jupyter_server,
     run_notebook_in_browser,
 )
 
 _ANTORA_IMAGES = GIT_ROOT / "docs" / "antora" / "modules" / "ROOT" / "images"
+_EXAMPLES = GIT_ROOT / "examples"
+
+# The widget wrapper element: the graph canvas plus its UI chrome (toolbar,
+# search, legend). Screenshotting it captures the widget as a user sees it.
+_WIDGET_SELECTOR = '[data-neo4j-viz-ndl="true"]'
+# The canvas mounts before the force-directed layout settles, so give the
+# widget a moment to paint before capturing it.
+_WIDGET_SETTLE_MS = 3000
+# JupyterLab chrome that would otherwise overlap the widget in the capture.
+_CHROME_HIDE_CSS = (
+    ".jp-NotebookPanel-toolbar, .jp-Notebook-toolbar, .jp-Notification, "
+    ".jp-Notification-Stack, .jp-Dialog, .jp-StatusBar { display: none !important; }"
+)
 
 _TOY_GRAPH_CELLS = """\
 from neo4j_viz import Node, Relationship, VisualizationGraph
@@ -104,6 +122,73 @@ VG = from_gql_create(
 )
 """
 
+# The graph from examples/snowflake-example.ipynb, built without Snowflake via
+# the GQL CREATE integration. The labels stand in for the Snowflake table names,
+# so the captions and colors match what from_snowflake produces.
+_SNOWFLAKE_CELLS = """\
+from neo4j_viz.gql_create import from_gql_create
+
+VG = from_gql_create(
+    \"\"\"
+    CREATE
+      (alice:PERSONS {SNOWFLAKEID: 'Alice'}),
+      (bob:PERSONS {SNOWFLAKEID: 'Bob'}),
+      (carol:PERSONS {SNOWFLAKEID: 'Carol'}),
+      (dave:PERSONS {SNOWFLAKEID: 'Dave'}),
+      (eve:PERSONS {SNOWFLAKEID: 'Eve'}),
+
+      (guitar:INSTRUMENTS {SNOWFLAKEID: 'Guitar'}),
+      (synthesizer:INSTRUMENTS {SNOWFLAKEID: 'Synthesizer'}),
+      (bongos:INSTRUMENTS {SNOWFLAKEID: 'Bongos'}),
+      (trumpet:INSTRUMENTS {SNOWFLAKEID: 'Trumpet'}),
+
+      (alice)-[:LIKES]->(guitar),
+      (alice)-[:LIKES]->(synthesizer),
+      (alice)-[:LIKES]->(bongos),
+      (bob)-[:LIKES]->(guitar),
+      (bob)-[:LIKES]->(synthesizer),
+      (carol)-[:LIKES]->(bongos),
+      (dave)-[:LIKES]->(guitar),
+      (dave)-[:LIKES]->(trumpet),
+      (dave)-[:LIKES]->(bongos)
+    \"\"\"
+)
+"""
+
+# The Cora graph from examples/gds-example.ipynb. Unlike the other specs this
+# needs a running GDS instance (see the module docstring).
+_GDS_CELLS = (
+    """\
+import os
+
+from graphdatascience import GraphDataScience
+
+gds = GraphDataScience(
+    os.environ["NEO4J_URI"],
+    auth=(os.environ.get("NEO4J_USERNAME", "neo4j"), os.environ.get("NEO4J_PASSWORD", "password")),
+)
+
+G = gds.graph.datasets.load_cora(graph_name="cora")
+gds.node_similarity.mutate(G, mutate_relationship_type="SIMILAR", mutate_property="similarity")
+gds.page_rank.mutate(G, mutate_property="pagerank")
+gds.louvain.mutate(G, mutate_property="componentId")
+""",
+    """\
+import matplotlib.colors as mcolors
+from palettable.colorbrewer.qualitative import Dark2_7
+
+from neo4j_viz.gds import from_gds
+
+VG = from_gds(gds, G, max_node_count=100)
+VG.resize_nodes(property="pagerank")
+
+number_of_components = len({n.properties["componentId"] for n in VG.nodes})
+color_map = Dark2_7.mpl_colormap.resampled(number_of_components)
+colors = [mcolors.rgb2hex(color_map(i)) for i in range(number_of_components)]
+VG.color_nodes(property="componentId", colors=colors, override=True)
+""",
+)
+
 
 @dataclass(frozen=True)
 class ImageSpec:
@@ -111,18 +196,18 @@ class ImageSpec:
 
     name: str
     target: Path
-    # Widget canvas size in pixels; for PNG output this is also the expected
-    # image size. SVG output covers the entire graph, so the widget size only
-    # needs to be large enough to mount the widget.
+    # Widget canvas size in pixels; the screenshot is the same size (the widget
+    # element's bounding box).
     size: tuple[int, int]
     # Cells up to and including the one that displays the widget. The harness
-    # waits for the widget's canvas before running the generated save cell.
+    # waits for the widget's canvas before running the generated marker cell.
     cells: tuple[str, ...] = ()
-
-    @property
-    def fmt(self) -> str:
-        """The output format, derived from the target's file ending."""
-        return self.target.suffix.lstrip(".")
+    # Extra locations to copy the produced image to (e.g. the examples/ copy
+    # that a notebook references alongside the Antora page copy).
+    also_copy: tuple[Path, ...] = ()
+    # When set, the spec only runs if this environment variable is present. Used
+    # for images that need an external service (e.g. GDS via NEO4J_URI).
+    requires_env: str | None = None
 
     @property
     def filename(self) -> str:
@@ -136,30 +221,22 @@ def _render_cell(size: tuple[int, int]) -> str:
     )
 
 
-def _save_cell(spec: ImageSpec) -> str:
-    filename = spec.filename
-    if spec.fmt == "svg":
-        # SVG export covers the entire graph and defaults to a transparent
-        # background, so it blends with the docs page.
-        save_call = f"await widget.save({filename!r})"
-        output_check = (
-            f"assert Path({filename!r}).read_text().lstrip().startswith('<svg')"
-        )
-    else:
-        save_call = f"await widget.save({filename!r}, background_color='#ffffff')"
-        output_check = (
-            f"assert Path({filename!r}).read_bytes()[:8] == b'\\x89PNG\\r\\n\\x1a\\n'"
-        )
-    return f"""\
-import traceback
-from pathlib import Path
-try:
-    {save_call}
-    {output_check}
-    Path('{DONE_MARKER}').write_text('ok')
-except Exception:
-    Path('{ERROR_MARKER}').write_text(traceback.format_exc())
-"""
+def _marker_cell() -> str:
+    """A final cell that signals completion."""
+    return f"from pathlib import Path\nPath('{DONE_MARKER}').write_text('ok')\n"
+
+
+def _screenshot_widget(page: Page, target: Path, size: tuple[int, int]) -> None:
+    """Capture the whole widget element, UI chrome included."""
+    # Give the widget room so it is fully on screen (the notebook otherwise
+    # scrolls it partly out of view), then hide JupyterLab's own chrome so it
+    # does not bleed into the capture.
+    page.set_viewport_size({"width": size[0] + 600, "height": size[1] + 350})
+    page.add_style_tag(content=_CHROME_HIDE_CSS)
+    widget = page.locator(_WIDGET_SELECTOR)
+    widget.scroll_into_view_if_needed()
+    page.wait_for_timeout(_WIDGET_SETTLE_MS)
+    widget.screenshot(path=str(target))
 
 
 def _png_size(path: Path) -> tuple[int, int]:
@@ -172,43 +249,64 @@ def _png_size(path: Path) -> tuple[int, int]:
 
 def _validate_produced(spec: ImageSpec, produced: Path) -> str | None:
     """Return an error message when the produced image does not look right."""
-    if spec.fmt == "svg":
-        text = produced.read_text(encoding="utf-8", errors="replace").lstrip()
-        if not text.startswith("<svg"):
-            return "the file does not start with '<svg'"
-        return None
     actual_size = _png_size(produced)
-    if actual_size != spec.size:
-        return f"expected a {spec.size[0]}x{spec.size[1]} image, got {actual_size[0]}x{actual_size[1]}"
+    # A browser screenshot includes the widget chrome, so allow a couple of
+    # pixels of rounding relative to the configured canvas size.
+    if abs(actual_size[0] - spec.size[0]) > 4 or abs(actual_size[1] - spec.size[1]) > 4:
+        return f"expected roughly a {spec.size[0]}x{spec.size[1]} image, got {actual_size[0]}x{actual_size[1]}"
     return None
 
 
 def _specs() -> list[ImageSpec]:
-    guide_size = (1588, 1200)
-    readme_size = (1392, 1200)
+    widget_size = (1200, 900)
 
     return [
         ImageSpec(
-            name="getting-started-graph",
-            target=_ANTORA_IMAGES / "getting-started-graph.svg",
-            size=guide_size,
-            cells=(_TOY_GRAPH_CELLS, _render_cell(guide_size)),
+            name="example_graph",
+            target=_EXAMPLES / "example_graph.png",
+            size=widget_size,
+            cells=(_EXAMPLE_CREATE_CELLS, _render_cell(widget_size)),
         ),
         ImageSpec(
-            name="getting-started-graph-colored",
-            target=_ANTORA_IMAGES / "getting-started-graph-colored.svg",
-            size=guide_size,
+            name="getting-started-widget",
+            target=_ANTORA_IMAGES / "getting-started-widget.png",
+            size=widget_size,
+            cells=(_TOY_GRAPH_CELLS, _render_cell(widget_size)),
+            also_copy=(_EXAMPLES / "getting-started-widget.png",),
+        ),
+        ImageSpec(
+            name="getting-started-widget-colored",
+            target=_ANTORA_IMAGES / "getting-started-widget-colored.png",
+            size=widget_size,
             cells=(
                 _TOY_GRAPH_CELLS,
                 "VG.color_nodes(field='caption')\n",
-                _render_cell(guide_size),
+                _render_cell(widget_size),
             ),
+            also_copy=(_EXAMPLES / "getting-started-widget-colored.png",),
         ),
         ImageSpec(
-            name="example_graph",
-            target=GIT_ROOT / "examples" / "example_graph.svg",
-            size=readme_size,
-            cells=(_EXAMPLE_CREATE_CELLS, _render_cell(readme_size)),
+            name="gds-example-graph",
+            target=_EXAMPLES / "gds-example-graph.png",
+            size=widget_size,
+            cells=(*_GDS_CELLS, _render_cell(widget_size)),
+            requires_env="NEO4J_URI",
+        ),
+        ImageSpec(
+            name="snowflake-example-graph",
+            target=_EXAMPLES / "example_instruments_1.png",
+            size=widget_size,
+            cells=(_SNOWFLAKE_CELLS, _render_cell(widget_size)),
+        ),
+        ImageSpec(
+            name="snowflake-example-graph-colored",
+            target=_EXAMPLES / "example_instruments_2.png",
+            size=widget_size,
+            cells=(
+                _SNOWFLAKE_CELLS,
+                _render_cell(widget_size),
+                "widget.color_nodes(property='SNOWFLAKEID', override=True)\n",
+            ),
         ),
     ]
 
@@ -234,21 +332,29 @@ def main() -> int:
             )
         specs = [spec for spec in specs if spec.name in set(args.names)]
 
-    unsupported = [spec.name for spec in specs if spec.fmt not in ("png", "svg")]
-    if unsupported:
-        parser.error(
-            f"unsupported image file ending for: {unsupported} (expected .png or .svg)"
-        )
-
     failures: list[str] = []
     with (
         tempfile.TemporaryDirectory(prefix="neo4j-viz-docs-images-") as tmp,
         jupyter_server(Path(tmp)) as server,
     ):
         for spec in specs:
+            if spec.requires_env and not os.environ.get(spec.requires_env):
+                print(
+                    f"Skipping {spec.name} (set {spec.requires_env} to regenerate)",
+                    flush=True,
+                )
+                continue
+
             print(f"Regenerating {spec.target.relative_to(GIT_ROOT)} ...", flush=True)
             try:
-                run_notebook_in_browser(server, [*spec.cells, _save_cell(spec)])
+                produced = server.root / spec.filename
+                run_notebook_in_browser(
+                    server,
+                    [*spec.cells, _marker_cell()],
+                    check=functools.partial(
+                        _screenshot_widget, target=produced, size=spec.size
+                    ),
+                )
             except BrowserUnavailableError as exc:
                 print(f"ERROR: {exc}", flush=True)
                 return 1
@@ -259,17 +365,16 @@ def main() -> int:
                 failures.append(spec.name)
                 continue
 
-            filename = spec.filename
-            produced = server.root / filename
             error = _validate_produced(spec, produced)
             if error:
                 print(f"ERROR {spec.name}: {error}", flush=True)
                 failures.append(spec.name)
                 continue
 
-            spec.target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(produced, spec.target)
-            print(f"  -> {spec.target.relative_to(GIT_ROOT)}", flush=True)
+            for destination in (spec.target, *spec.also_copy):
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(produced, destination)
+                print(f"  -> {destination.relative_to(GIT_ROOT)}", flush=True)
 
     if failures:
         print(f"Failed to regenerate: {', '.join(failures)}", flush=True)
