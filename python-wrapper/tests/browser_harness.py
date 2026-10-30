@@ -25,6 +25,7 @@ from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import nbformat
 from playwright.sync_api import (
@@ -46,6 +47,13 @@ KERNEL_START_TIMEOUT = 60
 CELL_RUN_TIMEOUT = 20
 CELL_RUN_ATTEMPTS = 4
 CELL_COMPLETE_TIMEOUT = 180
+# A started cell whose kernel never picks it up within this long had its run
+# lost (e.g. it went to a session that was still being wired up), so it gets
+# re-issued. A cell the kernel did run is left alone: the frontend prompt can
+# lag well behind it, e.g. while rendering an image for `save()`.
+CELL_STALL_GRACE = 10
+# How often to poll the prompt and the kernel state while waiting for a cell.
+CELL_POLL_INTERVAL = 0.5
 WIDGET_MOUNT_TIMEOUT = 30
 NOTEBOOK_RUN_TIMEOUT = 120
 
@@ -63,6 +71,9 @@ WIDGET_CANVAS_SELECTOR = ".jp-OutputArea canvas"
 # Runs the selected cell. Unlike Shift+Enter this cannot be swallowed by a
 # dialog that grabbed keyboard focus.
 RUN_CELL_COMMAND = "notebook:run-cell-and-select-next"
+
+# A finished cell shows its execution count in the prompt, e.g. "[3]:".
+CELL_COMPLETE_RE = re.compile(r"^\[\d+\]:$")
 
 
 class BrowserUnavailableError(RuntimeError):
@@ -212,6 +223,46 @@ def _wait_until_ready(server: JupyterServer | MarimoServer, path: str) -> None:
     )
 
 
+def _session_for_notebook(server: JupyterServer, notebook: str) -> dict[str, Any] | None:
+    """Return the Lab session dict for ``notebook``, or None when it has no session."""
+    try:
+        with urllib.request.urlopen(f"{server.url}/api/sessions", timeout=2) as response:
+            sessions = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError):
+        return None
+    if not isinstance(sessions, list):
+        return None
+    for session in sessions:
+        if isinstance(session, dict) and session.get("path") == notebook:
+            return dict(session)
+    return None
+
+
+def _kernel_execution_state(server: JupyterServer, notebook: str) -> str | None:
+    """Return the notebook kernel's execution state, or None when it has no kernel.
+
+    Uses the sessions REST API, which — unlike Lab's DOM — is version-independent.
+    """
+    session = _session_for_notebook(server, notebook)
+    if session is None:
+        return None
+    state = (session.get("kernel") or {}).get("execution_state")
+    return state if isinstance(state, str) else None
+
+
+def _delete_session(server: JupyterServer, notebook: str) -> None:
+    """Best-effort shutdown of the notebook's session so its kernel is not left running."""
+    session_id = (_session_for_notebook(server, notebook) or {}).get("id")
+    if not isinstance(session_id, str):
+        return
+    try:
+        request = urllib.request.Request(f"{server.url}/api/sessions/{session_id}", method="DELETE")
+        with urllib.request.urlopen(request, timeout=5):
+            pass
+    except (urllib.error.URLError, OSError):
+        pass
+
+
 def _wait_for_kernel_idle(server: JupyterServer, notebook: str) -> None:
     """Wait until Lab has started the notebook's kernel.
 
@@ -222,15 +273,8 @@ def _wait_for_kernel_idle(server: JupyterServer, notebook: str) -> None:
     """
     deadline = time.monotonic() + KERNEL_START_TIMEOUT
     while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{server.url}/api/sessions", timeout=2) as response:
-                sessions = json.loads(response.read().decode("utf-8"))
-        except (urllib.error.URLError, OSError):
-            sessions = []
-        for session in sessions:
-            kernel = session.get("kernel") or {}
-            if session.get("path") == notebook and kernel.get("execution_state") == "idle":
-                return
+        if _kernel_execution_state(server, notebook) == "idle":
+            return
         time.sleep(0.25)
     raise RuntimeError(
         f"the kernel for {notebook} did not become idle within {KERNEL_START_TIMEOUT}s; "
@@ -285,15 +329,15 @@ def _cell_start_error(prompt: Locator) -> AssertionError | None:
     return None
 
 
-def _run_cell(page: Page, index: int) -> None:
-    cell = page.locator(".jp-Cell").nth(index)
-    prompt = cell.locator(".jp-InputArea-prompt")
+def _issue_run(page: Page, cell: Locator, prompt: Locator) -> None:
+    """Press run for a cell until it leaves the unqueued state.
 
-    # The run command can be swallowed while JupyterLab is still settling — e.g.
-    # a kernel-picker dialog grabbing keyboard focus after the dialog sweep. If
-    # the prompt is still "[ ]:" nothing was queued, so re-trying is safe. Each
-    # attempt tries the keyboard first, then the toolbar's Run button, which a
-    # focus-stealing dialog cannot swallow.
+    The run command can be swallowed while JupyterLab is still settling — e.g. a
+    kernel-picker dialog grabbing keyboard focus after the dialog sweep. If the
+    prompt is still "[ ]:" nothing was queued, so re-trying is safe. Each attempt
+    tries the keyboard first, then the toolbar's Run button, which a
+    focus-stealing dialog cannot swallow.
+    """
     start_error: AssertionError | None = None
     for _ in range(CELL_RUN_ATTEMPTS):
         _accept_visible_dialogs(page)
@@ -301,26 +345,96 @@ def _run_cell(page: Page, index: int) -> None:
         page.keyboard.press("Shift+Enter")
         start_error = _cell_start_error(prompt)
         if start_error is None:
-            break
+            return
         run_button = page.locator(f'.jp-NotebookPanel-toolbar [data-command="{RUN_CELL_COMMAND}"]')
         if run_button.count():
             run_button.first.click()
             start_error = _cell_start_error(prompt)
             if start_error is None:
-                break
-    if start_error is not None:
-        raise AssertionError(
-            f"cell {index} did not start executing (prompt is still {prompt.text_content()!r}; "
-            f"a dialog may be blocking input and the kernel may not have started)"
-        ) from start_error
-    # Also wait for the cell to finish (its prompt gets an execution count): a slow
-    # kernel — e.g. cold imports on a loaded CI runner — would otherwise eat into
-    # the widget-mount timeout below, which is only meant to cover the frontend
-    # rendering the already-displayed widget.
-    expect(prompt).to_have_text(re.compile(r"^\[\d+\]:$"), timeout=CELL_COMPLETE_TIMEOUT * 1000)
+                return
+    raise AssertionError(
+        f"cell did not start executing (prompt is still {prompt.text_content()!r}; "
+        f"a dialog may be blocking input and the kernel may not have started)"
+    ) from start_error
 
 
-def _execute_notebook_in_browser(page: Page, cells: Sequence[str]) -> None:
+def _reissue_run(page: Page, cell: Locator) -> None:
+    """Re-issue a run for a cell whose previous execution was lost.
+
+    Uses the toolbar's Run button, which — unlike Shift+Enter — cannot be
+    swallowed by a dialog that grabbed keyboard focus.
+    """
+    _accept_visible_dialogs(page)
+    cell.click()
+    run_button = page.locator(f'.jp-NotebookPanel-toolbar [data-command="{RUN_CELL_COMMAND}"]')
+    if run_button.count():
+        run_button.first.click()
+    else:
+        page.keyboard.press("Shift+Enter")
+
+
+def _cell_finished(prompt: Locator) -> bool:
+    return bool(CELL_COMPLETE_RE.match((prompt.text_content() or "").strip()))
+
+
+def _wait_for_cell_completion(
+    page: Page, cell: Locator, prompt: Locator, server: JupyterServer, notebook: str, index: int
+) -> None:
+    """Wait for a started cell to finish, re-issuing it if its run never reached the kernel.
+
+    A slow kernel — e.g. cold imports on a loaded CI runner — legitimately keeps
+    the cell running, and the frontend prompt can lag well behind the kernel, so
+    we poll rather than wait blindly. If the kernel never picks the run up at
+    all, though, the run was lost before it could execute (typically because the
+    run command went to a session that was still being wired up), so it is
+    re-issued. Every cell this harness runs is idempotent — it rebuilds the
+    widget or rewrites the same files — so repeating one is safe.
+    """
+    deadline = time.monotonic() + CELL_COMPLETE_TIMEOUT
+    attempts = 1
+    ran = False
+    idle_since: float | None = None
+    while True:
+        if _cell_finished(prompt):
+            return
+        state = _kernel_execution_state(server, notebook)
+        now = time.monotonic()
+        if now >= deadline:
+            raise AssertionError(
+                f"cell {index} did not finish within {CELL_COMPLETE_TIMEOUT}s "
+                f"(prompt is {prompt.text_content()!r}, kernel is {state!r})"
+            )
+        if state == "busy":
+            ran = True
+            idle_since = None
+        elif idle_since is None:
+            idle_since = now
+        elif not ran and now - idle_since > CELL_STALL_GRACE:
+            # The kernel never picked the run up, so it was lost before it could
+            # execute (e.g. the run command went to a session that was still
+            # being wired up): re-issue it. A run that did execute is left alone
+            # — the frontend can lag well behind the kernel, e.g. while it
+            # renders an image for ``save()``.
+            if attempts >= CELL_RUN_ATTEMPTS:
+                raise AssertionError(
+                    f"cell {index} never reached the kernel after {attempts} attempts "
+                    f"(prompt is {prompt.text_content()!r}, kernel is {state!r})"
+                )
+            attempts += 1
+            _reissue_run(page, cell)
+            idle_since = None
+        time.sleep(CELL_POLL_INTERVAL)
+
+
+def _run_cell(page: Page, index: int, server: JupyterServer, notebook: str) -> None:
+    cell = page.locator(".jp-Cell").nth(index)
+    prompt = cell.locator(".jp-InputArea-prompt")
+
+    _issue_run(page, cell, prompt)
+    _wait_for_cell_completion(page, cell, prompt, server, notebook, index)
+
+
+def _execute_notebook_in_browser(page: Page, cells: Sequence[str], server: JupyterServer, notebook: str) -> None:
     expect(page.locator(".jp-Cell")).to_have_count(len(cells), timeout=LAB_LOAD_TIMEOUT * 1000)
     for index in range(len(cells)):
         if index == len(cells) - 1:
@@ -330,7 +444,7 @@ def _execute_notebook_in_browser(page: Page, cells: Sequence[str]) -> None:
             # hit the "not rendered yet" reply.
             page.wait_for_selector(WIDGET_CANVAS_SELECTOR, timeout=WIDGET_MOUNT_TIMEOUT * 1000)
         _accept_visible_dialogs(page)
-        _run_cell(page, index)
+        _run_cell(page, index, server, notebook)
 
 
 def _await_notebook_markers(server: JupyterServer) -> None:
@@ -458,7 +572,7 @@ def run_notebook_in_browser(
                 page.goto(f"{server.url}/lab/workspaces/{workspace}/tree/{notebook_name}")
                 _wait_for_kernel_idle(server, notebook_name)
                 try:
-                    _execute_notebook_in_browser(page, cells)
+                    _execute_notebook_in_browser(page, cells, server, notebook_name)
                 except Exception as exc:
                     # Cell-execution failures are usually kernel-side, and the
                     # pytest tmp artifacts never reach CI logs — inline the log.
@@ -473,6 +587,9 @@ def run_notebook_in_browser(
                 raise
         finally:
             browser.close()
+            # Best-effort: the kernel would otherwise outlive the run and can
+            # interfere with the next notebook driven by the same server.
+            _delete_session(server, notebook_name)
     if console_errors:
         raise RuntimeError(f"browser console errors: {console_errors}")
 
