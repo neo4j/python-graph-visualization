@@ -77,12 +77,13 @@ dev = [
     "python-dotenv",
 ]
 docs = [
-    # Sphinx is capped at 8.1.x: 8.2+ requires Python >=3.11 and Sphinx 9 requires >=3.12
-    # `enum_tools.autoenum` (removed `logger` from `sphinx.ext.autodoc`).
-    "sphinx==8.1.3",
-    "enum-tools[sphinx]",
-    "nbsphinx==0.9.8",
-    "nbsphinx-link==1.4.1",
+    # Docs are built on Python 3.13+ only (Sphinx 9.1+ requires it), so the whole
+    # group is gated on it rather than resolving an older Sphinx for 3.11/3.12.
+    # enum_tools.autoenum is no longer used: it fails on Sphinx 9, so the enums are
+    # documented with plain autoclass. The runtime enum-tools dependency stays.
+    "sphinx == 9.2.0; python_version >= '3.13'",
+    "nbsphinx==0.9.8; python_version >= '3.13'",
+    "nbsphinx-link==1.4.1; python_version >= '3.13'",
 ]
 notebook = [
     "ipykernel>=6.29.5",

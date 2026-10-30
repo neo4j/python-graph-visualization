@@ -38,7 +38,7 @@ jobs:
       - name: Install uv and set the Python version
         uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
-          python-version: "3.11"
+          python-version: "3.13"
           enable-cache: true
 
       - name: Build the JS applet

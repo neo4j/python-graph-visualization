@@ -13,11 +13,11 @@ set -o pipefail
 
 (
     cd "${PY_PROJECT}"
-    uv sync --group dev --group docs --extra pandas --extra neo4j --extra gds --extra snowflake
+    uv sync --python 3.13 --group dev --group docs --extra pandas --extra neo4j --extra gds --extra snowflake
 )
 
 # Build the Sphinx API reference (the same build CI runs).
-uv run --project "${PY_PROJECT}" bash "${GIT_ROOT}/scripts/render_api_docs.sh"
+uv run --project "${PY_PROJECT}" --python 3.13 bash "${GIT_ROOT}/scripts/render_api_docs.sh"
 
 # Build the Antora manual for preview (bypassing the `postbuild` server hook).
 (
