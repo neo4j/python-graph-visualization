@@ -148,7 +148,9 @@ def check_changelog() -> bool:
     if not changelog.exists():
         print(red("ERROR: changelog.md not found."))
         return False
-    if not any(line.startswith("- ") for line in changelog.read_text().splitlines()):
+    if not any(
+        line.startswith(("- ", "* ")) for line in changelog.read_text().splitlines()
+    ):
         print(
             red(
                 "ERROR: changelog.md has no entries; add release notes before releasing."
