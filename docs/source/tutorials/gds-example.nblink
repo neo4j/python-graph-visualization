@@ -1,3 +1,6 @@
 {
-  "path": "../../../examples/gds-example.ipynb"
+  "path": "../../../examples/gds-example.ipynb",
+  "extra-media": [
+    "../../../examples/gds-example-graph.png"
+  ]
 }

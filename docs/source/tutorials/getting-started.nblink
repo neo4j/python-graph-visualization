@@ -1,3 +1,7 @@
 {
-  "path": "../../../examples/getting-started.ipynb"
+  "path": "../../../examples/getting-started.ipynb",
+  "extra-media": [
+    "../../../examples/getting-started-widget.png",
+    "../../../examples/getting-started-widget-colored.png"
+  ]
 }

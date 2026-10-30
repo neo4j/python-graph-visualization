@@ -18,7 +18,7 @@ Each integration page includes installation instructions for the needed dependen
 
 === Notebook tutorials
 
-You need to install some additional dependencies to run the link:{tutorials-docs-uri}[Jupyter notebook tutorials]:
+You need to install some additional dependencies to run the link:{tutorials-docs-uri}[tutorials]:
 
 [source, console]
 ----
