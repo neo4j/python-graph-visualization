@@ -40,6 +40,7 @@ from tests.browser_harness import (
 
 _ANTORA_IMAGES = GIT_ROOT / "docs" / "antora" / "modules" / "ROOT" / "images"
 _EXAMPLES = GIT_ROOT / "examples"
+_EXAMPLE_IMAGES = _EXAMPLES / "images"
 
 # The widget wrapper element: the graph canvas plus its UI chrome (toolbar,
 # search, legend). Screenshotting it captures the widget as a user sees it.
@@ -263,7 +264,7 @@ def _specs() -> list[ImageSpec]:
     return [
         ImageSpec(
             name="example_graph",
-            target=_EXAMPLES / "example_graph.png",
+            target=_EXAMPLE_IMAGES / "example_graph.png",
             size=widget_size,
             cells=(_EXAMPLE_CREATE_CELLS, _render_cell(widget_size)),
         ),
@@ -272,7 +273,7 @@ def _specs() -> list[ImageSpec]:
             target=_ANTORA_IMAGES / "getting-started-widget.png",
             size=widget_size,
             cells=(_TOY_GRAPH_CELLS, _render_cell(widget_size)),
-            also_copy=(_EXAMPLES / "getting-started-widget.png",),
+            also_copy=(_EXAMPLE_IMAGES / "getting-started-widget.png",),
         ),
         ImageSpec(
             name="getting-started-widget-colored",
@@ -283,24 +284,24 @@ def _specs() -> list[ImageSpec]:
                 "VG.color_nodes(field='caption')\n",
                 _render_cell(widget_size),
             ),
-            also_copy=(_EXAMPLES / "getting-started-widget-colored.png",),
+            also_copy=(_EXAMPLE_IMAGES / "getting-started-widget-colored.png",),
         ),
         ImageSpec(
             name="gds-example-graph",
-            target=_EXAMPLES / "gds-example-graph.png",
+            target=_EXAMPLE_IMAGES / "gds-example-graph.png",
             size=widget_size,
             cells=(*_GDS_CELLS, _render_cell(widget_size)),
             requires_env="NEO4J_URI",
         ),
         ImageSpec(
             name="snowflake-example-graph",
-            target=_EXAMPLES / "example_instruments_1.png",
+            target=_EXAMPLE_IMAGES / "example_instruments_1.png",
             size=widget_size,
             cells=(_SNOWFLAKE_CELLS, _render_cell(widget_size)),
         ),
         ImageSpec(
             name="snowflake-example-graph-colored",
-            target=_EXAMPLES / "example_instruments_2.png",
+            target=_EXAMPLE_IMAGES / "example_instruments_2.png",
             size=widget_size,
             cells=(
                 _SNOWFLAKE_CELLS,
