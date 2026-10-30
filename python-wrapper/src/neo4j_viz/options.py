@@ -1,18 +1,16 @@
 from __future__ import annotations
 
 import warnings
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal, Optional, Union
 
-import enum_tools.documentation
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from pydantic.alias_generators import to_camel
 
 from .colors import ColorSpace
 
 
-@enum_tools.documentation.document_enum
-class CaptionAlignment(str, Enum):
+class CaptionAlignment(StrEnum):
     """
     The alignment of the caption text for nodes and relationships.
     """
@@ -22,8 +20,7 @@ class CaptionAlignment(str, Enum):
     BOTTOM = "bottom"
 
 
-@enum_tools.documentation.document_enum
-class Layout(str, Enum):
+class Layout(StrEnum):
     FORCE_DIRECTED = "forcedirected"
     """
     The force-directed layout uses a physics simulation to position the nodes.
@@ -43,8 +40,7 @@ class Layout(str, Enum):
     CIRCULAR = "circular"
 
 
-@enum_tools.documentation.document_enum
-class Direction(str, Enum):
+class Direction(StrEnum):
     """
     The direction in which the layout should be oriented
     """
@@ -55,8 +51,7 @@ class Direction(str, Enum):
     DOWN = "down"
 
 
-@enum_tools.documentation.document_enum
-class Packing(str, Enum):
+class Packing(StrEnum):
     """
     The packing method to be used
     """
@@ -106,8 +101,7 @@ def construct_layout_options(layout: Layout, options: dict[str, Any]) -> Optiona
     )
 
 
-@enum_tools.documentation.document_enum
-class Renderer(str, Enum):
+class Renderer(StrEnum):
     """
     The renderer used to render the visualization.
     """
@@ -139,8 +133,7 @@ class Renderer(str, Enum):
             )
 
 
-@enum_tools.documentation.document_enum
-class SelectionMode(str, Enum):
+class SelectionMode(StrEnum):
     """
     The selection mode (a.k.a. gesture) that determines how dragging on the canvas behaves.
     """
@@ -160,8 +153,7 @@ class SelectionMode(str, Enum):
     """
 
 
-@enum_tools.documentation.document_enum
-class WidgetLayout(str, Enum):
+class WidgetLayout(StrEnum):
     """The layout values in the JS/NVL wire format, as stored in :class:`WidgetOptions`."""
 
     D3_FORCE = "d3Force"

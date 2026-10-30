@@ -917,19 +917,6 @@ wheels = [
 ]
 
 [[package]]
-name = "enum-tools"
-version = "0.13.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pygments" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6d/87/50091e20c2765aa495b24521844a7d8f7041d48e4f9b47dd928cd38c8606/enum_tools-0.13.0.tar.gz", hash = "sha256:0d13335e361d300dc0f8fd82c8cf9951417246f9676144f5ee1761eb690228eb", size = 18904, upload-time = "2025-04-17T15:26:59.412Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/84/45/cf8a8df3ebe78db691ab54525d552085b67658877f0334f4b0c08c43b518/enum_tools-0.13.0-py3-none-any.whl", hash = "sha256:e0112b16767dd08cb94105844b52770eae67ece6f026916a06db4a3d330d2a95", size = 22366, upload-time = "2025-04-17T15:26:58.34Z" },
-]
-
-[[package]]
 name = "executing"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2415,7 +2402,6 @@ version = "1.12.0"
 source = { editable = "." }
 dependencies = [
     { name = "anywidget" },
-    { name = "enum-tools" },
     { name = "ipython" },
     { name = "pydantic" },
     { name = "pydantic-extra-types" },
@@ -2480,7 +2466,6 @@ notebook = [
 [package.metadata]
 requires-dist = [
     { name = "anywidget", specifier = ">=0.9,<1" },
-    { name = "enum-tools", specifier = "==0.13.0" },
     { name = "graphdatascience", marker = "extra == 'gds'", specifier = ">=1.22,<3" },
     { name = "ipython", specifier = ">=7,<10" },
     { name = "neo4j", marker = "extra == 'neo4j'" },

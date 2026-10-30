@@ -34,7 +34,6 @@ dependencies = [
     "ipython >=7, <10",
     "pydantic >=2 , <3",
     "pydantic-extra-types >=2, <3",
-    "enum-tools==0.13.0",
     "anywidget >=0.9, <1",
     "traitlets >=5, <6",
 ]
@@ -79,8 +78,6 @@ dev = [
 docs = [
     # Docs are built on Python 3.13+ only (Sphinx 9.1+ requires it), so the whole
     # group is gated on it rather than resolving an older Sphinx for 3.11/3.12.
-    # enum_tools.autoenum is no longer used: it fails on Sphinx 9, so the enums are
-    # documented with plain autoclass. The runtime enum-tools dependency stays.
     "sphinx == 9.2.0; python_version >= '3.13'",
     "nbsphinx==0.9.8; python_version >= '3.13'",
     "nbsphinx-link==1.4.1; python_version >= '3.13'",
