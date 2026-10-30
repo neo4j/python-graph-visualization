@@ -47,13 +47,6 @@ KERNEL_START_TIMEOUT = 60
 CELL_RUN_TIMEOUT = 20
 CELL_RUN_ATTEMPTS = 4
 CELL_COMPLETE_TIMEOUT = 180
-# A started cell whose kernel never picks it up within this long had its run
-# lost (e.g. it went to a session that was still being wired up), so it gets
-# re-issued. A cell the kernel did run is left alone: the frontend prompt can
-# lag well behind it, e.g. while rendering an image for `save()`.
-CELL_STALL_GRACE = 10
-# How often to poll the prompt and the kernel state while waiting for a cell.
-CELL_POLL_INTERVAL = 0.5
 WIDGET_MOUNT_TIMEOUT = 30
 NOTEBOOK_RUN_TIMEOUT = 120
 
@@ -223,18 +216,23 @@ def _wait_until_ready(server: JupyterServer | MarimoServer, path: str) -> None:
     )
 
 
-def _session_for_notebook(server: JupyterServer, notebook: str) -> dict[str, Any] | None:
-    """Return the Lab session dict for ``notebook``, or None when it has no session."""
+def _sessions(server: JupyterServer) -> list[dict[str, Any]]:
+    """Return the Lab sessions, or an empty list when the sessions API is unreachable."""
     try:
         with urllib.request.urlopen(f"{server.url}/api/sessions", timeout=2) as response:
             sessions = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, OSError):
-        return None
+        return []
     if not isinstance(sessions, list):
-        return None
-    for session in sessions:
-        if isinstance(session, dict) and session.get("path") == notebook:
-            return dict(session)
+        return []
+    return [session for session in sessions if isinstance(session, dict)]
+
+
+def _session_for_notebook(server: JupyterServer, notebook: str) -> dict[str, Any] | None:
+    """Return the Lab session dict for ``notebook``, or None when it has no session."""
+    for session in _sessions(server):
+        if session.get("path") == notebook:
+            return session
     return None
 
 
@@ -289,6 +287,11 @@ def _tail_text(path: Path, lines: int = 40) -> str:
     except OSError:
         return "<no server log>"
     return "\n".join(content[-lines:])
+
+
+def _console_tail(messages: Sequence[str], lines: int = 40) -> str:
+    """Return the last ``lines`` browser console messages, for CI failure output."""
+    return "\n".join(messages[-lines:]) or "<no console messages>"
 
 
 def _launch_chromium(playwright: Playwright) -> Browser:
@@ -358,83 +361,19 @@ def _issue_run(page: Page, cell: Locator, prompt: Locator) -> None:
     ) from start_error
 
 
-def _reissue_run(page: Page, cell: Locator) -> None:
-    """Re-issue a run for a cell whose previous execution was lost.
-
-    Uses the toolbar's Run button, which — unlike Shift+Enter — cannot be
-    swallowed by a dialog that grabbed keyboard focus.
-    """
-    _accept_visible_dialogs(page)
-    cell.click()
-    run_button = page.locator(f'.jp-NotebookPanel-toolbar [data-command="{RUN_CELL_COMMAND}"]')
-    if run_button.count():
-        run_button.first.click()
-    else:
-        page.keyboard.press("Shift+Enter")
-
-
-def _cell_finished(prompt: Locator) -> bool:
-    return bool(CELL_COMPLETE_RE.match((prompt.text_content() or "").strip()))
-
-
-def _wait_for_cell_completion(
-    page: Page, cell: Locator, prompt: Locator, server: JupyterServer, notebook: str, index: int
-) -> None:
-    """Wait for a started cell to finish, re-issuing it if its run never reached the kernel.
-
-    A slow kernel — e.g. cold imports on a loaded CI runner — legitimately keeps
-    the cell running, and the frontend prompt can lag well behind the kernel, so
-    we poll rather than wait blindly. If the kernel never picks the run up at
-    all, though, the run was lost before it could execute (typically because the
-    run command went to a session that was still being wired up), so it is
-    re-issued. Every cell this harness runs is idempotent — it rebuilds the
-    widget or rewrites the same files — so repeating one is safe.
-    """
-    deadline = time.monotonic() + CELL_COMPLETE_TIMEOUT
-    attempts = 1
-    ran = False
-    idle_since: float | None = None
-    while True:
-        if _cell_finished(prompt):
-            return
-        state = _kernel_execution_state(server, notebook)
-        now = time.monotonic()
-        if now >= deadline:
-            raise AssertionError(
-                f"cell {index} did not finish within {CELL_COMPLETE_TIMEOUT}s "
-                f"(prompt is {prompt.text_content()!r}, kernel is {state!r})"
-            )
-        if state == "busy":
-            ran = True
-            idle_since = None
-        elif idle_since is None:
-            idle_since = now
-        elif not ran and now - idle_since > CELL_STALL_GRACE:
-            # The kernel never picked the run up, so it was lost before it could
-            # execute (e.g. the run command went to a session that was still
-            # being wired up): re-issue it. A run that did execute is left alone
-            # — the frontend can lag well behind the kernel, e.g. while it
-            # renders an image for ``save()``.
-            if attempts >= CELL_RUN_ATTEMPTS:
-                raise AssertionError(
-                    f"cell {index} never reached the kernel after {attempts} attempts "
-                    f"(prompt is {prompt.text_content()!r}, kernel is {state!r})"
-                )
-            attempts += 1
-            _reissue_run(page, cell)
-            idle_since = None
-        time.sleep(CELL_POLL_INTERVAL)
-
-
-def _run_cell(page: Page, index: int, server: JupyterServer, notebook: str) -> None:
+def _run_cell(page: Page, index: int) -> None:
     cell = page.locator(".jp-Cell").nth(index)
     prompt = cell.locator(".jp-InputArea-prompt")
 
     _issue_run(page, cell, prompt)
-    _wait_for_cell_completion(page, cell, prompt, server, notebook, index)
+    # Also wait for the cell to finish (its prompt gets an execution count): a slow
+    # kernel — e.g. cold imports on a loaded CI runner — would otherwise eat into
+    # the widget-mount timeout below, which is only meant to cover the frontend
+    # rendering the already-displayed widget.
+    expect(prompt).to_have_text(CELL_COMPLETE_RE, timeout=CELL_COMPLETE_TIMEOUT * 1000)
 
 
-def _execute_notebook_in_browser(page: Page, cells: Sequence[str], server: JupyterServer, notebook: str) -> None:
+def _execute_notebook_in_browser(page: Page, cells: Sequence[str]) -> None:
     expect(page.locator(".jp-Cell")).to_have_count(len(cells), timeout=LAB_LOAD_TIMEOUT * 1000)
     for index in range(len(cells)):
         if index == len(cells) - 1:
@@ -444,7 +383,7 @@ def _execute_notebook_in_browser(page: Page, cells: Sequence[str], server: Jupyt
             # hit the "not rendered yet" reply.
             page.wait_for_selector(WIDGET_CANVAS_SELECTOR, timeout=WIDGET_MOUNT_TIMEOUT * 1000)
         _accept_visible_dialogs(page)
-        _run_cell(page, index, server, notebook)
+        _run_cell(page, index)
 
 
 def _await_notebook_markers(server: JupyterServer) -> None:
@@ -572,12 +511,16 @@ def run_notebook_in_browser(
                 page.goto(f"{server.url}/lab/workspaces/{workspace}/tree/{notebook_name}")
                 _wait_for_kernel_idle(server, notebook_name)
                 try:
-                    _execute_notebook_in_browser(page, cells, server, notebook_name)
+                    _execute_notebook_in_browser(page, cells)
                 except Exception as exc:
-                    # Cell-execution failures are usually kernel-side, and the
-                    # pytest tmp artifacts never reach CI logs — inline the log.
+                    # Cell-execution failures are usually frontend/kernel
+                    # communication problems, and the pytest tmp artifacts never
+                    # reach CI logs — inline the state that explains them.
                     raise RuntimeError(
-                        f"{exc}\n--- jupyter-server.log tail ---\n{_tail_text(server.log_path)}"
+                        f"{exc}\n"
+                        f"--- sessions ---\n{json.dumps(_sessions(server), indent=2)}\n"
+                        f"--- browser console tail ---\n{_console_tail(console_messages)}\n"
+                        f"--- jupyter-server.log tail ---\n{_tail_text(server.log_path)}"
                     ) from exc
                 if check is not None:
                     check(page)
