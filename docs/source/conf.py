@@ -18,7 +18,6 @@ release = "0.1.6"
 
 extensions = [
     "sphinx.ext.autodoc",  # include docs from docstrings
-    "enum_tools.autoenum",  # specialised autoclass for enums
     "sphinx.ext.napoleon",  # Support for NumPy and Google style docstrings
     "nbsphinx",  # support for jupyter notebooks
     "nbsphinx_link",  # support for jupyter notebooks from other directories

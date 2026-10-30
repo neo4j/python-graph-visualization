@@ -1,9 +1,8 @@
 from collections.abc import Iterable, Sequence
-from enum import Enum
+from enum import StrEnum
 from math import floor
 from typing import Any, Union
 
-import enum_tools
 from pydantic_extra_types.color import Color, ColorType
 
 from .node_size import RealNumber
@@ -72,8 +71,7 @@ def interpolate_gradient(colors: Sequence[ColorType], t: RealNumber) -> Color:
     )
 
 
-@enum_tools.documentation.document_enum
-class ColorSpace(str, Enum):
+class ColorSpace(StrEnum):
     """
     Describes the type of color space used by a color palette.
     """

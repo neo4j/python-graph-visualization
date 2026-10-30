@@ -1,7 +1,7 @@
-.. autoenum:: neo4j_viz.CaptionAlignment
+.. autoclass:: neo4j_viz.CaptionAlignment
     :members:
 
-.. autoenum:: neo4j_viz.Layout
+.. autoclass:: neo4j_viz.Layout
     :members:
 
 .. autoclass:: neo4j_viz.ForceDirectedLayoutOptions
@@ -12,14 +12,14 @@
     :members:
     :exclude-members: model_config
 
-.. autoenum:: neo4j_viz.Direction
+.. autoclass:: neo4j_viz.Direction
     :members:
 
-.. autoenum:: neo4j_viz.Packing
+.. autoclass:: neo4j_viz.Packing
     :members:
 
-.. autoenum:: neo4j_viz.Renderer
+.. autoclass:: neo4j_viz.Renderer
     :members:
 
-.. autoenum:: neo4j_viz.SelectionMode
+.. autoclass:: neo4j_viz.SelectionMode
     :members:
