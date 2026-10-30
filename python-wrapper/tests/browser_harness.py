@@ -49,6 +49,10 @@ CELL_RUN_ATTEMPTS = 4
 CELL_COMPLETE_TIMEOUT = 180
 WIDGET_MOUNT_TIMEOUT = 30
 NOTEBOOK_RUN_TIMEOUT = 120
+# A notebook run is retried from scratch (fresh notebook, page, and kernel)
+# because the JupyterLab frontend intermittently fails to reach the kernel,
+# leaving a cell stuck showing "[*]:" forever.
+NOTEBOOK_RUN_ATTEMPTS = 2
 
 # Kernel-side marker files written by the last notebook cell: ``_done.txt`` on
 # success, ``_error.txt`` with the traceback on failure.
@@ -473,9 +477,7 @@ def assert_no_ndl_leak(page: Page) -> None:
     )
 
 
-def run_notebook_in_browser(
-    server: JupyterServer, cells: Sequence[str], check: Callable[[Page], None] | None = None
-) -> None:
+def _run_notebook_once(server: JupyterServer, cells: Sequence[str], check: Callable[[Page], None] | None) -> None:
     """Create a notebook from ``cells`` on ``server`` and run it in headless Chrome.
 
     The last cell must write the ``_done.txt``/``_error.txt`` markers (see
@@ -535,6 +537,33 @@ def run_notebook_in_browser(
             _delete_session(server, notebook_name)
     if console_errors:
         raise RuntimeError(f"browser console errors: {console_errors}")
+
+
+def run_notebook_in_browser(
+    server: JupyterServer, cells: Sequence[str], check: Callable[[Page], None] | None = None
+) -> None:
+    """Run a notebook on ``server`` in headless Chrome, retrying a failed run.
+
+    A failed run is retried from scratch — a fresh notebook, page, and kernel —
+    because the JupyterLab frontend intermittently fails to reach the kernel,
+    leaving a cell stuck showing ``[*]:`` forever. See ``_run_notebook_once``
+    for the contract of a single run.
+    """
+    errors: list[str] = []
+    for attempt in range(1, NOTEBOOK_RUN_ATTEMPTS + 1):
+        try:
+            _run_notebook_once(server, cells, check)
+            return
+        except BrowserUnavailableError:
+            raise
+        except Exception as exc:
+            errors.append(f"attempt {attempt}:\n{exc}")
+            if attempt < NOTEBOOK_RUN_ATTEMPTS:
+                print(
+                    f"[harness] notebook run failed on attempt {attempt}; retrying with a fresh notebook, page, and kernel",
+                    flush=True,
+                )
+    raise RuntimeError(f"notebook did not run after {NOTEBOOK_RUN_ATTEMPTS} attempts:\n\n" + "\n\n".join(errors))
 
 
 def run_marimo_app_in_browser(server: MarimoServer, check: Callable[[Page], None]) -> None:
