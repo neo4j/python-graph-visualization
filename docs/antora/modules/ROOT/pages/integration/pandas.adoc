@@ -2,14 +2,14 @@
 
 The `neo4j-viz` library provides a convenience method for importing data from link:https://pandas.pydata.org/[Pandas DataFrames].
 These DataFrames can be created from many sources, such as CSV files.
-It requires and additional dependency to be installed, which you can do by running:
+It requires an additional dependency to be installed, which you can do by running:
 
 [source, console]
 ----
 pip install neo4j-viz[pandas]
 ----
 
-Once you have installed the additional dependency, you can use the link:{api-docs-uri}/from_pandas[`from_pandas`] method
+Once you have installed the additional dependency, you can use the link:{api-docs-uri}/from_pandas[`from_dfs`] method
 to import pandas DataFrames.
 
 The `from_dfs` method takes two mandatory positional parameters:
@@ -49,4 +49,6 @@ relationships = DataFrame({
 })
 
 VG = from_dfs(nodes, relationships)
+
+VG.render_widget()
 ----

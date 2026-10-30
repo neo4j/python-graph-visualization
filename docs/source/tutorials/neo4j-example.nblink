@@ -1,6 +1,6 @@
 {
   "path": "../../../examples/neo4j-example.ipynb",
   "extra-media": [
-    "../../../examples/example_graph.png"
+    "../../../examples/images"
   ]
 }

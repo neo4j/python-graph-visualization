@@ -25,6 +25,7 @@ from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import nbformat
 from playwright.sync_api import (
@@ -48,6 +49,10 @@ CELL_RUN_ATTEMPTS = 4
 CELL_COMPLETE_TIMEOUT = 180
 WIDGET_MOUNT_TIMEOUT = 30
 NOTEBOOK_RUN_TIMEOUT = 120
+# A notebook run is retried from scratch (fresh notebook, page, and kernel)
+# because the JupyterLab frontend intermittently fails to reach the kernel,
+# leaving a cell stuck showing "[*]:" forever.
+NOTEBOOK_RUN_ATTEMPTS = 2
 
 # Kernel-side marker files written by the last notebook cell: ``_done.txt`` on
 # success, ``_error.txt`` with the traceback on failure.
@@ -63,6 +68,9 @@ WIDGET_CANVAS_SELECTOR = ".jp-OutputArea canvas"
 # Runs the selected cell. Unlike Shift+Enter this cannot be swallowed by a
 # dialog that grabbed keyboard focus.
 RUN_CELL_COMMAND = "notebook:run-cell-and-select-next"
+
+# A finished cell shows its execution count in the prompt, e.g. "[3]:".
+CELL_COMPLETE_RE = re.compile(r"^\[\d+\]:$")
 
 
 class BrowserUnavailableError(RuntimeError):
@@ -212,6 +220,51 @@ def _wait_until_ready(server: JupyterServer | MarimoServer, path: str) -> None:
     )
 
 
+def _sessions(server: JupyterServer) -> list[dict[str, Any]]:
+    """Return the Lab sessions, or an empty list when the sessions API is unreachable."""
+    try:
+        with urllib.request.urlopen(f"{server.url}/api/sessions", timeout=2) as response:
+            sessions = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError):
+        return []
+    if not isinstance(sessions, list):
+        return []
+    return [session for session in sessions if isinstance(session, dict)]
+
+
+def _session_for_notebook(server: JupyterServer, notebook: str) -> dict[str, Any] | None:
+    """Return the Lab session dict for ``notebook``, or None when it has no session."""
+    for session in _sessions(server):
+        if session.get("path") == notebook:
+            return session
+    return None
+
+
+def _kernel_execution_state(server: JupyterServer, notebook: str) -> str | None:
+    """Return the notebook kernel's execution state, or None when it has no kernel.
+
+    Uses the sessions REST API, which — unlike Lab's DOM — is version-independent.
+    """
+    session = _session_for_notebook(server, notebook)
+    if session is None:
+        return None
+    state = (session.get("kernel") or {}).get("execution_state")
+    return state if isinstance(state, str) else None
+
+
+def _delete_session(server: JupyterServer, notebook: str) -> None:
+    """Best-effort shutdown of the notebook's session so its kernel is not left running."""
+    session_id = (_session_for_notebook(server, notebook) or {}).get("id")
+    if not isinstance(session_id, str):
+        return
+    try:
+        request = urllib.request.Request(f"{server.url}/api/sessions/{session_id}", method="DELETE")
+        with urllib.request.urlopen(request, timeout=5):
+            pass
+    except (urllib.error.URLError, OSError):
+        pass
+
+
 def _wait_for_kernel_idle(server: JupyterServer, notebook: str) -> None:
     """Wait until Lab has started the notebook's kernel.
 
@@ -222,15 +275,8 @@ def _wait_for_kernel_idle(server: JupyterServer, notebook: str) -> None:
     """
     deadline = time.monotonic() + KERNEL_START_TIMEOUT
     while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(f"{server.url}/api/sessions", timeout=2) as response:
-                sessions = json.loads(response.read().decode("utf-8"))
-        except (urllib.error.URLError, OSError):
-            sessions = []
-        for session in sessions:
-            kernel = session.get("kernel") or {}
-            if session.get("path") == notebook and kernel.get("execution_state") == "idle":
-                return
+        if _kernel_execution_state(server, notebook) == "idle":
+            return
         time.sleep(0.25)
     raise RuntimeError(
         f"the kernel for {notebook} did not become idle within {KERNEL_START_TIMEOUT}s; "
@@ -245,6 +291,11 @@ def _tail_text(path: Path, lines: int = 40) -> str:
     except OSError:
         return "<no server log>"
     return "\n".join(content[-lines:])
+
+
+def _console_tail(messages: Sequence[str], lines: int = 40) -> str:
+    """Return the last ``lines`` browser console messages, for CI failure output."""
+    return "\n".join(messages[-lines:]) or "<no console messages>"
 
 
 def _launch_chromium(playwright: Playwright) -> Browser:
@@ -285,15 +336,15 @@ def _cell_start_error(prompt: Locator) -> AssertionError | None:
     return None
 
 
-def _run_cell(page: Page, index: int) -> None:
-    cell = page.locator(".jp-Cell").nth(index)
-    prompt = cell.locator(".jp-InputArea-prompt")
+def _issue_run(page: Page, cell: Locator, prompt: Locator) -> None:
+    """Press run for a cell until it leaves the unqueued state.
 
-    # The run command can be swallowed while JupyterLab is still settling — e.g.
-    # a kernel-picker dialog grabbing keyboard focus after the dialog sweep. If
-    # the prompt is still "[ ]:" nothing was queued, so re-trying is safe. Each
-    # attempt tries the keyboard first, then the toolbar's Run button, which a
-    # focus-stealing dialog cannot swallow.
+    The run command can be swallowed while JupyterLab is still settling — e.g. a
+    kernel-picker dialog grabbing keyboard focus after the dialog sweep. If the
+    prompt is still "[ ]:" nothing was queued, so re-trying is safe. Each attempt
+    tries the keyboard first, then the toolbar's Run button, which a
+    focus-stealing dialog cannot swallow.
+    """
     start_error: AssertionError | None = None
     for _ in range(CELL_RUN_ATTEMPTS):
         _accept_visible_dialogs(page)
@@ -301,23 +352,29 @@ def _run_cell(page: Page, index: int) -> None:
         page.keyboard.press("Shift+Enter")
         start_error = _cell_start_error(prompt)
         if start_error is None:
-            break
+            return
         run_button = page.locator(f'.jp-NotebookPanel-toolbar [data-command="{RUN_CELL_COMMAND}"]')
         if run_button.count():
             run_button.first.click()
             start_error = _cell_start_error(prompt)
             if start_error is None:
-                break
-    if start_error is not None:
-        raise AssertionError(
-            f"cell {index} did not start executing (prompt is still {prompt.text_content()!r}; "
-            f"a dialog may be blocking input and the kernel may not have started)"
-        ) from start_error
+                return
+    raise AssertionError(
+        f"cell did not start executing (prompt is still {prompt.text_content()!r}; "
+        f"a dialog may be blocking input and the kernel may not have started)"
+    ) from start_error
+
+
+def _run_cell(page: Page, index: int) -> None:
+    cell = page.locator(".jp-Cell").nth(index)
+    prompt = cell.locator(".jp-InputArea-prompt")
+
+    _issue_run(page, cell, prompt)
     # Also wait for the cell to finish (its prompt gets an execution count): a slow
     # kernel — e.g. cold imports on a loaded CI runner — would otherwise eat into
     # the widget-mount timeout below, which is only meant to cover the frontend
     # rendering the already-displayed widget.
-    expect(prompt).to_have_text(re.compile(r"^\[\d+\]:$"), timeout=CELL_COMPLETE_TIMEOUT * 1000)
+    expect(prompt).to_have_text(CELL_COMPLETE_RE, timeout=CELL_COMPLETE_TIMEOUT * 1000)
 
 
 def _execute_notebook_in_browser(page: Page, cells: Sequence[str]) -> None:
@@ -420,9 +477,7 @@ def assert_no_ndl_leak(page: Page) -> None:
     )
 
 
-def run_notebook_in_browser(
-    server: JupyterServer, cells: Sequence[str], check: Callable[[Page], None] | None = None
-) -> None:
+def _run_notebook_once(server: JupyterServer, cells: Sequence[str], check: Callable[[Page], None] | None) -> None:
     """Create a notebook from ``cells`` on ``server`` and run it in headless Chrome.
 
     The last cell must write the ``_done.txt``/``_error.txt`` markers (see
@@ -460,10 +515,14 @@ def run_notebook_in_browser(
                 try:
                     _execute_notebook_in_browser(page, cells)
                 except Exception as exc:
-                    # Cell-execution failures are usually kernel-side, and the
-                    # pytest tmp artifacts never reach CI logs — inline the log.
+                    # Cell-execution failures are usually frontend/kernel
+                    # communication problems, and the pytest tmp artifacts never
+                    # reach CI logs — inline the state that explains them.
                     raise RuntimeError(
-                        f"{exc}\n--- jupyter-server.log tail ---\n{_tail_text(server.log_path)}"
+                        f"{exc}\n"
+                        f"--- sessions ---\n{json.dumps(_sessions(server), indent=2)}\n"
+                        f"--- browser console tail ---\n{_console_tail(console_messages)}\n"
+                        f"--- jupyter-server.log tail ---\n{_tail_text(server.log_path)}"
                     ) from exc
                 if check is not None:
                     check(page)
@@ -473,8 +532,38 @@ def run_notebook_in_browser(
                 raise
         finally:
             browser.close()
+            # Best-effort: the kernel would otherwise outlive the run and can
+            # interfere with the next notebook driven by the same server.
+            _delete_session(server, notebook_name)
     if console_errors:
         raise RuntimeError(f"browser console errors: {console_errors}")
+
+
+def run_notebook_in_browser(
+    server: JupyterServer, cells: Sequence[str], check: Callable[[Page], None] | None = None
+) -> None:
+    """Run a notebook on ``server`` in headless Chrome, retrying a failed run.
+
+    A failed run is retried from scratch — a fresh notebook, page, and kernel —
+    because the JupyterLab frontend intermittently fails to reach the kernel,
+    leaving a cell stuck showing ``[*]:`` forever. See ``_run_notebook_once``
+    for the contract of a single run.
+    """
+    errors: list[str] = []
+    for attempt in range(1, NOTEBOOK_RUN_ATTEMPTS + 1):
+        try:
+            _run_notebook_once(server, cells, check)
+            return
+        except BrowserUnavailableError:
+            raise
+        except Exception as exc:
+            errors.append(f"attempt {attempt}:\n{exc}")
+            if attempt < NOTEBOOK_RUN_ATTEMPTS:
+                print(
+                    f"[harness] notebook run failed on attempt {attempt}; retrying with a fresh notebook, page, and kernel",
+                    flush=True,
+                )
+    raise RuntimeError(f"notebook did not run after {NOTEBOOK_RUN_ATTEMPTS} attempts:\n\n" + "\n\n".join(errors))
 
 
 def run_marimo_app_in_browser(server: MarimoServer, check: Callable[[Page], None]) -> None:

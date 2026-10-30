@@ -82,6 +82,6 @@ jobs:
         run: |
           npm ci
           npm run verify
-          # Antora 3.1.x silently exits 0 without generating anything on
-          # non-LTS Node (e.g. 26); guard against that silent no-op.
+          # Antora can exit 0 without generating a site (observed with Antora
+          # 3.1.x on newer Node); guard against that silent no-op.
           test -f build/site/index.html || { echo '::error::Antora did not generate a site'; exit 1; }
