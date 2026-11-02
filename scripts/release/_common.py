@@ -3,13 +3,8 @@
 from __future__ import annotations
 
 import subprocess
-import sys
+import tomllib
 from pathlib import Path
-
-if sys.version_info < (3, 11):
-    raise SystemExit("The release scripts require Python 3.11+ (for tomllib).")
-
-import tomllib  # Python 3.11+
 
 PACKAGE = "neo4j-viz"
 MAIN_BRANCH = "main"

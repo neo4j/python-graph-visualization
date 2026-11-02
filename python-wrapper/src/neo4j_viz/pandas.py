@@ -70,7 +70,7 @@ def _parse_nodes(node_dfs: DFS_TYPE, dropna: bool = False) -> list[Node]:
     for node_df in node_dfs_iter:
         for _, row in node_df.iterrows():
             if dropna:
-                row = row.dropna(inplace=False)
+                row = row.dropna()
             mandatory_fields = {}
             properties = {}
             for key, value in row.to_dict().items():
@@ -102,7 +102,7 @@ def _parse_relationships(rel_dfs: DFS_TYPE, dropna: bool = False) -> list[Relati
     for rel_df in rel_dfs_iter:
         for _, row in rel_df.iterrows():
             if dropna:
-                row = row.dropna(inplace=False)
+                row = row.dropna()
             mandatory_fields = {}
             properties = {}
             for key, value in row.to_dict().items():

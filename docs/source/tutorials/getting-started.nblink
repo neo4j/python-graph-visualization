@@ -1,3 +1,6 @@
 {
-  "path": "../../../examples/getting-started.ipynb"
+  "path": "../../../examples/getting-started.ipynb",
+  "extra-media": [
+    "../../../examples/images"
+  ]
 }

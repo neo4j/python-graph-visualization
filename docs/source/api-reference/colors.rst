@@ -1,2 +1,2 @@
-.. autoenum:: neo4j_viz.colors.ColorSpace
+.. autoclass:: neo4j_viz.colors.ColorSpace
     :members:

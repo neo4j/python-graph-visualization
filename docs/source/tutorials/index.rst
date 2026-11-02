@@ -3,10 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Jupyter notebooks
+Tutorials
 =====================================================
 
-This chapter contains Jupyter notebook tutorials for the `neo4j-viz` package.
+This chapter contains tutorials for the `neo4j-viz` package.
 
 
 .. toctree::

@@ -5,22 +5,22 @@ to display the graph visualization.
 
 If you have not yet created a `VisualizationGraph` object, refer to one of the following sections:
 
-* xref:getting-started.adoc[Getting started] for creating a visualization graph from scratch using `neo4j-viz`
+* xref:index.adoc[Getting started] for creating a visualization graph from scratch using `neo4j-viz`
   primitives like link:{api-docs-uri}/node[Node] and link:{api-docs-uri}/relationship[Relationship] and
   link:{api-docs-uri}/visualization-graph[`VisualizationGraph`] directly.
 * xref:integration/index.adoc[] for importing data from a Pandas DataFrame or Neo4j GDS projection.
 
-== The `render` method
+== The `render_widget` method
 
-Once you have a `VisualizationGraph` object, you can render it using the `render` method.
-This will return a HTML object that will be displayed in an environment that supports HTML rendering, such as
-Jupyter notebooks or streamlit application.
+Once you have a `VisualizationGraph` object, you can display it using the `render_widget` method.
+This returns a `GraphWidget`, an interactive widget with two-way sync between Python and the browser, that works in
+JupyterLab, Notebook 7, VS Code, and Colab.
 
-All parameter of the `render` method are optional, and the full list of parameters of them is listed in the API
-reference: link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.render[neo4j_viz.VisualizationGraph.render()].
+All parameters of the `render_widget` method are optional, and the full list of them is listed in the API
+reference: link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.render_widget[neo4j_viz.VisualizationGraph.render_widget()].
 
 The most important parameters to be aware of are the `width` and `height` parameters, which control the size of
-HTML object that will be rendered.
+the widget.
 You can provide these either as a percentage of the available space (eg. `"80%"`), or as an absolute pixel value
 (eg. `"800px"`).
 
@@ -40,17 +40,29 @@ In this case you might also want to pass `Renderer.WEB_GL` as the `renderer` to 
 
 Relationships whose `source` or `target` is not part of the graph's nodes ("dangling" relationships) cannot be
 drawn, and a graph containing them may appear empty.
-By default `render` emits a warning that lists the offending relationships so the problem is not silent.
+By default `render_widget` emits a warning that lists the offending relationships so the problem is not silent.
 You can change this with the `on_dangling` parameter: pass `"error"` to raise a `ValueError` instead, or `"none"`
 to skip the check entirely.
 
-By default a tooltip showing IDs and properties will be shown when mouse hovering over a node or relationship.
-But you can disable this by passing `show_hover_tooltip=False`.
+Unlike `render`, the widget also lets you update the graph after it has been displayed, for example to add nodes and
+relationships, to change the layout or zoom, or to react to the user's selections and clicks.
+Refer to xref:customizing.adoc[Customizing the visualization] for these methods.
 
 === Examples
 
-Refer to the xref:getting-started.adoc[] and the link:{tutorials-docs-uri}[tutorials] for
-examples of `render` method usage.
+Refer to the xref:index.adoc[] and the link:{tutorials-docs-uri}[tutorials] for
+examples of `render_widget` method usage.
+
+== The `render` method
+
+The `render` method returns an `IPython.display.HTML` object containing the graph as static HTML.
+It is not recommended for interactive use; use `render_widget` instead.
+Reach for `render` when you need to embed the graph in a document or web page, or to
+xref:rendering.adoc#exporting-to-html[export it to an HTML file].
+
+It accepts the same `width`, `height`, `layout`, `max_allowed_nodes`, and `on_dangling` parameters as `render_widget`.
+The full list of parameters of the `render` method is listed in the API
+reference: link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.render[neo4j_viz.VisualizationGraph.render()].
 
 == Using with Streamlit
 

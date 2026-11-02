@@ -1,7 +1,7 @@
 = Neo4j Graph Data Science
 
 The `neo4j-viz` library provides a convenience method for importing data from the link:https://neo4j.com/docs/graph-data-science/current/[Neo4j Graph Data Science] (GDS) library.
-It requires and additional dependency to be installed, which you can do by running:
+It requires an additional dependency to be installed, which you can do by running:
 
 [source, console]
 ----
@@ -52,6 +52,8 @@ VG.resize_nodes(property="pagerank")
 # Color the nodes by the `componentId` property, so that the nodes are
 # colored by the connected component they belong to
 VG.color_nodes(property="componentId")
+
+VG.render_widget()
 ----
 
 See the link:{tutorials-docs-uri}/gds-example[Visualizing Neo4j Graph Data Science (GDS) Graphs tutorial] for a more extensive example.

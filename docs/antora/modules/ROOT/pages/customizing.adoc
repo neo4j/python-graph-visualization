@@ -7,7 +7,7 @@ relationships of existing `VisualizationGraph` objects.
 
 If you have not yet created a `VisualizationGraph` object, refer to one of the following sections:
 
-* xref:getting-started.adoc[Getting started] for creating a visualization graph from scratch using `neo4j-viz`
+* xref:index.adoc[Getting started] for creating a visualization graph from scratch using `neo4j-viz`
   primitives like link:{api-docs-uri}/node/[Node] and link:{api-docs-uri}/relationship/[Relationship] and
   link:{api-docs-uri}/visualization-graph[`VisualizationGraph`] directly.
 * xref:integration/index.adoc[] for importing data from a Pandas DataFrame or Neo4j GDS projection.
@@ -108,7 +108,7 @@ from palettable.wesanderson import Moonrise1_5
 VG.color_nodes(field="caption", colors=Moonrise1_5.colors)  # ColorSpace.DISCRETE is default
 ----
 
-In theses cases, all items with the same field value will get the same color.
+In these cases, all items with the same field value will get the same color.
 
 If there are fewer colors than unique values for the `field` or `property` provided, the colors will be reused in a cycle.
 To avoid that, you could use a larger palette or extend one with additional colors.
@@ -138,8 +138,8 @@ VG.color_relationships(
 )
 ----
 
-In these cases, the nodes or relationships will be colored based on the value of the property, with the lowest values being colored with the first color and the highest values being colored with the last color.
-Since we only provided five colors in the range, the granularity of the gradient will be limited to five steps.
+The property values are min-max scaled, and each node or relationship is then colored by interpolating smoothly along the gradient: the lowest value gets the first color, the highest gets the last color, and values in between are blends of the neighboring color stops.
+The number of stops controls the shape of the gradient (for example a multi-hue one), not the number of distinct colors.
 
 `palettable` and `matplotlib` are great libraries to use to create custom color gradients.
 
@@ -253,7 +253,7 @@ In the following example, we pin the node with ID 1337 and unpin the node with I
 [source, python]
 ----
 # VG is a VisualizationGraph object
-VG.toggle_nodes_pinned(1337: True, 42: False)})
+VG.toggle_nodes_pinned({1337: True, 42: False})
 ----
 
 == Reading the selection
