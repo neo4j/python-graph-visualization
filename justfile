@@ -7,7 +7,7 @@ py-sync:
 # check the release version is unpublished and main's CI is green
 # example: just prerelease
 prerelease:
-    python scripts/release/prerelease.py
+    uv run --no-project python scripts/release/prerelease.py
 
 # bump the version and reset the changelog after a release (default: minor bump)
 # examples:
@@ -15,7 +15,7 @@ prerelease:
 #   just postrelease patch    # 1.5.0 -> 1.5.1
 #   just postrelease major    # 1.5.0 -> 2.0.0
 postrelease part="minor":
-    python scripts/release/postrelease.py --part {{part}}
+    uv run --no-project python scripts/release/postrelease.py --part {{part}}
 
 # after the Release workflow has published to PyPI: verify the version is live,
 # sync the 1.x branch, bump the version, reset the changelog, and open the
@@ -23,7 +23,7 @@ postrelease part="minor":
 # examples:
 #   just release-finalize          # 1.5.0 -> 1.6.0
 release-finalize part="minor":
-    python scripts/release/finalize.py --part {{part}}
+    uv run --no-project python scripts/release/finalize.py --part {{part}}
 
 style: py-style js-style
 
