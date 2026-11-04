@@ -19,8 +19,13 @@ from .widget import _serialize_entity
 # data from an inert <script type="application/json" id="neo4j-viz-data">
 # block; Python injects that block (with `<` escaped so no literal </script>
 # can break out into executable markup) before the module script runs.
+# The template hard-codes the container and data-block ids, so every render
+# substitutes its own unique ids: otherwise several graphs sharing one page
+# (notebook cells share a DOM document) would all resolve the first graph's
+# container and data through getElementById.
 class NVL:
     _CONTAINER_ID = "neo4j-viz-container"
+    _DATA_ID = "neo4j-viz-data"
 
     def __init__(self) -> None:
         self._template = NVL._load_template()
@@ -58,12 +63,20 @@ class NVL:
         # need no escaping here.)
         data_json = json.dumps(data_dict).replace("<", "\\u003c")
         container_id = f"neo4j-viz-{uuid.uuid4().hex[:12]}"
+        data_id = f"neo4j-viz-data-{uuid.uuid4().hex[:12]}"
+
+        # Replace the fixed ids in the template — including the literals baked
+        # into the JS bundle — before injecting the data, so user-supplied JSON
+        # can never match and be rewritten. Unique ids let several graphs share
+        # one page: notebook cells share a DOM document and getElementById
+        # always resolves the first match.
+        html = self._template
+        html = html.replace(NVL._CONTAINER_ID, container_id)
+        html = html.replace(NVL._DATA_ID, data_id)
 
         # Inject data as inert JSON — a browser never executes a
-        # <script type="application/json"> block — and a unique container ID.
-        data_script = f'<script type="application/json" id="neo4j-viz-data">{data_json}</script>'
-        html = self._template
+        # <script type="application/json"> block.
+        data_script = f'<script type="application/json" id="{data_id}">{data_json}</script>'
         html = html.replace("</head>", f"{data_script}\n</head>", 1)
-        html = html.replace(NVL._CONTAINER_ID, container_id)
 
         return HTML(html)  # type: ignore[no-untyped-call]
