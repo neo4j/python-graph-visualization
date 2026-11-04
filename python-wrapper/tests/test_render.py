@@ -174,6 +174,16 @@ def test_render_with_wrong_layout_options() -> None:
         VG.render(layout=Layout.FORCE_DIRECTED, layout_options={"direction": "left"})
 
 
+def _data_block(html: str) -> re.Match[str]:
+    match = re.search(
+        r'<script type="application/json" id="(neo4j-viz-data-[0-9a-f]+)">(.*?)</script>',
+        html,
+        re.DOTALL,
+    )
+    assert match is not None
+    return match
+
+
 def test_render_escapes_script_breakout() -> None:
     # Regression test for F-01: a caption containing </script> must not break
     # out of the data block and run as executable markup. Single quotes are
@@ -188,18 +198,35 @@ def test_render_escapes_script_breakout() -> None:
     # The breakout sequence must not appear literally in the output.
     assert "</script><script>alert" not in out
     # Data is delivered as inert JSON, not as an executable script assignment.
-    assert 'type="application/json" id="neo4j-viz-data"' in out
     assert "<script>window.__NEO4J_VIZ_DATA__" not in out
     # The escaped JSON still parses back to the original caption exactly.
-    block = re.search(r'<script type="application/json" id="neo4j-viz-data">(.*?)</script>', out, re.DOTALL)
-    assert block is not None
-    assert json.loads(block.group(1))["nodes"][0]["caption"] == payload
+    assert json.loads(_data_block(out).group(2))["nodes"][0]["caption"] == payload
+
+
+def test_render_multiple_calls_get_distinct_ids() -> None:
+    # Regression test for GDS-485: several notebook cells render into one DOM
+    # document, so a fixed data-block id makes every graph after the first read
+    # the first graph's data (getElementById returns the first match in the
+    # document). Each render must instead reference its own unique ids.
+    VG_a = VisualizationGraph(nodes=[Node(id="a", caption="A")], relationships=[])
+    VG_b = VisualizationGraph(nodes=[Node(id="b", caption="B")], relationships=[])
+
+    html_a = VG_a.render().data
+    html_b = VG_b.render().data
+
+    data_id_a = _data_block(html_a).group(1)
+    data_id_b = _data_block(html_b).group(1)
+    assert data_id_a != data_id_b
+
+    # Each bundle must look up the data block it was rendered with, not a
+    # shared id that would resolve to the first graph on the page.
+    lookup = re.compile(r"getElementById\(`(neo4j-viz-data-[0-9a-f]+)`\)")
+    assert lookup.findall(html_a) == [data_id_a]
+    assert lookup.findall(html_b) == [data_id_b]
 
 
 def _render_options_block(html: str) -> dict[str, Any]:
-    block = re.search(r'<script type="application/json" id="neo4j-viz-data">(.*?)</script>', html, re.DOTALL)
-    assert block is not None
-    options: dict[str, Any] = json.loads(block.group(1))["options"]
+    options: dict[str, Any] = json.loads(_data_block(html).group(2))["options"]
     return options
 
 
