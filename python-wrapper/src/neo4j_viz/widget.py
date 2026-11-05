@@ -209,8 +209,7 @@ class GraphWidget(anywidget.AnyWidget):
 
     _nvl_ready: traitlets.Bool[bool, bool | int] = traitlets.Bool(
         default_value=False,
-        help="Whether the widget frontend has mounted the renderer. Set by the frontend; "
-        "`save()` waits for it so a request is not sent before the view exists.",
+        help="Set by the frontend once the renderer is mounted; `save()` waits for it.",
     ).tag(sync=True)
 
     _max_allowed_nodes: int = 10_000
@@ -454,8 +453,7 @@ class GraphWidget(anywidget.AnyWidget):
         self._check_save_frontend()
 
         loop = asyncio.get_running_loop()
-        # One deadline for the whole call: waiting for the frontend to load and waiting
-        # for it to render must not each get the full timeout.
+        # one deadline for load + render, not one per phase
         deadline = loop.time() + timeout
         await self._wait_for_frontend_ready(loop, deadline)
 
@@ -497,11 +495,8 @@ class GraphWidget(anywidget.AnyWidget):
     async def _wait_for_frontend_ready(self, loop: asyncio.AbstractEventLoop, deadline: float) -> None:
         """Wait until the frontend signals that the renderer is mounted.
 
-        `save()` can be called before the browser has loaded the widget module and mounted
-        the view. A `save_request` sent in that window is dropped (custom messages are not
-        queued), so the caller would wait out the whole timeout for a reply that never
-        comes. Waiting on the frontend-set `_nvl_ready` trait turns that race into a
-        bounded wait.
+        A `save_request` sent before the widget module has loaded is dropped (custom
+        messages are not queued), so the caller would otherwise time out for nothing.
         """
         if self._nvl_ready:
             return
@@ -514,8 +509,7 @@ class GraphWidget(anywidget.AnyWidget):
 
         self.observe(handler, names=["_nvl_ready"])
         try:
-            # Re-check after subscribing so a readiness signal that lands between the
-            # first check and the observer registration is not missed.
+            # re-check: the signal may land between the first check and observe()
             if not self._nvl_ready:
                 await asyncio.wait_for(ready, timeout=max(0.0, deadline - loop.time()))
         except asyncio.TimeoutError as exc:

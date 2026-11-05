@@ -82,10 +82,7 @@ export type WidgetData = {
    * trait; Streamlit passes it in the component state). Never bundled into the JS.
    */
   _css?: string;
-  /**
-   * Set by the frontend once the renderer is mounted, so Python `save()` can wait
-   * for it instead of racing the widget load. Synced to the `_nvl_ready` trait.
-   */
+  /** Set by the frontend once the renderer is mounted; Python `save()` waits for it. */
   _nvl_ready?: boolean;
 };
 
@@ -387,11 +384,8 @@ function GraphWidget() {
     return () => model.off("msg:custom", onSaveRequest);
   }, [model]);
 
-  // Tell Python the renderer is mounted. `save()` waits for this before sending a
-  // `save_request`, because a request sent while the widget module is still loading is
-  // dropped (custom messages are not queued) and would time out. NVL is created by the
-  // external react-graph package, so poll the ref the same way the resize shim does; a
-  // timer rather than rAF so it still fires while the browser tab is in the background.
+  // Signal the renderer is up so Python `save()` can wait instead of racing the load.
+  // Poll nvlRef (NVL comes from react-graph); timer, not rAF, so background tabs work.
   useEffect(() => {
     if (nvlRef.current) {
       setNvlReady(true);

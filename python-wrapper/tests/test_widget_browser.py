@@ -60,13 +60,10 @@ except Exception:
 
 
 def test_save_in_same_cell_as_display_does_not_time_out(jupyter_lab_server: JupyterServer) -> None:
-    """Regression: display the widget and call ``save()`` in the same cell.
+    """Regression: display the widget and ``save()`` in the same cell.
 
-    The frontend needs time to load the widget module and mount the renderer; a
-    ``save_request`` sent before that is dropped and used to surface as a 30 s
-    ``TimeoutError``. ``save()`` now waits for the frontend-ready signal, so the
-    request is only sent once the renderer is up. A trailing cell keeps this cell
-    off the harness's canvas wait, which would otherwise mask the race.
+    A request sent before the frontend loads is dropped, which used to surface as a
+    30 s timeout. The trailing cell keeps this one off the harness's canvas wait.
     """
     setup_cell = """\
 from neo4j_viz import Node, Relationship, VisualizationGraph

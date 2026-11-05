@@ -27,8 +27,7 @@ def _fake_frontend(widget: GraphWidget, response_for_request: Any) -> Mock:
     widget.comm = Mock(name="comm")
     comm = widget.comm
     comm.kernel = Mock(name="kernel")  # non-None kernel, mirroring a live ipykernel comm
-    # Pretend the frontend has already signalled that the renderer is mounted, as it
-    # does once the widget view is up. Tests for the readiness wait override this.
+    # frontend signals readiness once the view is mounted; readiness tests override this
     widget._nvl_ready = True
 
     def fake_send(content: dict[str, Any], buffers: Any = None) -> None:
@@ -203,7 +202,7 @@ class TestSave:
             }
 
         widget = _fake_frontend(_make_widget(), respond)
-        widget._nvl_ready = False  # the frontend has not signalled readiness yet
+        widget._nvl_ready = False  # frontend not ready yet
 
         async def run() -> Any:
             asyncio.get_running_loop().call_later(0.05, setattr, widget, "_nvl_ready", True)
@@ -212,7 +211,7 @@ class TestSave:
         result = asyncio.run(run())
 
         assert result == tmp_path / "graph.png"
-        # The request is only sent once the frontend has signalled readiness.
+        # request sent only after readiness
         assert len(requests) == 1
 
     def test_save_times_out_waiting_for_frontend_ready(self, tmp_path: pathlib.Path) -> None:
@@ -228,7 +227,7 @@ class TestSave:
         with pytest.raises(TimeoutError, match="did not finish loading"):
             asyncio.run(widget.save(tmp_path / "graph.png", timeout=0.05))
 
-        # Nothing may be sent while the frontend has not signalled readiness.
+        # nothing sent while the frontend is not ready
         assert requests == []
 
     def test_save_fails_fast_without_live_kernel(self, tmp_path: pathlib.Path) -> None:
