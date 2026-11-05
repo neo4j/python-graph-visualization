@@ -152,9 +152,11 @@ await widget.save("my_graph.svg")
 await widget.save("my_graph.png", background_color="#ffffff")
 ----
 
+`save` waits for the widget frontend to finish loading before sending the request, so it is safe to call it in the same cell that displays the widget, or immediately after.
+
 The format is inferred from the file extension (`.png` or `.svg`) and defaults to SVG when the file has no extension; any other extension is rejected.
 An explicit `format="png"`/`format="svg"` argument must match the extension.
 
 A PNG captures the current view (the canvas at its rendered size, including the current zoom and pan), while an SVG always contains the entire graph.
 
-NOTE: The image is rendered by the widget frontend in the browser, so `save` must be `await`-ed while the widget is displayed in a live notebook (JupyterLab, Notebook, VS Code, Colab, or marimo). Outside a running kernel, for example in a plain Python script, there is no renderer and saving raises an error — use xref:rendering.adoc#exporting-to-html[Exporting to HTML] there instead.
+NOTE: The image is rendered by the widget frontend in the browser, so `save` must be `await`-ed while the widget is displayed in a live notebook (JupyterLab, Notebook, VS Code, Colab, or marimo). Outside a running kernel, for example in a plain Python script, there is no renderer and saving raises an error — use xref:rendering.adoc#exporting-to-html[Exporting to HTML] there instead. The frontend must also be able to render: if the widget's output is scrolled out of view or collapsed, or its browser tab is in the background, `save` raises a timeout error.

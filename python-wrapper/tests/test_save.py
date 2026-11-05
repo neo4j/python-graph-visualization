@@ -27,6 +27,9 @@ def _fake_frontend(widget: GraphWidget, response_for_request: Any) -> Mock:
     widget.comm = Mock(name="comm")
     comm = widget.comm
     comm.kernel = Mock(name="kernel")  # non-None kernel, mirroring a live ipykernel comm
+    # Pretend the frontend has already signalled that the renderer is mounted, as it
+    # does once the widget view is up. Tests for the readiness wait override this.
+    widget._nvl_ready = True
 
     def fake_send(content: dict[str, Any], buffers: Any = None) -> None:
         if content.get("kind") != "save_request":
@@ -188,6 +191,45 @@ class TestSave:
 
         with pytest.raises(TimeoutError, match="timed out"):
             asyncio.run(widget.save(tmp_path / "graph.png", timeout=0.05))
+
+    def test_save_waits_for_frontend_ready(self, tmp_path: pathlib.Path) -> None:
+        requests: list[dict[str, Any]] = []
+
+        def respond(request: dict[str, Any]) -> dict[str, Any]:
+            requests.append(request)
+            return {
+                "kind": "save_response",
+                "dataUrl": "data:image/png;base64," + base64.b64encode(b"\x89PNG-data").decode(),
+            }
+
+        widget = _fake_frontend(_make_widget(), respond)
+        widget._nvl_ready = False  # the frontend has not signalled readiness yet
+
+        async def run() -> Any:
+            asyncio.get_running_loop().call_later(0.05, setattr, widget, "_nvl_ready", True)
+            return await widget.save(tmp_path / "graph.png", timeout=5.0)
+
+        result = asyncio.run(run())
+
+        assert result == tmp_path / "graph.png"
+        # The request is only sent once the frontend has signalled readiness.
+        assert len(requests) == 1
+
+    def test_save_times_out_waiting_for_frontend_ready(self, tmp_path: pathlib.Path) -> None:
+        requests: list[dict[str, Any]] = []
+
+        def respond(request: dict[str, Any]) -> dict[str, Any]:
+            requests.append(request)
+            return {"kind": "save_response", "dataUrl": "data:image/png;base64,AAA"}
+
+        widget = _fake_frontend(_make_widget(), respond)
+        widget._nvl_ready = False
+
+        with pytest.raises(TimeoutError, match="did not finish loading"):
+            asyncio.run(widget.save(tmp_path / "graph.png", timeout=0.05))
+
+        # Nothing may be sent while the frontend has not signalled readiness.
+        assert requests == []
 
     def test_save_fails_fast_without_live_kernel(self, tmp_path: pathlib.Path) -> None:
         # Outside a kernel (as in these tests) the widget holds a DummyComm.

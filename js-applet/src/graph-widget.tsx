@@ -82,6 +82,11 @@ export type WidgetData = {
    * trait; Streamlit passes it in the component state). Never bundled into the JS.
    */
   _css?: string;
+  /**
+   * Set by the frontend once the renderer is mounted, so Python `save()` can wait
+   * for it instead of racing the widget load. Synced to the `_nvl_ready` trait.
+   */
+  _nvl_ready?: boolean;
 };
 
 const EMPTY_SELECTION: GraphSelection = { nodeIds: [], relationshipIds: [] };
@@ -257,6 +262,7 @@ function GraphWidget() {
   // The NDL stylesheet is synced by the host as `_css` (see injectNdlCss) instead of
   // being bundled into the JS payload.
   const [ndlCss] = useModelState<string>("_css");
+  const [, setNvlReady] = useModelState<boolean>("_nvl_ready");
   const {
     layout,
     nvlOptions,
@@ -380,6 +386,25 @@ function GraphWidget() {
     model.on("msg:custom", onSaveRequest);
     return () => model.off("msg:custom", onSaveRequest);
   }, [model]);
+
+  // Tell Python the renderer is mounted. `save()` waits for this before sending a
+  // `save_request`, because a request sent while the widget module is still loading is
+  // dropped (custom messages are not queued) and would time out. NVL is created by the
+  // external react-graph package, so poll the ref the same way the resize shim does; a
+  // timer rather than rAF so it still fires while the browser tab is in the background.
+  useEffect(() => {
+    if (nvlRef.current) {
+      setNvlReady(true);
+      return;
+    }
+    const interval = setInterval(() => {
+      if (nvlRef.current) {
+        setNvlReady(true);
+        clearInterval(interval);
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [setNvlReady]);
 
   const [neoNodes, neoRelationships] = useMemo(
     () => [transformNodes(nodes ?? []), transformRelationships(relationships ?? [])],

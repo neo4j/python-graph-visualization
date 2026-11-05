@@ -53,6 +53,7 @@ type WidgetState = {
   theme: "light" | "dark" | "auto";
   selected: { nodeIds: string[]; relationshipIds: string[] };
   legend: { nodes: unknown; relationships: unknown; visible: boolean };
+  _nvl_ready?: boolean;
 };
 
 // The kernel-less local model extended with the comm half of the anywidget
@@ -333,6 +334,30 @@ describe("mounted widget save wiring", () => {
 
       expect(model.sent).toEqual([]);
       expect(getImageDataUrl).not.toHaveBeenCalled();
+    } finally {
+      if (typeof teardown === "function") await teardown();
+    }
+  });
+
+  it("signals readiness to Python once NVL is mounted", async () => {
+    nvlState.nvl = { getImageDataUrl: vi.fn() } as unknown as NVL;
+    const { model, teardown } = await renderWidgetWithCommModel();
+
+    try {
+      await vi.waitFor(() => {
+        expect(model.get("_nvl_ready")).toBe(true);
+      });
+    } finally {
+      if (typeof teardown === "function") await teardown();
+    }
+  });
+
+  it("does not signal readiness before NVL is mounted", async () => {
+    nvlState.nvl = null;
+    const { model, teardown } = await renderWidgetWithCommModel();
+
+    try {
+      expect(model.get("_nvl_ready")).toBeFalsy();
     } finally {
       if (typeof teardown === "function") await teardown();
     }
