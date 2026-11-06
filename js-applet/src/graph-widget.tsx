@@ -1,8 +1,8 @@
 import { createRender, useModel, useModelState } from "@anywidget/react";
 import { Gesture, GraphSelection, GraphVisualization } from "@neo4j-ndl/react-graph";
 import type NVL from "@neo4j-nvl/base";
-import type { Layout, NvlOptions } from "@neo4j-nvl/base";
-import { useEffect, useMemo, useRef, useState } from "react";
+import type { ExternalCallbacks, Layout, NvlOptions } from "@neo4j-nvl/base";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   SerializedNode,
   SerializedRelationship,
@@ -82,6 +82,8 @@ export type WidgetData = {
    * trait; Streamlit passes it in the component state). Never bundled into the JS.
    */
   _css?: string;
+  /** Set by the frontend once the renderer is mounted; Python `save()` waits for it. */
+  _nvl_ready?: boolean;
 };
 
 const EMPTY_SELECTION: GraphSelection = { nodeIds: [], relationshipIds: [] };
@@ -257,6 +259,7 @@ function GraphWidget() {
   // The NDL stylesheet is synced by the host as `_css` (see injectNdlCss) instead of
   // being bundled into the JS payload.
   const [ndlCss] = useModelState<string>("_css");
+  const [, setNvlReady] = useModelState<boolean>("_nvl_ready");
   const {
     layout,
     nvlOptions,
@@ -381,6 +384,36 @@ function GraphWidget() {
     return () => model.off("msg:custom", onSaveRequest);
   }, [model]);
 
+  // Signal Python once the graph has rendered, so `save()` waits instead of racing the
+  // frontend. The image is re-rendered from the current layout positions, so "rendered"
+  // means the initial layout has settled — not just that NVL exists.
+  const nvlReadySentRef = useRef(false);
+  const signalNvlReady = useCallback(() => {
+    if (nvlReadySentRef.current) return;
+    nvlReadySentRef.current = true;
+    setNvlReady(true);
+  }, [setNvlReady]);
+  // Fires when the layout stops moving, i.e. the graph is fully drawn.
+  const nvlCallbacks = useMemo<ExternalCallbacks>(
+    () => ({ onLayoutDone: signalNvlReady }),
+    [signalNvlReady],
+  );
+  // Static layouts (e.g. "free") never move and may not fire onLayoutDone, so fall back to
+  // polling isLayoutMoving(); timer, not rAF, so it still fires in a background tab.
+  useEffect(() => {
+    let stillFrames = 0;
+    const interval = setInterval(() => {
+      if (nvlReadySentRef.current) {
+        clearInterval(interval);
+        return;
+      }
+      const nvl = nvlRef.current;
+      stillFrames = nvl !== null && !nvl.isLayoutMoving() ? stillFrames + 1 : 0;
+      if (stillFrames >= 3) signalNvlReady();
+    }, 100);
+    return () => clearInterval(interval);
+  }, [signalNvlReady]);
+
   const [neoNodes, neoRelationships] = useMemo(
     () => [transformNodes(nodes ?? []), transformRelationships(relationships ?? [])],
     [nodes, relationships],
@@ -471,6 +504,7 @@ function GraphWidget() {
           layout={layout}
           setLayout={setLayout}
           nvlOptions={nvlOptionsWithoutWorkers}
+          nvlCallbacks={nvlCallbacks}
           nvlRef={nvlRef}
           zoom={zoom}
           pan={pan}

@@ -207,6 +207,11 @@ class GraphWidget(anywidget.AnyWidget):
         from_json=lambda value, widget: InteractionEvent.model_validate(value) if value is not None else None,
     )
 
+    _nvl_ready: traitlets.Bool[bool, bool | int] = traitlets.Bool(
+        default_value=False,
+        help="Set by the frontend once the graph has rendered (initial layout settled); `save()` waits for it.",
+    ).tag(sync=True)
+
     _max_allowed_nodes: int = 10_000
 
     def on_selection_change(self, callback: Callable[[GraphSelection], None]) -> Callable[[dict[str, Any]], None]:
@@ -400,6 +405,11 @@ class GraphWidget(anywidget.AnyWidget):
         current zoom and pan). An SVG always contains the entire graph; note that NVL's
         SVG export is still marked experimental upstream.
 
+        The frontend renders the image, so `save` first waits for it to signal that the
+        graph has rendered, including the initial layout. Calling `save` immediately after
+        displaying the widget is safe: the request is sent once the layout has settled,
+        within `timeout`.
+
         Parameters
         ----------
         file:
@@ -415,7 +425,9 @@ class GraphWidget(anywidget.AnyWidget):
             (full list: https://docs.pydantic.dev/2.0/usage/types/extra_types/color_types/).
             A PNG defaults to the canvas' background, an SVG to transparent.
         timeout:
-            How long to wait for the frontend to render the image, in seconds.
+            Total time to wait for the frontend to render the image, in seconds. This
+            includes waiting for the widget to finish its initial layout, which matters
+            when `save` is called right after the widget is displayed.
 
         Returns
         -------
@@ -441,8 +453,13 @@ class GraphWidget(anywidget.AnyWidget):
 
         self._check_save_frontend()
 
+        loop = asyncio.get_running_loop()
+        # one deadline for load + render, not one per phase
+        deadline = loop.time() + timeout
+        await self._wait_for_frontend_ready(loop, deadline)
+
         request_id = uuid.uuid4().hex
-        future: asyncio.Future[dict[str, Any]] = asyncio.get_running_loop().create_future()
+        future: asyncio.Future[dict[str, Any]] = loop.create_future()
         self._ensure_save_dispatcher()
         self._pending_save_requests[request_id] = future
 
@@ -455,12 +472,13 @@ class GraphWidget(anywidget.AnyWidget):
                     "backgroundColor": background_color_hex,
                 }
             )
-            response = await asyncio.wait_for(future, timeout=timeout)
+            response = await asyncio.wait_for(future, timeout=max(0.0, deadline - loop.time()))
         except asyncio.TimeoutError as exc:
             raise TimeoutError(
                 f"Saving as {save_format.upper()} timed out after {timeout} seconds. The widget must be "
                 "displayed in a live notebook frontend (JupyterLab, Notebook, VS Code, Colab, or marimo) "
-                "for save() to work."
+                "for save() to work. If the widget was only just displayed, the frontend may still be "
+                "loading — retry the call."
             ) from exc
         finally:
             self._pending_save_requests.pop(request_id, None)
@@ -474,6 +492,36 @@ class GraphWidget(anywidget.AnyWidget):
 
         path.write_bytes(_decode_data_url(data_url))
         return path
+
+    async def _wait_for_frontend_ready(self, loop: asyncio.AbstractEventLoop, deadline: float) -> None:
+        """Wait until the frontend signals that the renderer is mounted.
+
+        A `save_request` sent before the widget module has loaded is dropped (custom
+        messages are not queued), so the caller would otherwise time out for nothing.
+        """
+        if self._nvl_ready:
+            return
+
+        ready: asyncio.Future[None] = loop.create_future()
+
+        def handler(change: dict[str, Any]) -> None:
+            if change["new"] and not ready.done():
+                ready.set_result(None)
+
+        self.observe(handler, names=["_nvl_ready"])
+        try:
+            # re-check: the signal may land between the first check and observe()
+            if not self._nvl_ready:
+                await asyncio.wait_for(ready, timeout=max(0.0, deadline - loop.time()))
+        except asyncio.TimeoutError as exc:
+            raise TimeoutError(
+                "The widget frontend did not finish rendering within the timeout. Make sure the widget "
+                "is displayed in a live notebook frontend (JupyterLab, Notebook, VS Code, Colab, or "
+                "marimo) with its output visible — not scrolled out of view or collapsed — and the "
+                "browser tab in the foreground, then retry."
+            ) from exc
+        finally:
+            self.unobserve(handler, names=["_nvl_ready"])
 
     def _check_save_frontend(self) -> None:
         """Fail fast when no live kernel comm can carry a save request to the frontend.

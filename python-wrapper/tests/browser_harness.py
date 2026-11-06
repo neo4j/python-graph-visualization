@@ -99,6 +99,20 @@ def _free_port() -> int:
         return int(sock.getsockname()[1])
 
 
+def _stop_server(process: subprocess.Popen[bytes]) -> None:
+    """Stop a disposable server process, escalating to SIGKILL if it will not exit.
+
+    By teardown time the tests have already run, so a force-kill cannot mask a failure.
+    """
+    process.terminate()
+    try:
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        # graceful shutdown wedged on a lingering kernel; the server is disposable
+        process.kill()
+        process.wait(timeout=10)
+
+
 @contextmanager
 def jupyter_server(root: Path) -> Iterator[JupyterServer]:
     """Boot a disposable, tokenless JupyterLab server rooted at ``root``.
@@ -146,8 +160,7 @@ def jupyter_server(root: Path) -> Iterator[JupyterServer]:
         _wait_until_ready(server, "/api")
         yield server
     finally:
-        process.terminate()
-        process.wait(timeout=10)
+        _stop_server(process)
 
 
 @contextmanager
@@ -184,8 +197,7 @@ def marimo_server(root: Path, app: Path) -> Iterator[MarimoServer]:
         _wait_until_ready(server, "/health")
         yield server
     finally:
-        process.terminate()
-        process.wait(timeout=10)
+        _stop_server(process)
 
 
 def create_notebook(server: JupyterServer, cells: Sequence[str]) -> str:
