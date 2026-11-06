@@ -349,13 +349,22 @@ def _normalize(name: str) -> str:
     return re.sub(r"[^a-z0-9]", "", name.lower())
 
 
-def test_icon_catalog_matches_js_registry() -> None:
+def _registry_keys() -> list[str]:
     registry_path = Path(__file__).parents[2] / "js-applet" / "src" / "icon-registry.ts"
     assert registry_path.exists(), f"missing {registry_path}; run `yarn generate:icons` in js-applet"
 
-    registry_keys = set(
-        re.findall(r'^\s{2}([A-Za-z0-9_]+):\s*(?:"data:|$)', registry_path.read_text(), flags=re.MULTILINE)
-    )
-    enum_names = {str(icon.value) for icon in Icons}
+    return re.findall(r'^\s{2}([A-Za-z0-9_]+):\s*(?:"data:|$)', registry_path.read_text(), flags=re.MULTILINE)
 
-    assert {_normalize(key) for key in registry_keys} == {_normalize(name) for name in enum_names}
+
+def test_icon_catalog_matches_js_registry() -> None:
+    enum_names = [str(icon.value) for icon in Icons]
+
+    assert {_normalize(key) for key in _registry_keys()} == {_normalize(name) for name in enum_names}
+
+
+def test_icon_catalog_is_sorted() -> None:
+    registry_keys = _registry_keys()
+    enum_names = [str(icon.value) for icon in Icons]
+
+    assert [_normalize(key) for key in registry_keys] == sorted(_normalize(key) for key in registry_keys)
+    assert [_normalize(name) for name in enum_names] == sorted(_normalize(name) for name in enum_names)
