@@ -153,6 +153,7 @@ Built-in icon names follow the node's (or relationship's) color the same way in-
 element the icon is drawn white so it stays visible. Custom overlay images (URLs or data URIs) are drawn
 exactly as given, so pick a color that contrasts with the element they sit on.
 
+[[coloring-the-graph]]
 == Coloring the graph
 
 Nodes and relationships can be colored directly by providing them with a color field, upon creation.
