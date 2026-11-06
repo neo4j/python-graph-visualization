@@ -150,6 +150,24 @@ def construct_layout_options(layout: Layout, options: dict[str, Any]) -> Optiona
     )
 
 
+def check_force_directed_layout_options(layout: Layout | None, layout_options: LayoutOptions | None) -> None:
+    """Warn when force-directed layout options are given for the plain d3-force layout.
+
+    NVL's d3-force layout ignores them; only `Layout.GPU_FORCE` honours `gravity`,
+    `simulationStopVelocity`, `seedingMethod`, and `clustering`.
+    """
+    if layout != Layout.FORCE_DIRECTED or not isinstance(layout_options, ForceDirectedLayoutOptions):
+        return
+
+    set_options = layout_options.model_dump(exclude_none=True)
+    if set_options:
+        warnings.warn(
+            f"The force-directed layout options {sorted(set_options)} have no effect on "
+            "`Layout.FORCE_DIRECTED` (NVL's d3-force layout has no tunable options); "
+            "use `Layout.GPU_FORCE` to apply them."
+        )
+
+
 class Renderer(StrEnum):
     """
     The renderer used to draw the visualization.

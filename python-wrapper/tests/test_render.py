@@ -15,7 +15,7 @@ render_cases = {
     "grid layout": {"layout": Layout.GRID},
     "coordinate layout": {"layout": Layout.COORDINATE},
     "hierarchical layout + options": {"layout": Layout.HIERARCHICAL, "layout_options": {"direction": "left"}},
-    "with layout options": {"layout_options": {"gravity": 0.1}},
+    "gpu force layout + options": {"layout": Layout.GPU_FORCE, "layout_options": {"gravity": 0.1}},
 }
 
 
@@ -182,6 +182,17 @@ def test_render_gpu_force_layout_enables_webgl_context() -> None:
     assert options["layout"] == "forceDirected"
     assert options["nvlOptions"]["renderer"] == "canvas"
     assert options["nvlOptions"]["disableWebGL"] is False
+
+
+def test_render_warns_on_ignored_force_directed_options() -> None:
+    VG = VisualizationGraph(nodes=[Node(id="0")], relationships=[])
+
+    # NVL's d3-force layout ignores these options; only the GPU force layout honours them.
+    with pytest.warns(UserWarning, match="have no effect"):
+        VG.render(layout=Layout.FORCE_DIRECTED, layout_options={"gravity": 0.1})
+
+    # The GPU force layout accepts them without warning.
+    VG.render(layout=Layout.GPU_FORCE, layout_options={"gravity": 0.1})
 
 
 def _data_block(html: str) -> re.Match[str]:

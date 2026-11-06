@@ -632,7 +632,7 @@ render_widget_cases = {
     "grid layout": {"layout": Layout.GRID},
     "coordinate layout": {"layout": Layout.COORDINATE},
     "hierarchical layout + options": {"layout": Layout.HIERARCHICAL, "layout_options": {"direction": "left"}},
-    "with layout options": {"layout_options": {"gravity": 0.1}},
+    "gpu force layout + options": {"layout": Layout.GPU_FORCE, "layout_options": {"gravity": 0.1}},
 }
 
 
@@ -711,9 +711,19 @@ class TestRenderOptionSetters:
     def test_set_layout_with_options(self) -> None:
         widget = GraphWidget()
 
-        widget.set_layout(Layout.FORCE_DIRECTED, {"gravity": 0.1})
+        # NVL's d3-force layout ignores these options; the wrapper warns but still stores them.
+        with pytest.warns(UserWarning, match="have no effect"):
+            widget.set_layout(Layout.FORCE_DIRECTED, {"gravity": 0.1})
 
         assert widget.options.layout == "d3Force"
+        assert widget.options.layout_options == {"gravity": 0.1}
+
+    def test_set_layout_gpu_force_with_options(self) -> None:
+        widget = GraphWidget()
+
+        widget.set_layout(Layout.GPU_FORCE, {"gravity": 0.1})  # must not warn
+
+        assert widget.options.layout == "forceDirected"
         assert widget.options.layout_options == {"gravity": 0.1}
 
     def test_set_layout_clears_stale_layout_options(self) -> None:

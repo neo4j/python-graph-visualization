@@ -36,6 +36,7 @@ from .options import (
     SelectionMode,
     WidgetLayout,
     WidgetOptions,
+    check_force_directed_layout_options,
     construct_layout_options,
 )
 from .relationship import Relationship, RelationshipIdType
@@ -992,6 +993,8 @@ class GraphWidget(anywidget.AnyWidget):
 
         if isinstance(layout_options, dict):
             layout_options = construct_layout_options(layout, layout_options)
+
+        check_force_directed_layout_options(layout, layout_options)
 
         js = RenderOptions(layout=layout, layout_options=layout_options).to_widget_options()
 

@@ -26,8 +26,9 @@ You can provide these either as a percentage of the available space (eg. `"80%"`
 
 Further you can change the layout of the graph using the `layout` parameter, which can be set to one of the following values:
 
-* `Layout.FORCE_DIRECTED` - Nodes are arranged using the Force-Directed algorithm, which simulates physical forces.
-To customize the layout, use _ForceDirectedOptions_ via _layout_options_.
+* `Layout.FORCE_DIRECTED` - Nodes are arranged using the d3-force algorithm. It has no tunable options: the
+force-directed _layout_options_ (`gravity`, `simulationStopVelocity`, `seedingMethod`, `clustering`) only apply to
+`Layout.GPU_FORCE`, and the wrapper warns if you set them here.
 * `Layout.GPU_FORCE` - Nodes are arranged using NVL's GPU-accelerated force simulation, and is the layout that
 supports xref:rendering.adoc#clustering[clustering] of connected nodes. It works with any `renderer`, but needs
 WebGL2 support in the browser; where that is missing, NVL falls back to `Layout.FORCE_DIRECTED` and clustering is
