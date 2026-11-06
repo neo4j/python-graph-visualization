@@ -17,7 +17,7 @@ from .options import (
     Legend,
     Renderer,
     RenderOptions,
-    check_physics_layout_renderer,
+    check_gpu_force_layout_renderer,
     construct_layout_options,
 )
 from .relationship import Relationship
@@ -460,7 +460,7 @@ class VisualizationGraph:
         if isinstance(layout, str):
             layout = Layout(layout.lower())
 
-        check_physics_layout_renderer(layout, renderer)
+        check_gpu_force_layout_renderer(layout, renderer)
 
         if not layout_options:
             layout_options = {}

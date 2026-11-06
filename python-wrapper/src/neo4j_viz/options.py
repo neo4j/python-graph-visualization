@@ -23,14 +23,14 @@ class CaptionAlignment(StrEnum):
 class Layout(StrEnum):
     FORCE_DIRECTED = "forcedirected"
     """
-    The force-directed layout uses a physics simulation to position the nodes.
+    The force-directed layout uses a d3-force simulation (on the CPU) to position the nodes.
     """
-    PHYSICS = "physics"
+    GPU_FORCE = "gpu_force"
     """
-    The physics layout uses NVL's GPU-accelerated engine to position the nodes.
+    The GPU force layout uses NVL's GPU-accelerated force simulation to position the nodes.
 
-    It requires `Renderer.WEB_GL` (with the canvas renderer it falls back to the
-    `FORCE_DIRECTED` layout), and is the only layout that supports node clustering via
+    It requires `Renderer.WEB_GL` (on the canvas renderer it is identical to `FORCE_DIRECTED`
+    and clustering is ignored), and is the only layout that supports node clustering via
     `ForceDirectedLayoutOptions.clustering`.
     """
     HIERARCHICAL = "hierarchical"
@@ -70,7 +70,7 @@ class Packing(StrEnum):
 
 class SeedingMethod(StrEnum):
     """
-    How initial node positions are seeded before the physics simulation runs.
+    How initial node positions are seeded before the force simulation runs.
     """
 
     BOX = "box"
@@ -85,7 +85,7 @@ class SeedingMethod(StrEnum):
 
 class ClusteringOptions(BaseModel, extra="forbid"):
     """
-    Physical clustering options for the physics layout.
+    Clustering options for the GPU force layout.
 
     Nodes that share the same value for the `clusterBy` property are pulled together and
     can be decorated with an outline or halo.
@@ -133,7 +133,7 @@ def construct_layout_options(layout: Layout, options: dict[str, Any]) -> Optiona
     if not options:
         return None
 
-    if layout in (Layout.FORCE_DIRECTED, Layout.PHYSICS):
+    if layout in (Layout.FORCE_DIRECTED, Layout.GPU_FORCE):
         try:
             return ForceDirectedLayoutOptions(**options)
         except ValidationError as e:
@@ -145,7 +145,7 @@ def construct_layout_options(layout: Layout, options: dict[str, Any]) -> Optiona
             _parse_validation_error(e, HierarchicalLayoutOptions)
 
     raise ValueError(
-        f"Layout options only supported for layouts `{Layout.FORCE_DIRECTED}`, `{Layout.PHYSICS}` "
+        f"Layout options only supported for layouts `{Layout.FORCE_DIRECTED}`, `{Layout.GPU_FORCE}` "
         f"and `{Layout.HIERARCHICAL}`, but was `{layout}`"
     )
 
@@ -215,7 +215,7 @@ class WidgetLayout(StrEnum):
 # Maps the Python-facing `Layout` to the JS/NVL wire format stored in `WidgetOptions`.
 _LAYOUT_TO_JS: dict[Layout, WidgetLayout] = {
     Layout.FORCE_DIRECTED: WidgetLayout.D3_FORCE,
-    Layout.PHYSICS: WidgetLayout.FORCE_DIRECTED,
+    Layout.GPU_FORCE: WidgetLayout.FORCE_DIRECTED,
     Layout.HIERARCHICAL: WidgetLayout.HIERARCHICAL,
     Layout.COORDINATE: WidgetLayout.FREE,
     Layout.GRID: WidgetLayout.GRID,
@@ -223,17 +223,17 @@ _LAYOUT_TO_JS: dict[Layout, WidgetLayout] = {
 }
 
 
-def check_physics_layout_renderer(layout: Layout | None, renderer: Renderer) -> None:
-    """Warn when the physics layout is requested without the WebGL renderer.
+def check_gpu_force_layout_renderer(layout: Layout | None, renderer: Renderer) -> None:
+    """Raise when the GPU force layout is requested without the WebGL renderer.
 
-    NVL runs its physics engine (and therefore clustering) only on the WebGL renderer;
-    on the canvas renderer it falls back to the force-directed layout.
+    NVL runs the GPU force layout (and therefore clustering) only on the WebGL renderer; on the
+    canvas renderer it is identical to the force-directed layout, so requesting it is a mistake.
     """
-    if layout == Layout.PHYSICS and renderer != Renderer.WEB_GL:
-        warnings.warn(
-            "The physics layout requires the WebGL renderer. With the canvas renderer it falls "
-            "back to the force-directed layout and clustering is ignored. Set "
-            "`renderer=Renderer.WEB_GL` to use it."
+    if layout == Layout.GPU_FORCE and renderer != Renderer.WEB_GL:
+        raise ValueError(
+            "The GPU force layout requires the WebGL renderer. On the canvas renderer it is "
+            "identical to `Layout.FORCE_DIRECTED` and clustering is ignored. Set "
+            "`renderer=Renderer.WEB_GL`, or use `Layout.FORCE_DIRECTED` instead."
         )
 
 
@@ -372,9 +372,9 @@ class NvlOptions(
     max_zoom: Optional[float] = None
     allow_dynamic_min_zoom: Optional[bool] = None
     min_fps: Optional[int] = Field(None, ge=1, le=120)
-    """Target minimum presentation fps while the layout is active (1-120, default 3)."""
+    """Target minimum presentation frames per second while the layout is active (1-120, default 3)."""
     max_fps: Optional[int] = Field(None, ge=1, le=120)
-    """Target maximum presentation fps while the layout is active (1-120, default 30)."""
+    """Target maximum presentation frames per second while the layout is active (1-120, default 30)."""
 
 
 # Mirrors the GraphOptions type in js-applet/src/graph-widget.tsx and is the structure stored
@@ -425,8 +425,12 @@ class RenderOptions(BaseModel, extra="allow"):
     min_zoom: Optional[float] = Field(None, serialization_alias="minZoom", description="The minimum zoom level allowed")
     allow_dynamic_min_zoom: Optional[bool] = Field(None, serialization_alias="allowDynamicMinZoom")
 
-    min_fps: Optional[int] = Field(None, ge=1, le=120, description="Target minimum presentation fps (1-120).")
-    max_fps: Optional[int] = Field(None, ge=1, le=120, description="Target maximum presentation fps (1-120).")
+    min_fps: Optional[int] = Field(
+        None, ge=1, le=120, description="Target minimum presentation frames per second (1-120)."
+    )
+    max_fps: Optional[int] = Field(
+        None, ge=1, le=120, description="Target maximum presentation frames per second (1-120)."
+    )
 
     selection_mode: Optional[SelectionMode] = Field(None, serialization_alias="selectionMode")
 
@@ -441,7 +445,7 @@ class RenderOptions(BaseModel, extra="allow"):
 
         if self.layout == Layout.HIERARCHICAL and not isinstance(self.layout_options, HierarchicalLayoutOptions):
             raise ValueError("layout_options must be of type HierarchicalLayoutOptions for hierarchical layout")
-        if self.layout in (Layout.FORCE_DIRECTED, Layout.PHYSICS) and not isinstance(
+        if self.layout in (Layout.FORCE_DIRECTED, Layout.GPU_FORCE) and not isinstance(
             self.layout_options, ForceDirectedLayoutOptions
         ):
             raise ValueError("layout_options must be of type ForceDirectedLayoutOptions for force-directed layout")

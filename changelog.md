@@ -8,7 +8,7 @@
   corner badge). Icons are set by name from a built-in catalog (`neo4j_viz.Icons`) or by URL, and local
   or remote images can be inlined with `neo4j_viz.icon_from_file`, `neo4j_viz.icon_from_url`, or a whole
   directory with `neo4j_viz.icons_from_directory`.
-* The `Layout.PHYSICS` layout uses NVL's GPU-accelerated physics engine. It supports clustering of nodes by
+* The `Layout.GPU_FORCE` layout uses NVL's GPU-accelerated force simulation. It supports clustering of nodes by
   a node property, with an optional cluster outline or halo, via `ClusteringOptions` in
   `ForceDirectedLayoutOptions`. It requires `Renderer.WEB_GL`.
 * The `Layout.HIERARCHICAL` layout supports clustering of nodes by a node property via the

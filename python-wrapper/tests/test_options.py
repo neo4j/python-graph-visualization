@@ -12,7 +12,7 @@ from neo4j_viz.options import (
     SelectionMode,
     WidgetLayout,
     WidgetOptions,
-    check_physics_layout_renderer,
+    check_gpu_force_layout_renderer,
     construct_layout_options,
 )
 
@@ -156,8 +156,8 @@ def test_widget_options_full() -> None:
     }
 
 
-def test_widget_options_layout_physics() -> None:
-    options = RenderOptions(layout=Layout.PHYSICS)
+def test_widget_options_layout_gpu_force() -> None:
+    options = RenderOptions(layout=Layout.GPU_FORCE)
     js = options.to_widget_options().to_json()
     assert js["layout"] == "forceDirected"
 
@@ -178,9 +178,9 @@ def test_widget_options_force_directed_with_seeding_method() -> None:
     assert js["layoutOptions"] == {"seedingMethod": "circle"}
 
 
-def test_widget_options_physics_with_clustering() -> None:
+def test_widget_options_gpu_force_with_clustering() -> None:
     options = RenderOptions(
-        layout=Layout.PHYSICS,
+        layout=Layout.GPU_FORCE,
         layout_options=ForceDirectedLayoutOptions(
             clustering=ClusteringOptions(clusterBy="community", drawOutline=True, drawHalo=True),
         ),
@@ -204,40 +204,32 @@ def test_widget_options_hierarchical_with_clustering() -> None:
 def test_widget_options_cross_cluster_multiplier_out_of_range() -> None:
     with pytest.raises(ValueError, match="crossClusterRelationshipMultiplier"):
         construct_layout_options(
-            Layout.PHYSICS,
+            Layout.GPU_FORCE,
             {"clustering": {"clusterBy": "community", "crossClusterRelationshipMultiplier": 2}},
         )
 
 
 def test_widget_options_clustering_requires_cluster_by() -> None:
     with pytest.raises(ValueError, match="clusterBy"):
-        construct_layout_options(Layout.PHYSICS, {"clustering": {"drawOutline": True}})
+        construct_layout_options(Layout.GPU_FORCE, {"clustering": {"drawOutline": True}})
 
 
-def test_widget_options_physics_layout_options_type_mismatch() -> None:
+def test_widget_options_gpu_force_layout_options_type_mismatch() -> None:
     with pytest.raises(ValueError, match="ForceDirectedLayoutOptions"):
         RenderOptions(
-            layout=Layout.PHYSICS,
+            layout=Layout.GPU_FORCE,
             layout_options=HierarchicalLayoutOptions(direction=Direction.LEFT),
         )
 
 
-def test_check_physics_layout_renderer_warns_on_canvas() -> None:
-    with pytest.warns(UserWarning, match="physics layout requires the WebGL renderer"):
-        check_physics_layout_renderer(Layout.PHYSICS, Renderer.CANVAS)
+def test_check_gpu_force_layout_renderer_raises_on_canvas() -> None:
+    with pytest.raises(ValueError, match="GPU force layout requires the WebGL renderer"):
+        check_gpu_force_layout_renderer(Layout.GPU_FORCE, Renderer.CANVAS)
 
 
-def test_check_physics_layout_renderer_no_warning_on_webgl() -> None:
-    import warnings as warnings_module
-
-    with warnings_module.catch_warnings():
-        warnings_module.simplefilter("error")
-        check_physics_layout_renderer(Layout.PHYSICS, Renderer.WEB_GL)
+def test_check_gpu_force_layout_renderer_allows_webgl() -> None:
+    check_gpu_force_layout_renderer(Layout.GPU_FORCE, Renderer.WEB_GL)  # must not raise
 
 
-def test_check_physics_layout_renderer_no_warning_for_other_layouts() -> None:
-    import warnings as warnings_module
-
-    with warnings_module.catch_warnings():
-        warnings_module.simplefilter("error")
-        check_physics_layout_renderer(Layout.FORCE_DIRECTED, Renderer.CANVAS)
+def test_check_gpu_force_layout_renderer_allows_other_layouts() -> None:
+    check_gpu_force_layout_renderer(Layout.FORCE_DIRECTED, Renderer.CANVAS)  # must not raise
