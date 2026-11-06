@@ -149,6 +149,10 @@ from neo4j_viz import OverlayIcon
 VG.nodes[0].overlay_icon = OverlayIcon(url=Icons.PIN, position=(1, 1), size=0.5)
 ----
 
+Built-in icon names follow the node's (or relationship's) color the same way in-node icons do: on a dark
+element the icon is drawn white so it stays visible. Custom overlay images (URLs or data URIs) are drawn
+exactly as given, so pick a color that contrasts with the element they sit on.
+
 == Coloring the graph
 
 Nodes and relationships can be colored directly by providing them with a color field, upon creation.

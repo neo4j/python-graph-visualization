@@ -28,13 +28,80 @@ export function resolveIcon(value: string | undefined): string | undefined {
   return uri;
 }
 
+function parseHexColor(color: string): [number, number, number] | undefined {
+  const match = /^#?([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(color.trim());
+  if (!match?.[1]) return undefined;
+
+  let digits = match[1];
+  if (digits.length === 3) {
+    digits = digits
+      .split("")
+      .map((d) => d + d)
+      .join("");
+  }
+
+  const value = Number.parseInt(digits.slice(0, 6), 16);
+  return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff];
+}
+
+function channelToLinear(channel: number): number {
+  const s = channel / 255;
+  return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+}
+
+function relativeLuminance([r, g, b]: [number, number, number]): number {
+  return 0.2126 * channelToLinear(r) + 0.7152 * channelToLinear(g) + 0.0722 * channelToLinear(b);
+}
+
+function contrastRatio(a: number, b: number): number {
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+// NVL picks the most readable of these two for a node's text/icon and inverts a
+// black icon when it settles on white. Mirror that so overlays flip together with
+// in-node icons on the same fill.
+const DARK_GLYPH_LUMINANCE = relativeLuminance([0x1a, 0x1b, 0x1d]);
+const LIGHT_GLYPH_LUMINANCE = relativeLuminance([0xff, 0xff, 0xff]);
+
+/** Whether a fill is dark enough that NVL would invert a black icon to white. */
+export function isDarkColor(color: string | undefined): boolean {
+  if (!color) return false;
+
+  const rgb = parseHexColor(color);
+  if (!rgb) return false;
+
+  const luminance = relativeLuminance(rgb);
+  return (
+    contrastRatio(luminance, DARK_GLYPH_LUMINANCE) < contrastRatio(luminance, LIGHT_GLYPH_LUMINANCE)
+  );
+}
+
+// Catalog data URIs are percent-encoded SVG whose glyphs are black (`#000` -> `%23000`).
+const BLACK_GLYPH = /%23(?:000000|000)(?![0-9a-fA-F])/gi;
+
+function invertCatalogIcon(uri: string): string {
+  return uri.replace(BLACK_GLYPH, "%23ffffff");
+}
+
 function resolveOverlayIcon(
   overlayIcon: Node["overlayIcon"] | undefined,
   iconRefs: Record<string, string>,
+  isDark: boolean,
 ): Node["overlayIcon"] | undefined {
   if (!overlayIcon) return undefined;
 
-  const url = resolveIcon(expandIconRef(overlayIcon.url, iconRefs));
+  const value = expandIconRef(overlayIcon.url, iconRefs);
+  if (!value) return undefined;
+
+  // NVL never inverts overlay icons, so a black catalog overlay would be invisible
+  // on a dark fill; use the white variant instead. Custom URLs and data URIs are
+  // left as-is, so coloured badges keep their colour.
+  if (isDark && !URL_SCHEME.test(value)) {
+    const catalogUri = ICON_LOOKUP.get(normalizeIconName(value));
+    if (catalogUri) return { ...overlayIcon, url: invertCatalogIcon(catalogUri) };
+  }
+
+  const url = resolveIcon(value);
   return url ? { ...overlayIcon, url } : undefined;
 }
 
@@ -61,7 +128,7 @@ export function transformNodes(
     const { icon, overlayIcon, ...rest } = node;
     const labelProperty = isListOfStrings(node.properties.labels) ? node.properties.labels : [];
     const resolvedIcon = resolveIcon(expandIconRef(icon, iconRefs));
-    const resolvedOverlayIcon = resolveOverlayIcon(overlayIcon, iconRefs);
+    const resolvedOverlayIcon = resolveOverlayIcon(overlayIcon, iconRefs, isDarkColor(node.color));
     return {
       ...rest,
       id: node.id,
@@ -96,7 +163,7 @@ export function transformRelationships(
 ): NeoRel[] {
   return relationships.map((rel) => {
     const { overlayIcon, ...rest } = rel;
-    const resolvedOverlayIcon = resolveOverlayIcon(overlayIcon, iconRefs);
+    const resolvedOverlayIcon = resolveOverlayIcon(overlayIcon, iconRefs, isDarkColor(rel.color));
     return {
       ...rest,
       id: rel.id,
