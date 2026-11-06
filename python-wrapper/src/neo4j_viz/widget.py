@@ -34,8 +34,8 @@ from .options import (
     Renderer,
     RenderOptions,
     SelectionMode,
+    WidgetLayout,
     WidgetOptions,
-    check_gpu_force_layout_renderer,
     construct_layout_options,
 )
 from .relationship import Relationship, RelationshipIdType
@@ -981,11 +981,11 @@ class GraphWidget(anywidget.AnyWidget):
         Parameters
         -----------
         layout:
-            The layout algorithm to use (e.g. `Layout.FORCE_DIRECTED`, `Layout.HIERARCHICAL`).
+            The layout algorithm to use (e.g. `Layout.FORCE_DIRECTED`, `Layout.GPU_FORCE`, `Layout.HIERARCHICAL`).
         layout_options:
             Optional layout-specific options. Either a `HierarchicalLayoutOptions`/`ForceDirectedLayoutOptions`
             instance or a plain dict, which is validated against the chosen layout. Layout options are only
-            supported for the force-directed and hierarchical layouts.
+            supported for the force-directed, GPU force, and hierarchical layouts.
         """
         if isinstance(layout, str):
             layout = Layout(layout)
@@ -996,10 +996,11 @@ class GraphWidget(anywidget.AnyWidget):
         js = RenderOptions(layout=layout, layout_options=layout_options).to_widget_options()
 
         new = self._render_options()
-        # The GPU force layout needs the WebGL renderer; the widget defaults to canvas when unset.
-        current = new.nvl_options
-        renderer = Renderer.CANVAS if current is None or current.disable_web_gl is not False else Renderer.WEB_GL
-        check_gpu_force_layout_renderer(layout, renderer)
+        if layout == Layout.GPU_FORCE:
+            # The GPU physics engine needs NVL's WebGL context, regardless of the renderer.
+            nvl_options = new.nvl_options or NvlOptions()
+            nvl_options.disable_web_gl = False
+            new.nvl_options = nvl_options
         new.layout = js.layout
         new.layout_options = js.layout_options
         self.options = new
@@ -1041,11 +1042,16 @@ class GraphWidget(anywidget.AnyWidget):
         renderer:
             The renderer to use, either `Renderer.WEB_GL` or `Renderer.CANVAS`.
         """
-        Renderer.check(renderer, len(self.nodes))
+        has_captions = any(node.caption for node in self.nodes) or any(
+            rel.caption or rel.properties.get("type") for rel in self.relationships
+        )
+        Renderer.check(renderer, len(self.nodes), has_captions=has_captions)
 
         new = self._render_options()
         nvl_options = new.nvl_options or NvlOptions()
-        nvl_options.disable_web_gl = renderer != Renderer.WEB_GL
+        nvl_options.renderer = renderer
+        # The WebGL renderer needs NVL's WebGL context, and so does the GPU force layout.
+        nvl_options.disable_web_gl = renderer != Renderer.WEB_GL and new.layout != WidgetLayout.FORCE_DIRECTED
         new.nvl_options = nvl_options
         self.options = new
 

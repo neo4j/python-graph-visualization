@@ -29,9 +29,9 @@ class Layout(StrEnum):
     """
     The GPU force layout uses NVL's GPU-accelerated force simulation to position the nodes.
 
-    It requires `Renderer.WEB_GL` (on the canvas renderer it is identical to `FORCE_DIRECTED`
-    and clustering is ignored), and is the only layout that supports node clustering via
-    `ForceDirectedLayoutOptions.clustering`.
+    It is the only layout that supports node clustering via `ForceDirectedLayoutOptions.clustering`,
+    and it works with any `Renderer`. It needs WebGL2 support in the browser; where that is missing,
+    NVL falls back to the `FORCE_DIRECTED` layout and clustering is ignored.
     """
     HIERARCHICAL = "hierarchical"
     """
@@ -152,32 +152,32 @@ def construct_layout_options(layout: Layout, options: dict[str, Any]) -> Optiona
 
 class Renderer(StrEnum):
     """
-    The renderer used to render the visualization.
+    The renderer used to draw the visualization.
     """
 
     WEB_GL = "webgl"
     """
-    The WebGL renderer is optimized for performance and handles large graphs better.
-    It renders node icons and relationship arrowheads, but not captions.
+    The WebGL renderer draws the graph on the GPU and handles large graphs better than the canvas
+    renderer. It renders node icons and relationship arrowheads, but not captions.
     """
     CANVAS = "canvas"
     """
-    The canvas renderer has worse performance than the WebGL renderer, so is less well suited to render large graphs.
-    However, it renders captions.
+    The canvas renderer is slower than the WebGL renderer, so is less well suited to large graphs.
+    It renders captions. This is the default.
     """
 
     @classmethod
-    def check(self, renderer: Renderer, num_nodes: int) -> None:
+    def check(cls, renderer: Renderer, num_nodes: int, has_captions: bool = False) -> None:
         if renderer == Renderer.CANVAS and num_nodes > 10_000:
             warnings.warn(
                 "To visualize more than 10.000 nodes, we recommend using the WebGL renderer "
                 "instead of the canvas renderer for better performance. You can set the renderer "
                 "using the `renderer` parameter"
             )
-        if renderer == Renderer.WEB_GL:
+        if renderer == Renderer.WEB_GL and has_captions:
             warnings.warn(
-                "Although better for performance, the WebGL renderer cannot render captions. "
-                "If you need captions, use the canvas renderer by setting the `renderer` parameter"
+                "The WebGL renderer does not render captions. Use the canvas renderer (the default) "
+                "if you need them, or remove the node and relationship captions."
             )
 
 
@@ -221,20 +221,6 @@ _LAYOUT_TO_JS: dict[Layout, WidgetLayout] = {
     Layout.GRID: WidgetLayout.GRID,
     Layout.CIRCULAR: WidgetLayout.CIRCULAR,
 }
-
-
-def check_gpu_force_layout_renderer(layout: Layout | None, renderer: Renderer) -> None:
-    """Raise when the GPU force layout is requested without the WebGL renderer.
-
-    NVL runs the GPU force layout (and therefore clustering) only on the WebGL renderer; on the
-    canvas renderer it is identical to the force-directed layout, so requesting it is a mistake.
-    """
-    if layout == Layout.GPU_FORCE and renderer != Renderer.WEB_GL:
-        raise ValueError(
-            "The GPU force layout requires the WebGL renderer. On the canvas renderer it is "
-            "identical to `Layout.FORCE_DIRECTED` and clustering is ignored. Set "
-            "`renderer=Renderer.WEB_GL`, or use `Layout.FORCE_DIRECTED` instead."
-        )
 
 
 class PanPosition(BaseModel):
@@ -368,6 +354,7 @@ class NvlOptions(
 
     # ``to_camel("disable_web_gl")`` would yield ``disableWebGl``; NVL expects ``disableWebGL``.
     disable_web_gl: Optional[bool] = Field(None, alias="disableWebGL")
+    renderer: Optional[Renderer] = None
     min_zoom: Optional[float] = None
     max_zoom: Optional[float] = None
     allow_dynamic_min_zoom: Optional[bool] = None
@@ -465,7 +452,10 @@ class RenderOptions(BaseModel, extra="allow"):
 
         nvl_options = NvlOptions()
         if self.renderer is not None:
-            nvl_options.disable_web_gl = self.renderer != Renderer.WEB_GL
+            nvl_options.renderer = self.renderer
+        if self.renderer is not None or self.layout == Layout.GPU_FORCE:
+            # Both the WebGL renderer and the GPU physics engine need NVL's WebGL context.
+            nvl_options.disable_web_gl = self.renderer != Renderer.WEB_GL and self.layout != Layout.GPU_FORCE
         if self.min_zoom is not None:
             nvl_options.min_zoom = self.min_zoom
         if self.max_zoom is not None:
