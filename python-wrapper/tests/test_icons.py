@@ -341,8 +341,12 @@ def test_icon_from_url_propagates_http_error(monkeypatch: pytest.MonkeyPatch) ->
 
     monkeypatch.setattr(icons_module, "urlopen", fake_urlopen)
 
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPError) as exc_info:
         icon_from_url("https://example.com/missing.svg")
+
+    # HTTPError subclasses urllib's `addinfourl`, which is a tempfile wrapper. Close it so it does
+    # not emit a ResourceWarning when collected; `filterwarnings = ["error"]` would fail the test.
+    exc_info.value.close()
 
 
 def _normalize(name: str) -> str:
