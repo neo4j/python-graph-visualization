@@ -48,15 +48,17 @@ def build_icon_refs(nodes: list[Node], relationships: list[Relationship]) -> tup
 
 
 def apply_icon_refs(entity_dict: dict[str, Any], uri_to_ref: dict[str, str]) -> dict[str, Any]:
-    """Replace factored icon values in a serialized entity with their short references."""
+    """Return a copy of a serialized entity with factored icon values replaced by their references."""
+    result = dict(entity_dict)
+
     icon = entity_dict.get("icon")
     if isinstance(icon, str) and icon in uri_to_ref:
-        entity_dict["icon"] = uri_to_ref[icon]
+        result["icon"] = uri_to_ref[icon]
 
     overlay_icon = entity_dict.get("overlayIcon")
     if isinstance(overlay_icon, dict):
         url = overlay_icon.get("url")
         if isinstance(url, str) and url in uri_to_ref:
-            overlay_icon["url"] = uri_to_ref[url]
+            result["overlayIcon"] = {**overlay_icon, "url": uri_to_ref[url]}
 
-    return entity_dict
+    return result

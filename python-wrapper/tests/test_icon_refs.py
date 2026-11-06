@@ -56,6 +56,16 @@ def test_apply_icon_refs_leaves_other_values() -> None:
     assert apply_icon_refs(entity, {_LONG_ICON: "#0"})["icon"] == "database_check"
 
 
+def test_apply_icon_refs_does_not_mutate_input() -> None:
+    entity: dict[str, Any] = {"id": "0", "icon": _LONG_ICON, "overlayIcon": {"url": _LONG_ICON}}
+
+    result = apply_icon_refs(entity, {_LONG_ICON: "#0"})
+
+    assert result is not entity
+    assert entity["icon"] == _LONG_ICON
+    assert entity["overlayIcon"]["url"] == _LONG_ICON
+
+
 def test_widget_serializes_shared_icons_as_refs() -> None:
     widget = GraphWidget(nodes=[Node(id="0", icon=_LONG_ICON), Node(id="1", icon=_LONG_ICON)])
 
