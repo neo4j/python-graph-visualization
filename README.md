@@ -28,21 +28,27 @@ The package wraps the [Neo4j Visualization JavaScript library (NVL)](https://neo
   - Sizing
   - Colors
   - Captions
+  - Icons
   - Pinning
   - On hover tooltip
 - Relationship features:
   - Colors
   - Captions
+  - Overlay icons
   - On hover tooltip
 - Graph features:
   - Zooming
   - Panning
   - Moving nodes
   - Using different layouts
+  - Clustering nodes by a property
+  - Color legend
 - Additional convenience functionality for:
   - Resizing nodes, optionally including scale normalization
   - Coloring nodes based on a property
   - Toggle whether nodes should be pinned or not
+  - Setting node icons from a built-in catalog, or from image files, URLs, or a directory
+  - Reading the current selection and reacting to click, double-click, and right-click events
 
 Please note that this list is by no means exhaustive.
 

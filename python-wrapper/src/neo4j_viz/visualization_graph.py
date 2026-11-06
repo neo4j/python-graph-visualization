@@ -17,6 +17,7 @@ from .options import (
     Legend,
     Renderer,
     RenderOptions,
+    check_force_directed_layout_options,
     construct_layout_options,
 )
 from .relationship import Relationship
@@ -146,6 +147,63 @@ class VisualizationGraph:
         >>> VG.set_node_captions(field="id", override=False)
         """
         self._entity_ops.set_node_captions(field=field, property=property, override=override)
+
+    def set_node_icons(
+        self,
+        *,
+        icons: dict[NodeIdType, str] | None = None,
+        field: str | None = None,
+        property: str | None = None,
+        mapping: dict[Any, str] | None = None,
+        override: bool = True,
+    ) -> None:
+        """
+        Set the icon for nodes in the graph.
+
+        Icons can be given explicitly per node id, or derived from a node field/property. A value
+        is either the name of a built-in icon (see `neo4j_viz.Icons`) or a URL. To use a local
+        image file, inline it with `neo4j_viz.icon_from_file`.
+
+        Parameters
+        ----------
+        icons:
+            A dictionary mapping from node ID to icon. Must be None if `field` or `property` is provided.
+        field:
+            The field of the nodes to use as the icon. Must be None if `icons` or `property` is provided.
+        property:
+            The property of the nodes to use as the icon. Must be None if `icons` or `field` is provided.
+        mapping:
+            A dictionary mapping from the field/property value to icon. If omitted, the field/property
+            value is used as the icon directly. Only valid together with `field` or `property`.
+        override:
+            Whether to override existing icons of the nodes, if they have any.
+
+        Examples
+        --------
+        Given a VisualizationGraph `VG`:
+
+        >>> from neo4j_viz import Icons
+        >>> nodes = [
+        ...    Node(id="0", properties={"label": "Person"}),
+        ...    Node(id="1", properties={"label": "Company"}),
+        ... ]
+        >>> VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+        Set icons from a property via a mapping:
+
+        >>> VG.set_node_icons(property="label", mapping={"Person": Icons.USER_SHIELD, "Company": Icons.DEPLOYMENTS})
+
+        Set icons explicitly per node id:
+
+        >>> VG.set_node_icons(icons={"0": Icons.CIRCLE, "1": "https://example.com/logo.svg"})
+        """
+        self._entity_ops.set_node_icons(
+            icons=icons,
+            field=field,
+            property=property,
+            mapping=mapping,
+            override=override,
+        )
 
     def resize_nodes(
         self,
@@ -393,12 +451,18 @@ class VisualizationGraph:
         if isinstance(renderer, str):
             renderer = Renderer(renderer)
 
-        Renderer.check(renderer, num_nodes)
+        # The WebGL renderer does not draw captions, but the canvas renderer does; only warn when
+        # the graph actually has captions that would be lost.
+        has_captions = any(node.caption for node in self.nodes) or any(
+            rel.caption or rel.properties.get("type") for rel in self.relationships
+        )
+        Renderer.check(renderer, num_nodes, has_captions=has_captions)
 
         if not layout:
             layout = Layout.FORCE_DIRECTED
         if isinstance(layout, str):
             layout = Layout(layout.lower())
+
         if not layout_options:
             layout_options = {}
 
@@ -406,6 +470,8 @@ class VisualizationGraph:
             layout_options_typed = construct_layout_options(layout, layout_options)
         else:
             layout_options_typed = layout_options
+
+        check_force_directed_layout_options(layout, layout_options_typed)
 
         return RenderOptions(
             layout=layout,

@@ -2,27 +2,33 @@
 
 ## Breaking changes
 
-* The `Layout`, `CaptionAlignment`, `Direction`, `Packing`, `Renderer`, `SelectionMode`,
-  `WidgetLayout`, and `ColorSpace` enums are now `StrEnum`s: `str()` of a member (and
-  f-string interpolation) returns the value (e.g. `"grid"`) instead of the member name
-  (e.g. `"Layout.GRID"`).
-
 ## New features
+
+* Nodes can display an icon, and nodes and relationships can display an overlay icon (for example a
+  corner badge). Icons are set by name from a built-in catalog (`neo4j_viz.Icons`) or by URL, and local
+  or remote images can be inlined with `neo4j_viz.icon_from_file`, `neo4j_viz.icon_from_url`, or a whole
+  directory with `neo4j_viz.icons_from_directory`.
+* The `Layout.GPU_FORCE` layout uses NVL's GPU-accelerated force simulation. It supports clustering of nodes by
+  a node property, with an optional cluster outline or halo, via `ClusteringOptions` in
+  `ForceDirectedLayoutOptions`. It works with any renderer.
+* The `Layout.HIERARCHICAL` layout supports clustering of nodes by a node property via the
+  `HierarchicalLayoutOptions.clusterBy` option.
+* The GPU force layout accepts a `seedingMethod` option (how initial node positions are seeded).
 
 ## Bug fixes
 
-* Avoid pandas 3.1 deprecation warnings when building a graph from GDS
+* Multiple `VG.render()` calls on one page (e.g. several notebook cells) no longer all display the first graph.
+* `GraphWidget.save()` no longer times out intermittently when it is called right after the
+  widget is displayed: the request now waits for the frontend to finish rendering instead of
+  racing it.
 
 ## Improvements
 
-* Support Python 3.15
-* Support the GDS client 2.3
+* `Renderer.WEB_GL` now selects NVL's WebGL renderer (it previously only enabled the GPU context without changing
+  how the graph was drawn). WebGL drawing is faster for large graphs but does not render captions; the warning is
+  now only shown when the graph actually has captions that would be dropped.
+* The wrapper warns when force-directed layout options (`gravity`, `simulationStopVelocity`, `seedingMethod`,
+  `clustering`) are set on `Layout.FORCE_DIRECTED`, since NVL's d3-force layout ignores them; use `Layout.GPU_FORCE`.
+* Since NVL 2.0 the WebGL renderer renders node icons and relationship arrowheads; only captions remain canvas-only.
 
 ## Other changes
-
-* Remove the `enum-tools` dependency: the `document_enum` decorator only did anything
-  in interactive sessions, and the enum member docstrings are picked up from the source
-  when the docs are built.
-* Drop support for Python 3.10
-* On Python 3.15, the `pandas` extra installs pandas 3 (pandas 2 has no 3.15 wheels)
-* The `snowflake` extra is not available on Python 3.15 until `snowflake-connector-python` ships 3.15 wheels

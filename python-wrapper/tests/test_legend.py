@@ -1,4 +1,5 @@
 import json
+import re
 from typing import Any
 
 from pydantic_extra_types.color import Color
@@ -187,7 +188,7 @@ def test_render_injects_legend_into_html() -> None:
 
     html = VG.render().data
 
-    assert 'type="application/json" id="neo4j-viz-data"' in html
+    assert re.search(r'<script type="application/json" id="neo4j-viz-data-[0-9a-f]+">', html) is not None
     assert '"legend"' in html
     assert "Movie" in html
 

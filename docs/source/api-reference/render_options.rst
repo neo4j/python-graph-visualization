@@ -8,6 +8,10 @@
     :members:
     :exclude-members: model_config
 
+.. autoclass:: neo4j_viz.ClusteringOptions
+    :members:
+    :exclude-members: model_config
+
 .. autoclass:: neo4j_viz.HierarchicalLayoutOptions
     :members:
     :exclude-members: model_config
@@ -16,6 +20,9 @@
     :members:
 
 .. autoclass:: neo4j_viz.Packing
+    :members:
+
+.. autoclass:: neo4j_viz.SeedingMethod
     :members:
 
 .. autoclass:: neo4j_viz.Renderer

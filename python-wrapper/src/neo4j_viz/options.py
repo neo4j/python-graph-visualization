@@ -23,7 +23,15 @@ class CaptionAlignment(StrEnum):
 class Layout(StrEnum):
     FORCE_DIRECTED = "forcedirected"
     """
-    The force-directed layout uses a physics simulation to position the nodes.
+    The force-directed layout uses a d3-force simulation (on the CPU) to position the nodes.
+    """
+    GPU_FORCE = "gpu_force"
+    """
+    The GPU force layout uses NVL's GPU-accelerated force simulation to position the nodes.
+
+    It is the only layout that supports node clustering via `ForceDirectedLayoutOptions.clustering`,
+    and it works with any `Renderer`. It needs WebGL2 support in the browser; where that is missing,
+    NVL falls back to the `FORCE_DIRECTED` layout and clustering is ignored.
     """
     HIERARCHICAL = "hierarchical"
     """
@@ -60,6 +68,42 @@ class Packing(StrEnum):
     STACK = "stack"
 
 
+class SeedingMethod(StrEnum):
+    """
+    How initial node positions are seeded before the force simulation runs.
+    """
+
+    BOX = "box"
+    """
+    Seed node positions in a box.
+    """
+    CIRCLE = "circle"
+    """
+    Seed node positions in a circle.
+    """
+
+
+class ClusteringOptions(BaseModel, extra="forbid"):
+    """
+    Clustering options for the GPU force layout.
+
+    Nodes that share the same value for the `clusterBy` property are pulled together and
+    can be decorated with an outline or halo.
+    """
+
+    clusterBy: str
+    """The node property whose value groups nodes into clusters."""
+    drawOutline: bool = False
+    """Draw a convex-hull outline around each cluster."""
+    drawHalo: bool = False
+    """Fill a soft glowing halo around each cluster."""
+    crossClusterRelationshipMultiplier: Optional[float] = Field(None, ge=0, le=1)
+    """
+    Spring force multiplier for relationships that cross a cluster boundary, between 0 and 1.
+    0 disables cross-cluster pull. Experimental.
+    """
+
+
 class HierarchicalLayoutOptions(BaseModel, extra="forbid"):
     """
     The options for the hierarchical layout.
@@ -67,6 +111,8 @@ class HierarchicalLayoutOptions(BaseModel, extra="forbid"):
 
     direction: Optional[Direction] = None
     packaging: Optional[Packing] = None
+    clusterBy: Optional[str] = None
+    """The node property whose value groups nodes into clusters (experimental)."""
 
 
 class ForceDirectedLayoutOptions(BaseModel, extra="forbid"):
@@ -76,6 +122,8 @@ class ForceDirectedLayoutOptions(BaseModel, extra="forbid"):
 
     gravity: Optional[float] = None
     simulationStopVelocity: Optional[float] = None
+    seedingMethod: Optional[SeedingMethod] = None
+    clustering: Optional[ClusteringOptions] = None
 
 
 LayoutOptions = Union[HierarchicalLayoutOptions, ForceDirectedLayoutOptions]
@@ -85,7 +133,7 @@ def construct_layout_options(layout: Layout, options: dict[str, Any]) -> Optiona
     if not options:
         return None
 
-    if layout == Layout.FORCE_DIRECTED:
+    if layout in (Layout.FORCE_DIRECTED, Layout.GPU_FORCE):
         try:
             return ForceDirectedLayoutOptions(**options)
         except ValidationError as e:
@@ -97,39 +145,57 @@ def construct_layout_options(layout: Layout, options: dict[str, Any]) -> Optiona
             _parse_validation_error(e, HierarchicalLayoutOptions)
 
     raise ValueError(
-        f"Layout options only supported for layouts `{Layout.FORCE_DIRECTED}` and `{Layout.HIERARCHICAL}`, but was `{layout}`"
+        f"Layout options only supported for layouts `{Layout.FORCE_DIRECTED}`, `{Layout.GPU_FORCE}` "
+        f"and `{Layout.HIERARCHICAL}`, but was `{layout}`"
     )
+
+
+def check_force_directed_layout_options(layout: Layout | None, layout_options: LayoutOptions | None) -> None:
+    """Warn when force-directed layout options are given for the plain d3-force layout.
+
+    NVL's d3-force layout ignores them; only `Layout.GPU_FORCE` honours `gravity`,
+    `simulationStopVelocity`, `seedingMethod`, and `clustering`.
+    """
+    if layout != Layout.FORCE_DIRECTED or not isinstance(layout_options, ForceDirectedLayoutOptions):
+        return
+
+    set_options = layout_options.model_dump(exclude_none=True)
+    if set_options:
+        warnings.warn(
+            f"The force-directed layout options {sorted(set_options)} have no effect on "
+            "`Layout.FORCE_DIRECTED` (NVL's d3-force layout has no tunable options); "
+            "use `Layout.GPU_FORCE` to apply them."
+        )
 
 
 class Renderer(StrEnum):
     """
-    The renderer used to render the visualization.
+    The renderer used to draw the visualization.
     """
 
     WEB_GL = "webgl"
     """
-    The WebGL renderer is optimized for performance and handles large graphs better.
-    However, it does not render text, icons, and arrowheads on relationships.
+    The WebGL renderer draws the graph on the GPU and handles large graphs better than the canvas
+    renderer. It renders node icons and relationship arrowheads, but not captions.
     """
     CANVAS = "canvas"
     """
-    The canvas renderer has worse performance than the WebGL renderer, so is less well suited to render large graphs.
-    However, it can render text, icons, and arrowheads on relationships.
+    The canvas renderer is slower than the WebGL renderer, so is less well suited to large graphs.
+    It renders captions. This is the default.
     """
 
     @classmethod
-    def check(self, renderer: Renderer, num_nodes: int) -> None:
+    def check(cls, renderer: Renderer, num_nodes: int, has_captions: bool = False) -> None:
         if renderer == Renderer.CANVAS and num_nodes > 10_000:
             warnings.warn(
                 "To visualize more than 10.000 nodes, we recommend using the WebGL renderer "
                 "instead of the canvas renderer for better performance. You can set the renderer "
                 "using the `renderer` parameter"
             )
-        if renderer == Renderer.WEB_GL:
+        if renderer == Renderer.WEB_GL and has_captions:
             warnings.warn(
-                "Although better for performance, the WebGL renderer cannot render text, icons "
-                "and arrowheads on relationships. If you need these features, use the canvas renderer "
-                "by setting the `renderer` parameter"
+                "The WebGL renderer does not render captions. Use the canvas renderer (the default) "
+                "if you need them, or remove the node and relationship captions."
             )
 
 
@@ -157,6 +223,7 @@ class WidgetLayout(StrEnum):
     """The layout values in the JS/NVL wire format, as stored in :class:`WidgetOptions`."""
 
     D3_FORCE = "d3Force"
+    FORCE_DIRECTED = "forceDirected"
     HIERARCHICAL = "hierarchical"
     FREE = "free"
     GRID = "grid"
@@ -166,6 +233,7 @@ class WidgetLayout(StrEnum):
 # Maps the Python-facing `Layout` to the JS/NVL wire format stored in `WidgetOptions`.
 _LAYOUT_TO_JS: dict[Layout, WidgetLayout] = {
     Layout.FORCE_DIRECTED: WidgetLayout.D3_FORCE,
+    Layout.GPU_FORCE: WidgetLayout.FORCE_DIRECTED,
     Layout.HIERARCHICAL: WidgetLayout.HIERARCHICAL,
     Layout.COORDINATE: WidgetLayout.FREE,
     Layout.GRID: WidgetLayout.GRID,
@@ -304,6 +372,7 @@ class NvlOptions(
 
     # ``to_camel("disable_web_gl")`` would yield ``disableWebGl``; NVL expects ``disableWebGL``.
     disable_web_gl: Optional[bool] = Field(None, alias="disableWebGL")
+    renderer: Optional[Renderer] = None
     min_zoom: Optional[float] = None
     max_zoom: Optional[float] = None
     allow_dynamic_min_zoom: Optional[bool] = None
@@ -370,7 +439,9 @@ class RenderOptions(BaseModel, extra="allow"):
 
         if self.layout == Layout.HIERARCHICAL and not isinstance(self.layout_options, HierarchicalLayoutOptions):
             raise ValueError("layout_options must be of type HierarchicalLayoutOptions for hierarchical layout")
-        if self.layout == Layout.FORCE_DIRECTED and not isinstance(self.layout_options, ForceDirectedLayoutOptions):
+        if self.layout in (Layout.FORCE_DIRECTED, Layout.GPU_FORCE) and not isinstance(
+            self.layout_options, ForceDirectedLayoutOptions
+        ):
             raise ValueError("layout_options must be of type ForceDirectedLayoutOptions for force-directed layout")
         return self
 
@@ -388,7 +459,10 @@ class RenderOptions(BaseModel, extra="allow"):
 
         nvl_options = NvlOptions()
         if self.renderer is not None:
-            nvl_options.disable_web_gl = self.renderer != Renderer.WEB_GL
+            nvl_options.renderer = self.renderer
+        if self.renderer is not None or self.layout == Layout.GPU_FORCE:
+            # Both the WebGL renderer and the GPU physics engine need NVL's WebGL context.
+            nvl_options.disable_web_gl = self.renderer != Renderer.WEB_GL and self.layout != Layout.GPU_FORCE
         if self.min_zoom is not None:
             nvl_options.min_zoom = self.min_zoom
         if self.max_zoom is not None:
@@ -415,10 +489,12 @@ class RenderOptions(BaseModel, extra="allow"):
 def _parse_validation_error(e: ValidationError, entity_type: type[BaseModel]) -> None:
     for err in e.errors():
         loc = err["loc"][0]
+        path = ".".join(str(part) for part in err["loc"])
         if err["type"] == "missing":
-            raise ValueError(
-                f"Mandatory `{entity_type.__name__}` parameter '{loc}' is missing. Expected one of {entity_type.model_fields[loc].validation_alias.choices} to be present"  # type: ignore
-            )
+            # Enum-like fields carry the accepted values on their alias; plain fields don't.
+            choices = getattr(entity_type.model_fields[str(loc)].validation_alias, "choices", None)
+            expected = f" Expected one of {choices} to be present" if choices else ""
+            raise ValueError(f"Mandatory `{entity_type.__name__}` parameter '{path}' is missing.{expected}")
         elif err["type"] == "extra_forbidden":
             raise ValueError(
                 f"Unexpected `{entity_type.__name__}` parameter '{loc}' with provided input '{err['input']}'. "
@@ -426,5 +502,5 @@ def _parse_validation_error(e: ValidationError, entity_type: type[BaseModel]) ->
             )
         else:
             raise ValueError(
-                f"Error for `{entity_type.__name__}` parameter '{loc}' with provided input '{err['input']}'. Reason: {err['msg']}"
+                f"Error for `{entity_type.__name__}` parameter '{path}' with provided input '{err['input']}'. Reason: {err['msg']}"
             )

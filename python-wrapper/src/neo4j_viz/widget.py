@@ -17,6 +17,7 @@ from pydantic_extra_types.color import ColorType
 
 from ._events import _to_full_event_type
 from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
+from ._icon_refs import apply_icon_refs, build_icon_refs
 from ._validation import OnDangling, OnDuplicate, check_dangling_relationships, merge_on_duplicate
 from .colors import ColorSpace, ColorsType, to_hex
 from .node import Node, NodeIdType
@@ -33,7 +34,9 @@ from .options import (
     Renderer,
     RenderOptions,
     SelectionMode,
+    WidgetLayout,
     WidgetOptions,
+    check_force_directed_layout_options,
     construct_layout_options,
 )
 from .relationship import Relationship, RelationshipIdType
@@ -80,7 +83,8 @@ _ensure_built_assets()
 
 
 def entity_to_json(entity_list: list[Node | Relationship], widget: anywidget.AnyWidget) -> list[dict[str, Any]]:
-    return [_serialize_entity(entity) for entity in entity_list]
+    uri_to_ref = getattr(widget, "_icon_uri_to_ref", {})
+    return [apply_icon_refs(_serialize_entity(entity), uri_to_ref) for entity in entity_list]
 
 
 _SAVE_FORMATS = ("png", "svg")
@@ -207,7 +211,21 @@ class GraphWidget(anywidget.AnyWidget):
         from_json=lambda value, widget: InteractionEvent.model_validate(value) if value is not None else None,
     )
 
+    _nvl_ready: traitlets.Bool[bool, bool | int] = traitlets.Bool(
+        default_value=False,
+        help="Set by the frontend once the graph has rendered (initial layout settled); `save()` waits for it.",
+    ).tag(sync=True)
+
+    _icon_refs: traitlets.Dict[str, str] = traitlets.Dict(
+        {},
+        help="Maps the short icon references in `nodes`/`relationships` to data URIs. Large custom "
+        "icons are sent here once instead of being repeated on every entity.",
+    ).tag(sync=True)
+
     _max_allowed_nodes: int = 10_000
+
+    # Maps a data URI icon back to its short reference; kept in sync with `_icon_refs`.
+    _icon_uri_to_ref: dict[str, str] = {}
 
     def on_selection_change(self, callback: Callable[[GraphSelection], None]) -> Callable[[dict[str, Any]], None]:
         """
@@ -400,6 +418,11 @@ class GraphWidget(anywidget.AnyWidget):
         current zoom and pan). An SVG always contains the entire graph; note that NVL's
         SVG export is still marked experimental upstream.
 
+        The frontend renders the image, so `save` first waits for it to signal that the
+        graph has rendered, including the initial layout. Calling `save` immediately after
+        displaying the widget is safe: the request is sent once the layout has settled,
+        within `timeout`.
+
         Parameters
         ----------
         file:
@@ -415,7 +438,9 @@ class GraphWidget(anywidget.AnyWidget):
             (full list: https://docs.pydantic.dev/2.0/usage/types/extra_types/color_types/).
             A PNG defaults to the canvas' background, an SVG to transparent.
         timeout:
-            How long to wait for the frontend to render the image, in seconds.
+            Total time to wait for the frontend to render the image, in seconds. This
+            includes waiting for the widget to finish its initial layout, which matters
+            when `save` is called right after the widget is displayed.
 
         Returns
         -------
@@ -441,8 +466,13 @@ class GraphWidget(anywidget.AnyWidget):
 
         self._check_save_frontend()
 
+        loop = asyncio.get_running_loop()
+        # one deadline for load + render, not one per phase
+        deadline = loop.time() + timeout
+        await self._wait_for_frontend_ready(loop, deadline)
+
         request_id = uuid.uuid4().hex
-        future: asyncio.Future[dict[str, Any]] = asyncio.get_running_loop().create_future()
+        future: asyncio.Future[dict[str, Any]] = loop.create_future()
         self._ensure_save_dispatcher()
         self._pending_save_requests[request_id] = future
 
@@ -455,12 +485,13 @@ class GraphWidget(anywidget.AnyWidget):
                     "backgroundColor": background_color_hex,
                 }
             )
-            response = await asyncio.wait_for(future, timeout=timeout)
+            response = await asyncio.wait_for(future, timeout=max(0.0, deadline - loop.time()))
         except asyncio.TimeoutError as exc:
             raise TimeoutError(
                 f"Saving as {save_format.upper()} timed out after {timeout} seconds. The widget must be "
                 "displayed in a live notebook frontend (JupyterLab, Notebook, VS Code, Colab, or marimo) "
-                "for save() to work."
+                "for save() to work. If the widget was only just displayed, the frontend may still be "
+                "loading — retry the call."
             ) from exc
         finally:
             self._pending_save_requests.pop(request_id, None)
@@ -474,6 +505,36 @@ class GraphWidget(anywidget.AnyWidget):
 
         path.write_bytes(_decode_data_url(data_url))
         return path
+
+    async def _wait_for_frontend_ready(self, loop: asyncio.AbstractEventLoop, deadline: float) -> None:
+        """Wait until the frontend signals that the renderer is mounted.
+
+        A `save_request` sent before the widget module has loaded is dropped (custom
+        messages are not queued), so the caller would otherwise time out for nothing.
+        """
+        if self._nvl_ready:
+            return
+
+        ready: asyncio.Future[None] = loop.create_future()
+
+        def handler(change: dict[str, Any]) -> None:
+            if change["new"] and not ready.done():
+                ready.set_result(None)
+
+        self.observe(handler, names=["_nvl_ready"])
+        try:
+            # re-check: the signal may land between the first check and observe()
+            if not self._nvl_ready:
+                await asyncio.wait_for(ready, timeout=max(0.0, deadline - loop.time()))
+        except asyncio.TimeoutError as exc:
+            raise TimeoutError(
+                "The widget frontend did not finish rendering within the timeout. Make sure the widget "
+                "is displayed in a live notebook frontend (JupyterLab, Notebook, VS Code, Colab, or "
+                "marimo) with its output visible — not scrolled out of view or collapsed — and the "
+                "browser tab in the foreground, then retry."
+            ) from exc
+        finally:
+            self.unobserve(handler, names=["_nvl_ready"])
 
     def _check_save_frontend(self) -> None:
         """Fail fast when no live kernel comm can carry a save request to the frontend.
@@ -548,6 +609,21 @@ class GraphWidget(anywidget.AnyWidget):
         """Manually trigger a sync of the `relationships` list to the frontend."""
         self._sync_entities(relationships=True)
 
+    def get_state(self, key: Any = None, drop_defaults: bool = False) -> dict[str, Any]:
+        """Serialize widget state, refreshing the icon reference table first.
+
+        Every state sync funnels through here, so the table always matches the entities being
+        serialized. Because refreshing `_icon_refs` sends it as its own message *before* the
+        entities, the frontend never receives references before the table that resolves them.
+        """
+        self._refresh_icon_refs()
+        return cast("dict[str, Any]", super().get_state(key=key, drop_defaults=drop_defaults))
+
+    def _refresh_icon_refs(self) -> None:
+        refs, uri_to_ref = build_icon_refs(self.nodes, self.relationships)
+        self._icon_uri_to_ref = uri_to_ref
+        self._icon_refs = refs
+
     def _sync_entities(self, *, nodes: bool = False, relationships: bool = False) -> None:
         """Propagate in-place entity mutations to the frontend.
 
@@ -615,6 +691,63 @@ class GraphWidget(anywidget.AnyWidget):
         >>> widget.set_node_captions(field="id", override=False)
         """
         self._entity_ops.set_node_captions(field=field, property=property, override=override)
+
+    def set_node_icons(
+        self,
+        *,
+        icons: dict[NodeIdType, str] | None = None,
+        field: str | None = None,
+        property: str | None = None,
+        mapping: dict[Any, str] | None = None,
+        override: bool = True,
+    ) -> None:
+        """
+        Set the icon for nodes in the graph.
+
+        Icons can be given explicitly per node id, or derived from a node field/property. A value
+        is either the name of a built-in icon (see `neo4j_viz.Icons`) or a URL. To use a local
+        image file, inline it with `neo4j_viz.icon_from_file`.
+
+        Parameters
+        ----------
+        icons:
+            A dictionary mapping from node ID to icon. Must be None if `field` or `property` is provided.
+        field:
+            The field of the nodes to use as the icon. Must be None if `icons` or `property` is provided.
+        property:
+            The property of the nodes to use as the icon. Must be None if `icons` or `field` is provided.
+        mapping:
+            A dictionary mapping from the field/property value to icon. If omitted, the field/property
+            value is used as the icon directly. Only valid together with `field` or `property`.
+        override:
+            Whether to override existing icons of the nodes, if they have any.
+
+        Examples
+        --------
+        Given a GraphWidget `widget`:
+
+        >>> from neo4j_viz import Icons
+        >>> nodes = [
+        ...    Node(id="0", properties={"label": "Person"}),
+        ...    Node(id="1", properties={"label": "Company"}),
+        ... ]
+        >>> widget = GraphWidget(nodes=nodes)
+
+        Set icons from a property via a mapping:
+
+        >>> widget.set_node_icons(property="label", mapping={"Person": Icons.USER_SHIELD, "Company": Icons.DEPLOYMENTS})
+
+        Set icons explicitly per node id:
+
+        >>> widget.set_node_icons(icons={"0": Icons.CIRCLE, "1": "https://example.com/logo.svg"})
+        """
+        self._entity_ops.set_node_icons(
+            icons=icons,
+            field=field,
+            property=property,
+            mapping=mapping,
+            override=override,
+        )
 
     def resize_nodes(
         self,
@@ -849,11 +982,11 @@ class GraphWidget(anywidget.AnyWidget):
         Parameters
         -----------
         layout:
-            The layout algorithm to use (e.g. `Layout.FORCE_DIRECTED`, `Layout.HIERARCHICAL`).
+            The layout algorithm to use (e.g. `Layout.FORCE_DIRECTED`, `Layout.GPU_FORCE`, `Layout.HIERARCHICAL`).
         layout_options:
             Optional layout-specific options. Either a `HierarchicalLayoutOptions`/`ForceDirectedLayoutOptions`
             instance or a plain dict, which is validated against the chosen layout. Layout options are only
-            supported for the force-directed and hierarchical layouts.
+            supported for the force-directed, GPU force, and hierarchical layouts.
         """
         if isinstance(layout, str):
             layout = Layout(layout)
@@ -861,9 +994,16 @@ class GraphWidget(anywidget.AnyWidget):
         if isinstance(layout_options, dict):
             layout_options = construct_layout_options(layout, layout_options)
 
+        check_force_directed_layout_options(layout, layout_options)
+
         js = RenderOptions(layout=layout, layout_options=layout_options).to_widget_options()
 
         new = self._render_options()
+        if layout == Layout.GPU_FORCE:
+            # The GPU physics engine needs NVL's WebGL context, regardless of the renderer.
+            nvl_options = new.nvl_options or NvlOptions()
+            nvl_options.disable_web_gl = False
+            new.nvl_options = nvl_options
         new.layout = js.layout
         new.layout_options = js.layout_options
         self.options = new
@@ -905,11 +1045,16 @@ class GraphWidget(anywidget.AnyWidget):
         renderer:
             The renderer to use, either `Renderer.WEB_GL` or `Renderer.CANVAS`.
         """
-        Renderer.check(renderer, len(self.nodes))
+        has_captions = any(node.caption for node in self.nodes) or any(
+            rel.caption or rel.properties.get("type") for rel in self.relationships
+        )
+        Renderer.check(renderer, len(self.nodes), has_captions=has_captions)
 
         new = self._render_options()
         nvl_options = new.nvl_options or NvlOptions()
-        nvl_options.disable_web_gl = renderer != Renderer.WEB_GL
+        nvl_options.renderer = renderer
+        # The WebGL renderer needs NVL's WebGL context, and so does the GPU force layout.
+        nvl_options.disable_web_gl = renderer != Renderer.WEB_GL and new.layout != WidgetLayout.FORCE_DIRECTED
         new.nvl_options = nvl_options
         self.options = new
 

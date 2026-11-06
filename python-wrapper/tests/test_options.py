@@ -1,13 +1,20 @@
+import warnings as warnings_module
+
+import pytest
+
 from neo4j_viz.options import (
+    ClusteringOptions,
     Direction,
     ForceDirectedLayoutOptions,
     HierarchicalLayoutOptions,
     Layout,
     Renderer,
     RenderOptions,
+    SeedingMethod,
     SelectionMode,
     WidgetLayout,
     WidgetOptions,
+    construct_layout_options,
 )
 
 
@@ -40,13 +47,60 @@ def test_widget_options_layout_coordinate() -> None:
 def test_widget_options_renderer_canvas() -> None:
     options = RenderOptions(renderer=Renderer.CANVAS)
     js = options.to_widget_options().to_json()
+    assert js["nvlOptions"]["renderer"] == "canvas"
     assert js["nvlOptions"]["disableWebGL"] is True
 
 
 def test_widget_options_renderer_webgl() -> None:
     options = RenderOptions(renderer=Renderer.WEB_GL)
     js = options.to_widget_options().to_json()
+    assert js["nvlOptions"]["renderer"] == "webgl"
     assert js["nvlOptions"]["disableWebGL"] is False
+
+
+def test_widget_options_gpu_force_enables_webgl_context() -> None:
+    # The GPU force layout needs NVL's WebGL context even on the canvas renderer (default).
+    options = RenderOptions(layout=Layout.GPU_FORCE)
+    js = options.to_widget_options().to_json()
+    assert js["layout"] == "forceDirected"
+    assert js["nvlOptions"]["disableWebGL"] is False
+    assert "renderer" not in js["nvlOptions"]
+
+
+def test_widget_options_gpu_force_with_canvas_renderer() -> None:
+    options = RenderOptions(layout=Layout.GPU_FORCE, renderer=Renderer.CANVAS)
+    js = options.to_widget_options().to_json()
+    assert js["nvlOptions"]["renderer"] == "canvas"
+    assert js["nvlOptions"]["disableWebGL"] is False
+
+
+def test_widget_options_gpu_force_with_webgl_renderer() -> None:
+    options = RenderOptions(layout=Layout.GPU_FORCE, renderer=Renderer.WEB_GL)
+    js = options.to_widget_options().to_json()
+    assert js["nvlOptions"]["renderer"] == "webgl"
+    assert js["nvlOptions"]["disableWebGL"] is False
+
+
+def test_check_renderer_warns_on_webgl_with_captions() -> None:
+    with pytest.warns(UserWarning, match="WebGL renderer does not render captions"):
+        Renderer.check(Renderer.WEB_GL, num_nodes=10, has_captions=True)
+
+
+def test_check_renderer_no_caption_warning_without_captions() -> None:
+    with warnings_module.catch_warnings():
+        warnings_module.simplefilter("error")
+        Renderer.check(Renderer.WEB_GL, num_nodes=10, has_captions=False)
+
+
+def test_check_renderer_no_warning_on_canvas() -> None:
+    with warnings_module.catch_warnings():
+        warnings_module.simplefilter("error")
+        Renderer.check(Renderer.CANVAS, num_nodes=10, has_captions=True)
+
+
+def test_check_renderer_warns_on_many_canvas_nodes() -> None:
+    with pytest.warns(UserWarning, match="we recommend using the WebGL renderer"):
+        Renderer.check(Renderer.CANVAS, num_nodes=10_001)
 
 
 def test_widget_options_zoom_and_pan() -> None:
@@ -138,6 +192,7 @@ def test_widget_options_full() -> None:
         "layoutOptions": {"direction": "down"},
         "nvlOptions": {
             "disableWebGL": False,
+            "renderer": "webgl",
             "minZoom": 0.05,
             "maxZoom": 8.0,
             "allowDynamicMinZoom": True,
@@ -148,3 +203,62 @@ def test_widget_options_full() -> None:
         "showSearchButton": False,
         "selectionMode": "lasso",
     }
+
+
+def test_widget_options_layout_gpu_force() -> None:
+    options = RenderOptions(layout=Layout.GPU_FORCE)
+    js = options.to_widget_options().to_json()
+    assert js["layout"] == "forceDirected"
+
+
+def test_widget_options_force_directed_with_seeding_method() -> None:
+    options = RenderOptions(
+        layout=Layout.FORCE_DIRECTED,
+        layout_options=ForceDirectedLayoutOptions(seedingMethod=SeedingMethod.CIRCLE),
+    )
+    js = options.to_widget_options().to_json()
+    assert js["layoutOptions"] == {"seedingMethod": "circle"}
+
+
+def test_widget_options_gpu_force_with_clustering() -> None:
+    options = RenderOptions(
+        layout=Layout.GPU_FORCE,
+        layout_options=ForceDirectedLayoutOptions(
+            clustering=ClusteringOptions(clusterBy="community", drawOutline=True, drawHalo=True),
+        ),
+    )
+    js = options.to_widget_options().to_json()
+    assert js["layout"] == "forceDirected"
+    assert js["layoutOptions"] == {
+        "clustering": {"clusterBy": "community", "drawOutline": True, "drawHalo": True},
+    }
+
+
+def test_widget_options_hierarchical_with_clustering() -> None:
+    options = RenderOptions(
+        layout=Layout.HIERARCHICAL,
+        layout_options=HierarchicalLayoutOptions(clusterBy="community"),
+    )
+    js = options.to_widget_options().to_json()
+    assert js["layoutOptions"] == {"clusterBy": "community"}
+
+
+def test_widget_options_cross_cluster_multiplier_out_of_range() -> None:
+    with pytest.raises(ValueError, match="crossClusterRelationshipMultiplier"):
+        construct_layout_options(
+            Layout.GPU_FORCE,
+            {"clustering": {"clusterBy": "community", "crossClusterRelationshipMultiplier": 2}},
+        )
+
+
+def test_widget_options_clustering_requires_cluster_by() -> None:
+    with pytest.raises(ValueError, match="clusterBy"):
+        construct_layout_options(Layout.GPU_FORCE, {"clustering": {"drawOutline": True}})
+
+
+def test_widget_options_gpu_force_layout_options_type_mismatch() -> None:
+    with pytest.raises(ValueError, match="ForceDirectedLayoutOptions"):
+        RenderOptions(
+            layout=Layout.GPU_FORCE,
+            layout_options=HierarchicalLayoutOptions(direction=Direction.LEFT),
+        )

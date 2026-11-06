@@ -110,6 +110,65 @@ class GraphEntityOperations:
 
         self._host._sync_entities(nodes=True)
 
+    def set_node_icons(
+        self,
+        *,
+        icons: dict[NodeIdType, str] | None = None,
+        field: str | None = None,
+        property: str | None = None,
+        mapping: dict[Any, str] | None = None,
+        override: bool = True,
+    ) -> None:
+        """Set node icons from explicit per-node values or a field/property. See `VisualizationGraph.set_node_icons`."""
+        provided = [icons is not None, field is not None, property is not None]
+        if sum(provided) != 1:
+            raise ValueError("Exactly one of the arguments `icons`, `field` and `property` must be provided")
+
+        if icons is not None:
+            if mapping is not None:
+                raise ValueError("`mapping` can only be combined with `field` or `property`, not with `icons`")
+
+            for node in self.nodes:
+                icon = icons.get(node.id)
+
+                if icon is None:
+                    continue
+
+                if node.icon is not None and not override:
+                    continue
+
+                node.icon = str(icon)
+
+        else:
+            attribute = to_snake(field) if field is not None else property
+            assert attribute is not None
+
+            for node in self.nodes:
+                if node.icon is not None and not override:
+                    continue
+
+                if field is not None:
+                    value = getattr(node, attribute, None)
+                else:
+                    value = node.properties.get(attribute)
+
+                if value is None:
+                    continue
+
+                if mapping is not None:
+                    try:
+                        icon = mapping.get(value)
+                    except TypeError:
+                        # Unhashable property value (e.g. a list); it can't be a mapping key.
+                        continue
+                    if icon is None:
+                        continue
+                    node.icon = str(icon)
+                else:
+                    node.icon = str(value)
+
+        self._host._sync_entities(nodes=True)
+
     def resize_nodes(
         self,
         sizes: dict[NodeIdType, RealNumber] | None = None,

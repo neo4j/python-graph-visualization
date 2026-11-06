@@ -9,6 +9,7 @@ from pydantic_extra_types.color import Color, ColorType
 
 from .colors import to_color, to_hex
 from .options import CaptionAlignment
+from .overlay_icon import OverlayIcon
 
 RelationshipIdType = str | int
 
@@ -69,6 +70,10 @@ class Relationship(
     color: Optional[ColorType] = Field(None, description="The color of the relationship")
     # The width of the relationship
     width: Optional[int | float] = Field(None, gt=0.0, description="The width of the relationship")
+    #: An icon displayed on top of the relationship, for example a badge on the caption
+    overlay_icon: Optional[OverlayIcon] = Field(
+        None, description="An icon displayed on top of the relationship, for example a badge on the caption"
+    )
     #: Additional properties of the relationship that do not directly impact the visualization
     properties: dict[str, Any] = Field(
         default_factory=dict,

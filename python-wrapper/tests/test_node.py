@@ -1,6 +1,6 @@
 import pytest
 
-from neo4j_viz import CaptionAlignment, Node
+from neo4j_viz import CaptionAlignment, Node, OverlayIcon
 
 
 def test_nodes_with_all_options() -> None:
@@ -79,6 +79,40 @@ def test_id_aliases(alias: str) -> None:
 def test_node_validation() -> None:
     with pytest.raises(ValueError, match="Input should be a valid integer, unable to parse string as an integer"):
         Node(id="1", x="not a number")
+
+
+def test_node_with_icon() -> None:
+    node = Node(id="1", icon="Circle")
+
+    assert node.to_dict() == {
+        "id": "1",
+        "icon": "Circle",
+        "properties": {},
+    }
+
+
+def test_node_with_url_icon() -> None:
+    node = Node(id="1", icon="https://example.com/icon.svg")
+
+    assert node.to_dict()["icon"] == "https://example.com/icon.svg"
+
+
+def test_node_with_overlay_icon() -> None:
+    node = Node(id="1", overlay_icon=OverlayIcon(url="Pin", position=(1, 1), size=0.5))
+
+    assert node.to_dict() == {
+        "id": "1",
+        "overlayIcon": {"url": "Pin", "position": [1.0, 1.0], "size": 0.5},
+        "properties": {},
+    }
+
+
+def test_overlay_icon_aliases() -> None:
+    node = Node(id="1", overlay_icon={"URL": "Pin", "SIZE": 2})
+
+    assert node.overlay_icon is not None
+    assert node.overlay_icon.url == "Pin"
+    assert node.overlay_icon.size == 2.0
 
 
 def test_node_casing() -> None:
