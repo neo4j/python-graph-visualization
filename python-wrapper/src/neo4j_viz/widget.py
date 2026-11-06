@@ -17,6 +17,7 @@ from pydantic_extra_types.color import ColorType
 
 from ._events import _to_full_event_type
 from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
+from ._icon_refs import apply_icon_refs, build_icon_refs
 from ._validation import OnDangling, OnDuplicate, check_dangling_relationships, merge_on_duplicate
 from .colors import ColorSpace, ColorsType, to_hex
 from .node import Node, NodeIdType
@@ -80,7 +81,8 @@ _ensure_built_assets()
 
 
 def entity_to_json(entity_list: list[Node | Relationship], widget: anywidget.AnyWidget) -> list[dict[str, Any]]:
-    return [_serialize_entity(entity) for entity in entity_list]
+    uri_to_ref = getattr(widget, "_icon_uri_to_ref", {})
+    return [apply_icon_refs(_serialize_entity(entity), uri_to_ref) for entity in entity_list]
 
 
 _SAVE_FORMATS = ("png", "svg")
@@ -212,7 +214,16 @@ class GraphWidget(anywidget.AnyWidget):
         help="Set by the frontend once the graph has rendered (initial layout settled); `save()` waits for it.",
     ).tag(sync=True)
 
+    _icon_refs: traitlets.Dict[str, str] = traitlets.Dict(
+        {},
+        help="Maps the short icon references in `nodes`/`relationships` to data URIs. Large custom "
+        "icons are sent here once instead of being repeated on every entity.",
+    ).tag(sync=True)
+
     _max_allowed_nodes: int = 10_000
+
+    # Maps a data URI icon back to its short reference; kept in sync with `_icon_refs`.
+    _icon_uri_to_ref: dict[str, str] = {}
 
     def on_selection_change(self, callback: Callable[[GraphSelection], None]) -> Callable[[dict[str, Any]], None]:
         """
@@ -595,6 +606,21 @@ class GraphWidget(anywidget.AnyWidget):
     def sync_relationships(self) -> None:
         """Manually trigger a sync of the `relationships` list to the frontend."""
         self._sync_entities(relationships=True)
+
+    def get_state(self, key: Any = None, drop_defaults: bool = False) -> dict[str, Any]:
+        """Serialize widget state, refreshing the icon reference table first.
+
+        Every state sync funnels through here, so the table always matches the entities being
+        serialized. Because refreshing `_icon_refs` sends it as its own message *before* the
+        entities, the frontend never receives references before the table that resolves them.
+        """
+        self._refresh_icon_refs()
+        return cast("dict[str, Any]", super().get_state(key=key, drop_defaults=drop_defaults))
+
+    def _refresh_icon_refs(self) -> None:
+        refs, uri_to_ref = build_icon_refs(self.nodes, self.relationships)
+        self._icon_uri_to_ref = uri_to_ref
+        self._icon_refs = refs
 
     def _sync_entities(self, *, nodes: bool = False, relationships: bool = False) -> None:
         """Propagate in-place entity mutations to the frontend.

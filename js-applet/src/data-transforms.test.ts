@@ -230,4 +230,21 @@ describe("data-transforms", () => {
     expect(Object.keys(ICON_REGISTRY).length).toBeLessThanOrEqual(100);
     expect(JSON.stringify(ICON_REGISTRY).length).toBeLessThan(120 * 1024);
   });
+
+  it("should expand icon references from the shared table", () => {
+    const iconRefs = { "#0": "data:image/svg+xml,%3Csvg%2F%3E" };
+    const node = transformNodes([{ id: "0", icon: "#0", properties: {} }], iconRefs)[0];
+    expect(node?.icon).toBe(iconRefs["#0"]);
+
+    const rel = transformRelationships(
+      [{ id: "r", from: "0", to: "1", overlayIcon: { url: "#0" }, properties: {} }],
+      iconRefs,
+    )[0];
+    expect(rel?.overlayIcon).toEqual({ url: iconRefs["#0"] });
+  });
+
+  it("should drop unresolved icon references without warning", () => {
+    const node = transformNodes([{ id: "0", icon: "#9", properties: {} }])[0];
+    expect(node?.icon).toBeUndefined();
+  });
 });
