@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isDarkColor,
   resolveIcon,
   SerializedRelationship,
   transformNodes,
@@ -246,5 +247,77 @@ describe("data-transforms", () => {
   it("should drop unresolved icon references without warning", () => {
     const node = transformNodes([{ id: "0", icon: "#9", properties: {} }])[0];
     expect(node?.icon).toBeUndefined();
+  });
+
+  describe("overlay icon contrast", () => {
+    it("inverts a catalog overlay icon on a dark fill", () => {
+      const node = transformNodes([
+        { id: "0", color: "#1a1a1a", overlayIcon: { url: "Pin" }, properties: {} },
+      ])[0];
+
+      expect(node?.overlayIcon?.url).toContain("%23ffffff");
+      expect(node?.overlayIcon?.url).not.toContain("%23000");
+    });
+
+    it("keeps a catalog overlay icon black on a light fill", () => {
+      const node = transformNodes([
+        { id: "0", color: "#ffffff", overlayIcon: { url: "Pin" }, properties: {} },
+      ])[0];
+
+      expect(node?.overlayIcon?.url).toBe(ICON_REGISTRY.Pin);
+    });
+
+    it("keeps a catalog overlay icon black when no fill color is set", () => {
+      const node = transformNodes([{ id: "0", overlayIcon: { url: "Pin" }, properties: {} }])[0];
+
+      expect(node?.overlayIcon?.url).toBe(ICON_REGISTRY.Pin);
+    });
+
+    it("leaves custom overlay URLs untouched on a dark fill", () => {
+      const url = "https://example.com/badge.svg";
+      const node = transformNodes([
+        { id: "0", color: "#1a1a1a", overlayIcon: { url }, properties: {} },
+      ])[0];
+
+      expect(node?.overlayIcon?.url).toBe(url);
+    });
+
+    it("leaves data-URI overlay icons untouched on a dark fill", () => {
+      const iconRefs = { "#0": "data:image/svg+xml,%3Csvg%2F%3E" };
+      const node = transformNodes(
+        [{ id: "0", color: "#1a1a1a", overlayIcon: { url: "#0" }, properties: {} }],
+        iconRefs,
+      )[0];
+
+      expect(node?.overlayIcon?.url).toBe(iconRefs["#0"]);
+    });
+
+    it("inverts a relationship overlay icon on a dark relationship", () => {
+      const rel = transformRelationships([
+        {
+          id: "r",
+          from: "0",
+          to: "1",
+          color: "#000000",
+          overlayIcon: { url: "Pin" },
+          properties: {},
+        },
+      ])[0];
+
+      expect(rel?.overlayIcon?.url).toContain("%23ffffff");
+    });
+
+    it("mirrors NVL's contrast rule when deciding what is dark", () => {
+      expect(isDarkColor("#000000")).toBe(true);
+      expect(isDarkColor("#1a1a1a")).toBe(true);
+      expect(isDarkColor("#800000")).toBe(true);
+      expect(isDarkColor("#000")).toBe(true);
+      expect(isDarkColor("#1a1a1a80")).toBe(true);
+      expect(isDarkColor("#ffffff")).toBe(false);
+      expect(isDarkColor("#abaa86")).toBe(false); // default node palette sample
+      expect(isDarkColor("#959aa1")).toBe(false); // default relationship color
+      expect(isDarkColor(undefined)).toBe(false);
+      expect(isDarkColor("not-a-color")).toBe(false);
+    });
   });
 });
