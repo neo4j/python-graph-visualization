@@ -376,16 +376,6 @@ class NvlOptions(
     min_zoom: Optional[float] = None
     max_zoom: Optional[float] = None
     allow_dynamic_min_zoom: Optional[bool] = None
-    min_fps: Optional[int] = Field(None, ge=1, le=120)
-    """
-    Target minimum layout frame rate while a layout is active (1-120, default 3). Budgets the layout
-    steps run per frame, not the render frame rate, so it is only noticeable on large graphs.
-    """
-    max_fps: Optional[int] = Field(None, ge=1, le=120)
-    """
-    Target maximum layout frame rate while a layout is active (1-120, default 30). Budgets the layout
-    steps run per frame, not the render frame rate, so it is only noticeable on large graphs.
-    """
 
 
 # Mirrors the GraphOptions type in js-applet/src/graph-widget.tsx and is the structure stored
@@ -436,13 +426,6 @@ class RenderOptions(BaseModel, extra="allow"):
     min_zoom: Optional[float] = Field(None, serialization_alias="minZoom", description="The minimum zoom level allowed")
     allow_dynamic_min_zoom: Optional[bool] = Field(None, serialization_alias="allowDynamicMinZoom")
 
-    min_fps: Optional[int] = Field(
-        None, ge=1, le=120, description="Target minimum layout frame rate while a layout is active (1-120)."
-    )
-    max_fps: Optional[int] = Field(
-        None, ge=1, le=120, description="Target maximum layout frame rate while a layout is active (1-120)."
-    )
-
     selection_mode: Optional[SelectionMode] = Field(None, serialization_alias="selectionMode")
 
     show_layout_button: bool = False
@@ -486,10 +469,6 @@ class RenderOptions(BaseModel, extra="allow"):
             nvl_options.max_zoom = self.max_zoom
         if self.allow_dynamic_min_zoom is not None:
             nvl_options.allow_dynamic_min_zoom = self.allow_dynamic_min_zoom
-        if self.min_fps is not None:
-            nvl_options.min_fps = self.min_fps
-        if self.max_fps is not None:
-            nvl_options.max_fps = self.max_fps
 
         # check if any nvl options are set
         if nvl_options.model_dump(exclude_none=True):

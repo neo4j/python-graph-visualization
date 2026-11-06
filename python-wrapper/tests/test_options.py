@@ -211,13 +211,6 @@ def test_widget_options_layout_gpu_force() -> None:
     assert js["layout"] == "forceDirected"
 
 
-def test_widget_options_min_max_fps() -> None:
-    options = RenderOptions(min_fps=10, max_fps=60)
-    js = options.to_widget_options().to_json()
-    assert js["nvlOptions"]["minFps"] == 10
-    assert js["nvlOptions"]["maxFps"] == 60
-
-
 def test_widget_options_force_directed_with_seeding_method() -> None:
     options = RenderOptions(
         layout=Layout.FORCE_DIRECTED,
