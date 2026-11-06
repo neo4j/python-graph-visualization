@@ -5,35 +5,56 @@
 // Run with `yarn generate:icons` (also the first step of `yarn build`).
 import { execFileSync } from "node:child_process";
 import { readdirSync, writeFileSync } from "node:fs";
-import { register } from "node:module";
+import { registerHooks } from "node:module";
 import { dirname, join } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-register("./icon-loader.mjs", import.meta.url);
+// @neo4j-ndl/react ships bundler-style ESM: relative imports without file
+// extensions. Node's ESM resolver requires the extension, so retry with it.
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    try {
+      return nextResolve(specifier, context);
+    } catch (error) {
+      if (specifier.startsWith(".")) {
+        for (const candidate of [`${specifier}.js`, `${specifier}/index.js`]) {
+          try {
+            return nextResolve(candidate, context);
+          } catch {
+            // Try the next candidate.
+          }
+        }
+      }
+      throw error;
+    }
+  },
+});
 
-// Icons exposed in the built-in catalog. Keep in sync with `Icons` in
-// python-wrapper/src/neo4j_viz/icons.py; a Python test asserts they match.
+// Icons exposed in the built-in catalog, in alphabetical order. Keep in sync
+// with `Icons` in python-wrapper/src/neo4j_viz/icons.py; a Python test asserts
+// both the contents and the order match.
 const CATALOG = [
-  "Circle",
-  "Square",
-  "Triangle",
-  "Rhombus",
   "Boolean",
   "Chip",
-  "DataScience",
+  "Circle",
+  "CloudCheck",
+  "CloudCross",
+  "Configure",
   "DatabaseCheck",
   "DatabaseCross",
   "DatabasePlug",
   "DatabasePlus",
   "DatabaseRole",
   "DatabaseSignal",
+  "DataScience",
   "Deployments",
   "DesktopSave",
   "DocumentIntelligence",
   "DocumentRefresh",
   "Explore",
+  "ExternalLink",
   "FloppyDisk",
   "FolderBookmark",
   "Github",
@@ -44,28 +65,27 @@ const CATALOG = [
   "Heartbeat",
   "HierarchyOne",
   "HierarchyTwo",
+  "ListCheck",
+  "ListNumber",
   "LocationTarget",
   "MemoryCard",
   "NodeAdd",
   "NodeClick",
+  "Pin",
   "Presentation",
   "Query",
   "QueryStream",
   "RelationshipAdd",
   "RelationshipClick",
+  "Rhombus",
   "ScatterPlot",
   "Select",
   "SingleValue",
+  "Square",
   "Text",
-  "VisualizeBloom",
-  "CloudCheck",
-  "CloudCross",
-  "Pin",
-  "Configure",
+  "Triangle",
   "UserShield",
-  "ExternalLink",
-  "ListCheck",
-  "ListNumber",
+  "VisualizeBloom",
 ];
 
 const here = dirname(fileURLToPath(import.meta.url));
