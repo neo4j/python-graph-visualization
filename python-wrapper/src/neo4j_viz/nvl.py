@@ -6,6 +6,7 @@ from importlib.resources import files
 
 from IPython.display import HTML
 
+from ._icon_refs import apply_icon_refs, build_icon_refs
 from .node import Node
 from .options import Legend, RenderOptions
 from .relationship import Relationship
@@ -47,9 +48,11 @@ class NVL:
         theme: str,
         legend: Legend | None = None,
     ) -> HTML:
+        refs, uri_to_ref = build_icon_refs(nodes, relationships)
         data_dict: dict[str, object] = {
-            "nodes": [_serialize_entity(node) for node in nodes],
-            "relationships": [_serialize_entity(rel) for rel in relationships],
+            "nodes": [apply_icon_refs(_serialize_entity(node), uri_to_ref) for node in nodes],
+            "relationships": [apply_icon_refs(_serialize_entity(rel), uri_to_ref) for rel in relationships],
+            "_icon_refs": refs,
             "width": width,
             "height": height,
             "theme": theme,

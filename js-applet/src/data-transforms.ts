@@ -30,23 +30,38 @@ export function resolveIcon(value: string | undefined): string | undefined {
 
 function resolveOverlayIcon(
   overlayIcon: Node["overlayIcon"] | undefined,
+  iconRefs: Record<string, string>,
 ): Node["overlayIcon"] | undefined {
   if (!overlayIcon) return undefined;
 
-  const url = resolveIcon(overlayIcon.url);
+  const url = resolveIcon(expandIconRef(overlayIcon.url, iconRefs));
   return url ? { ...overlayIcon, url } : undefined;
+}
+
+// Large custom icons are sent once in `iconRefs` and referenced per entity by a
+// `#<n>` key. `#` cannot start a URL or a catalog name, so it is a safe namespace.
+function expandIconRef(
+  value: string | undefined,
+  iconRefs: Record<string, string>,
+): string | undefined {
+  if (!value) return undefined;
+  if (value.startsWith("#")) return iconRefs[value];
+  return value;
 }
 
 function isListOfStrings(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
-export function transformNodes(nodes: SerializedNode[]): NeoNode[] {
+export function transformNodes(
+  nodes: SerializedNode[],
+  iconRefs: Record<string, string> = {},
+): NeoNode[] {
   return nodes.map((node) => {
     const { icon, overlayIcon, ...rest } = node;
     const labelProperty = isListOfStrings(node.properties.labels) ? node.properties.labels : [];
-    const resolvedIcon = resolveIcon(icon);
-    const resolvedOverlayIcon = resolveOverlayIcon(overlayIcon);
+    const resolvedIcon = resolveIcon(expandIconRef(icon, iconRefs));
+    const resolvedOverlayIcon = resolveOverlayIcon(overlayIcon, iconRefs);
     return {
       ...rest,
       id: node.id,
@@ -75,10 +90,13 @@ export function transformNodes(nodes: SerializedNode[]): NeoNode[] {
 
 export type SerializedRelationship = { properties: Record<string, unknown> } & Relationship;
 
-export function transformRelationships(relationships: SerializedRelationship[]): NeoRel[] {
+export function transformRelationships(
+  relationships: SerializedRelationship[],
+  iconRefs: Record<string, string> = {},
+): NeoRel[] {
   return relationships.map((rel) => {
     const { overlayIcon, ...rest } = rel;
-    const resolvedOverlayIcon = resolveOverlayIcon(overlayIcon);
+    const resolvedOverlayIcon = resolveOverlayIcon(overlayIcon, iconRefs);
     return {
       ...rest,
       id: rel.id,

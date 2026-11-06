@@ -84,6 +84,8 @@ export type WidgetData = {
   _css?: string;
   /** Set by the frontend once the renderer is mounted; Python `save()` waits for it. */
   _nvl_ready?: boolean;
+  /** Maps short icon references in `nodes`/`relationships` (e.g. `"#0"`) to data URIs. */
+  _icon_refs?: Record<string, string>;
 };
 
 const EMPTY_SELECTION: GraphSelection = { nodeIds: [], relationshipIds: [] };
@@ -256,6 +258,7 @@ function GraphWidget() {
   const [selected, setSelected] = useModelState<WidgetData["selected"]>("selected");
   const [, setLastEvent] = useModelState<WidgetData["last_event"]>("last_event");
   const [legend] = useModelState<WidgetData["legend"]>("legend");
+  const [iconRefs] = useModelState<WidgetData["_icon_refs"]>("_icon_refs");
   // The NDL stylesheet is synced by the host as `_css` (see injectNdlCss) instead of
   // being bundled into the JS payload.
   const [ndlCss] = useModelState<string>("_css");
@@ -415,8 +418,11 @@ function GraphWidget() {
   }, [signalNvlReady]);
 
   const [neoNodes, neoRelationships] = useMemo(
-    () => [transformNodes(nodes ?? []), transformRelationships(relationships ?? [])],
-    [nodes, relationships],
+    () => [
+      transformNodes(nodes ?? [], iconRefs ?? {}),
+      transformRelationships(relationships ?? [], iconRefs ?? {}),
+    ],
+    [nodes, relationships, iconRefs],
   );
 
   const nvlOptionsWithoutWorkers = useMemo(
