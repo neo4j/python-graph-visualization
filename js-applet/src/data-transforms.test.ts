@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  resolveIcon,
   SerializedRelationship,
   transformNodes,
   transformRelationships,
   type SerializedNode,
 } from "./data-transforms";
+import { ICON_REGISTRY } from "./icon-registry";
 
 describe("data-transforms", () => {
   it("should transform a node with a caption", () => {
@@ -181,5 +183,51 @@ describe("data-transforms", () => {
       labels: [],
       properties: {},
     });
+  });
+
+  it("should resolve a catalog icon name to its data URI", () => {
+    const nodes: SerializedNode[] = [{ id: "0", icon: "Circle", properties: {} }];
+    const result = transformNodes(nodes);
+    expect(result[0]?.icon).toBe(ICON_REGISTRY.Circle);
+  });
+
+  it("should resolve catalog icon names case- and separator-insensitively", () => {
+    expect(resolveIcon("database_check")).toBe(ICON_REGISTRY.DatabaseCheck);
+    expect(resolveIcon("DatabaseCheck")).toBe(ICON_REGISTRY.DatabaseCheck);
+    expect(resolveIcon("DATABASECHECK")).toBe(ICON_REGISTRY.DatabaseCheck);
+  });
+
+  it("should pass through URLs unchanged", () => {
+    expect(resolveIcon("https://example.com/icon.svg")).toBe("https://example.com/icon.svg");
+    expect(resolveIcon("data:image/svg+xml,%3Csvg%2F%3E")).toBe("data:image/svg+xml,%3Csvg%2F%3E");
+  });
+
+  it("should drop unknown icon names", () => {
+    expect(resolveIcon("not-a-real-icon")).toBeUndefined();
+    const result = transformNodes([{ id: "0", icon: "not-a-real-icon", properties: {} }]);
+    expect(result[0]?.icon).toBeUndefined();
+  });
+
+  it("should resolve overlay icons on nodes and relationships", () => {
+    const node = transformNodes([
+      { id: "0", overlayIcon: { url: "Pin", position: [1, 1], size: 0.5 }, properties: {} },
+    ])[0];
+    expect(node?.overlayIcon).toEqual({ url: ICON_REGISTRY.Pin, position: [1, 1], size: 0.5 });
+
+    const rel = transformRelationships([
+      {
+        id: "r",
+        from: "0",
+        to: "1",
+        overlayIcon: { url: "https://example.com/b.svg" },
+        properties: {},
+      },
+    ])[0];
+    expect(rel?.overlayIcon).toEqual({ url: "https://example.com/b.svg" });
+  });
+
+  it("keeps the icon catalog within the size budget", () => {
+    expect(Object.keys(ICON_REGISTRY).length).toBeLessThanOrEqual(100);
+    expect(JSON.stringify(ICON_REGISTRY).length).toBeLessThan(120 * 1024);
   });
 });

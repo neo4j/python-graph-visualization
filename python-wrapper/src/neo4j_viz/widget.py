@@ -664,6 +664,63 @@ class GraphWidget(anywidget.AnyWidget):
         """
         self._entity_ops.set_node_captions(field=field, property=property, override=override)
 
+    def set_node_icons(
+        self,
+        *,
+        icons: dict[NodeIdType, str] | None = None,
+        field: str | None = None,
+        property: str | None = None,
+        mapping: dict[Any, str] | None = None,
+        override: bool = True,
+    ) -> None:
+        """
+        Set the icon for nodes in the graph.
+
+        Icons can be given explicitly per node id, or derived from a node field/property. A value
+        is either the name of a built-in icon (see `neo4j_viz.Icons`) or a URL. To use a local
+        image file, inline it with `neo4j_viz.icon_from_file`.
+
+        Parameters
+        ----------
+        icons:
+            A dictionary mapping from node ID to icon. Must be None if `field` or `property` is provided.
+        field:
+            The field of the nodes to use as the icon. Must be None if `icons` or `property` is provided.
+        property:
+            The property of the nodes to use as the icon. Must be None if `icons` or `field` is provided.
+        mapping:
+            A dictionary mapping from the field/property value to icon. If omitted, the field/property
+            value is used as the icon directly. Only valid together with `field` or `property`.
+        override:
+            Whether to override existing icons of the nodes, if they have any.
+
+        Examples
+        --------
+        Given a GraphWidget `widget`:
+
+        >>> from neo4j_viz import Icons
+        >>> nodes = [
+        ...    Node(id="0", properties={"label": "Person"}),
+        ...    Node(id="1", properties={"label": "Company"}),
+        ... ]
+        >>> widget = GraphWidget(nodes=nodes)
+
+        Set icons from a property via a mapping:
+
+        >>> widget.set_node_icons(property="label", mapping={"Person": Icons.USER_SHIELD, "Company": Icons.DEPLOYMENTS})
+
+        Set icons explicitly per node id:
+
+        >>> widget.set_node_icons(icons={"0": Icons.CIRCLE, "1": "https://example.com/logo.svg"})
+        """
+        self._entity_ops.set_node_icons(
+            icons=icons,
+            field=field,
+            property=property,
+            mapping=mapping,
+            override=override,
+        )
+
     def resize_nodes(
         self,
         sizes: dict[NodeIdType, RealNumber] | None = None,
