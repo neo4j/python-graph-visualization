@@ -550,9 +550,10 @@ class VisualizationGraph:
         show_layout_button:
             Whether to show the layout selector button.
         min_fps:
-            Target minimum presentation frames per second while the layout is active (1-120).
+            Target minimum layout frame rate while a layout is active (1-120). Budgets the layout steps
+            run per frame, not the render frame rate, so it only matters on large graphs.
         max_fps:
-            Target maximum presentation frames per second while the layout is active (1-120).
+            Target maximum layout frame rate while a layout is active (1-120).
 
         Example
         -------
@@ -645,9 +646,10 @@ class VisualizationGraph:
         show_layout_button:
             Whether to show the layout selector button.
         min_fps:
-            Target minimum presentation frames per second while the layout is active (1-120).
+            Target minimum layout frame rate while a layout is active (1-120). Budgets the layout steps
+            run per frame, not the render frame rate, so it only matters on large graphs.
         max_fps:
-            Target maximum presentation frames per second while the layout is active (1-120).
+            Target maximum layout frame rate while a layout is active (1-120).
         """
         render_options = self._build_render_options(
             layout,

@@ -377,9 +377,15 @@ class NvlOptions(
     max_zoom: Optional[float] = None
     allow_dynamic_min_zoom: Optional[bool] = None
     min_fps: Optional[int] = Field(None, ge=1, le=120)
-    """Target minimum presentation frames per second while the layout is active (1-120, default 3)."""
+    """
+    Target minimum layout frame rate while a layout is active (1-120, default 3). Budgets the layout
+    steps run per frame, not the render frame rate, so it is only noticeable on large graphs.
+    """
     max_fps: Optional[int] = Field(None, ge=1, le=120)
-    """Target maximum presentation frames per second while the layout is active (1-120, default 30)."""
+    """
+    Target maximum layout frame rate while a layout is active (1-120, default 30). Budgets the layout
+    steps run per frame, not the render frame rate, so it is only noticeable on large graphs.
+    """
 
 
 # Mirrors the GraphOptions type in js-applet/src/graph-widget.tsx and is the structure stored
@@ -431,10 +437,10 @@ class RenderOptions(BaseModel, extra="allow"):
     allow_dynamic_min_zoom: Optional[bool] = Field(None, serialization_alias="allowDynamicMinZoom")
 
     min_fps: Optional[int] = Field(
-        None, ge=1, le=120, description="Target minimum presentation frames per second (1-120)."
+        None, ge=1, le=120, description="Target minimum layout frame rate while a layout is active (1-120)."
     )
     max_fps: Optional[int] = Field(
-        None, ge=1, le=120, description="Target maximum presentation frames per second (1-120)."
+        None, ge=1, le=120, description="Target maximum layout frame rate while a layout is active (1-120)."
     )
 
     selection_mode: Optional[SelectionMode] = Field(None, serialization_alias="selectionMode")
