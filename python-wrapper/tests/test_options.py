@@ -1,3 +1,5 @@
+import warnings as warnings_module
+
 import pytest
 
 from neo4j_viz.options import (
@@ -12,7 +14,6 @@ from neo4j_viz.options import (
     SelectionMode,
     WidgetLayout,
     WidgetOptions,
-    check_gpu_force_layout_renderer,
     construct_layout_options,
 )
 
@@ -46,13 +47,60 @@ def test_widget_options_layout_coordinate() -> None:
 def test_widget_options_renderer_canvas() -> None:
     options = RenderOptions(renderer=Renderer.CANVAS)
     js = options.to_widget_options().to_json()
+    assert js["nvlOptions"]["renderer"] == "canvas"
     assert js["nvlOptions"]["disableWebGL"] is True
 
 
 def test_widget_options_renderer_webgl() -> None:
     options = RenderOptions(renderer=Renderer.WEB_GL)
     js = options.to_widget_options().to_json()
+    assert js["nvlOptions"]["renderer"] == "webgl"
     assert js["nvlOptions"]["disableWebGL"] is False
+
+
+def test_widget_options_gpu_force_enables_webgl_context() -> None:
+    # The GPU force layout needs NVL's WebGL context even on the canvas renderer (default).
+    options = RenderOptions(layout=Layout.GPU_FORCE)
+    js = options.to_widget_options().to_json()
+    assert js["layout"] == "forceDirected"
+    assert js["nvlOptions"]["disableWebGL"] is False
+    assert "renderer" not in js["nvlOptions"]
+
+
+def test_widget_options_gpu_force_with_canvas_renderer() -> None:
+    options = RenderOptions(layout=Layout.GPU_FORCE, renderer=Renderer.CANVAS)
+    js = options.to_widget_options().to_json()
+    assert js["nvlOptions"]["renderer"] == "canvas"
+    assert js["nvlOptions"]["disableWebGL"] is False
+
+
+def test_widget_options_gpu_force_with_webgl_renderer() -> None:
+    options = RenderOptions(layout=Layout.GPU_FORCE, renderer=Renderer.WEB_GL)
+    js = options.to_widget_options().to_json()
+    assert js["nvlOptions"]["renderer"] == "webgl"
+    assert js["nvlOptions"]["disableWebGL"] is False
+
+
+def test_check_renderer_warns_on_webgl_with_captions() -> None:
+    with pytest.warns(UserWarning, match="WebGL renderer does not render captions"):
+        Renderer.check(Renderer.WEB_GL, num_nodes=10, has_captions=True)
+
+
+def test_check_renderer_no_caption_warning_without_captions() -> None:
+    with warnings_module.catch_warnings():
+        warnings_module.simplefilter("error")
+        Renderer.check(Renderer.WEB_GL, num_nodes=10, has_captions=False)
+
+
+def test_check_renderer_no_warning_on_canvas() -> None:
+    with warnings_module.catch_warnings():
+        warnings_module.simplefilter("error")
+        Renderer.check(Renderer.CANVAS, num_nodes=10, has_captions=True)
+
+
+def test_check_renderer_warns_on_many_canvas_nodes() -> None:
+    with pytest.warns(UserWarning, match="we recommend using the WebGL renderer"):
+        Renderer.check(Renderer.CANVAS, num_nodes=10_001)
 
 
 def test_widget_options_zoom_and_pan() -> None:
@@ -144,6 +192,7 @@ def test_widget_options_full() -> None:
         "layoutOptions": {"direction": "down"},
         "nvlOptions": {
             "disableWebGL": False,
+            "renderer": "webgl",
             "minZoom": 0.05,
             "maxZoom": 8.0,
             "allowDynamicMinZoom": True,
@@ -220,16 +269,3 @@ def test_widget_options_gpu_force_layout_options_type_mismatch() -> None:
             layout=Layout.GPU_FORCE,
             layout_options=HierarchicalLayoutOptions(direction=Direction.LEFT),
         )
-
-
-def test_check_gpu_force_layout_renderer_raises_on_canvas() -> None:
-    with pytest.raises(ValueError, match="GPU force layout requires the WebGL renderer"):
-        check_gpu_force_layout_renderer(Layout.GPU_FORCE, Renderer.CANVAS)
-
-
-def test_check_gpu_force_layout_renderer_allows_webgl() -> None:
-    check_gpu_force_layout_renderer(Layout.GPU_FORCE, Renderer.WEB_GL)  # must not raise
-
-
-def test_check_gpu_force_layout_renderer_allows_other_layouts() -> None:
-    check_gpu_force_layout_renderer(Layout.FORCE_DIRECTED, Renderer.CANVAS)  # must not raise

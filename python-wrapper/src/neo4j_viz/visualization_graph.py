@@ -17,7 +17,6 @@ from .options import (
     Legend,
     Renderer,
     RenderOptions,
-    check_gpu_force_layout_renderer,
     construct_layout_options,
 )
 from .relationship import Relationship
@@ -453,14 +452,17 @@ class VisualizationGraph:
         if isinstance(renderer, str):
             renderer = Renderer(renderer)
 
-        Renderer.check(renderer, num_nodes)
+        # The WebGL renderer does not draw captions, but the canvas renderer does; only warn when
+        # the graph actually has captions that would be lost.
+        has_captions = any(node.caption for node in self.nodes) or any(
+            rel.caption or rel.properties.get("type") for rel in self.relationships
+        )
+        Renderer.check(renderer, num_nodes, has_captions=has_captions)
 
         if not layout:
             layout = Layout.FORCE_DIRECTED
         if isinstance(layout, str):
             layout = Layout(layout.lower())
-
-        check_gpu_force_layout_renderer(layout, renderer)
 
         if not layout_options:
             layout_options = {}

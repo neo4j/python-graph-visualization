@@ -10,7 +10,7 @@
   directory with `neo4j_viz.icons_from_directory`.
 * The `Layout.GPU_FORCE` layout uses NVL's GPU-accelerated force simulation. It supports clustering of nodes by
   a node property, with an optional cluster outline or halo, via `ClusteringOptions` in
-  `ForceDirectedLayoutOptions`. It requires `Renderer.WEB_GL`.
+  `ForceDirectedLayoutOptions`. It works with any renderer.
 * The `Layout.HIERARCHICAL` layout supports clustering of nodes by a node property via the
   `HierarchicalLayoutOptions.clusterBy` option.
 * The force-directed layout accepts a `seedingMethod` option (how initial node positions are seeded), and
@@ -25,7 +25,9 @@
 
 ## Improvements
 
-* Since NVL 2.0 the WebGL renderer renders node icons and relationship arrowheads, so the warning shown when
-  selecting `Renderer.WEB_GL` now only mentions captions (which remain canvas-only).
+* `Renderer.WEB_GL` now selects NVL's WebGL renderer (it previously only enabled the GPU context without changing
+  how the graph was drawn). WebGL drawing is faster for large graphs but does not render captions; the warning is
+  now only shown when the graph actually has captions that would be dropped.
+* Since NVL 2.0 the WebGL renderer renders node icons and relationship arrowheads; only captions remain canvas-only.
 
 ## Other changes

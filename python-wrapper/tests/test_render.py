@@ -125,15 +125,14 @@ def test_dangling_relationship_render_widget_warns() -> None:
 
 def test_no_dangling_with_mixed_id_types() -> None:
     # Node(id=1) (int) and Relationship(source="1") (str) must be treated as the same node
-    nodes = [Node(id=1), Node(id=2)]
+    nodes = [Node(id=1, caption="one"), Node(id=2)]
     relationships = [Relationship(source="1", target=2)]
     VG = VisualizationGraph(nodes=nodes, relationships=relationships)
     VG.render(on_dangling="error")  # must not raise
 
     with pytest.warns(
         UserWarning,
-        match="Although better for performance, the WebGL renderer cannot render captions. "
-        "If you need captions, use the canvas renderer by setting the `renderer` parameter",
+        match="The WebGL renderer does not render captions",
     ):
         VG.render(max_allowed_nodes=20_000, renderer=Renderer.WEB_GL)
 
@@ -174,16 +173,15 @@ def test_render_with_wrong_layout_options() -> None:
         VG.render(layout=Layout.FORCE_DIRECTED, layout_options={"direction": "left"})
 
 
-def test_render_gpu_force_layout_requires_webgl() -> None:
-    nodes = [Node(id="4:d09f48a4-5fca-421d-921d-a30a896c604d:0", caption="Person", x=1, y=10)]
-    VG = VisualizationGraph(nodes=nodes, relationships=[])
+def test_render_gpu_force_layout_enables_webgl_context() -> None:
+    # The GPU force layout works with the default (canvas) renderer: it enables NVL's WebGL
+    # context so the GPU physics engine (and clustering) can run, while drawing stays on canvas.
+    VG = VisualizationGraph(nodes=[Node(id="0")], relationships=[])
 
-    # The default renderer is canvas, which the GPU force layout requires WebGL instead of.
-    with pytest.raises(ValueError, match="GPU force layout requires the WebGL renderer"):
-        VG.render(layout=Layout.GPU_FORCE)
-
-    with pytest.raises(ValueError, match="GPU force layout requires the WebGL renderer"):
-        VG.render_widget(layout=Layout.GPU_FORCE, renderer=Renderer.CANVAS)
+    options = json.loads(_data_block(VG.render(layout=Layout.GPU_FORCE).data).group(2))["options"]
+    assert options["layout"] == "forceDirected"
+    assert options["nvlOptions"]["renderer"] == "canvas"
+    assert options["nvlOptions"]["disableWebGL"] is False
 
 
 def _data_block(html: str) -> re.Match[str]:
