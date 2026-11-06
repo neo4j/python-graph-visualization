@@ -13,7 +13,7 @@
   `ForceDirectedLayoutOptions`. It works with any renderer.
 * The `Layout.HIERARCHICAL` layout supports clustering of nodes by a node property via the
   `HierarchicalLayoutOptions.clusterBy` option.
-* The force-directed layout accepts a `seedingMethod` option (how initial node positions are seeded), and
+* The GPU force layout accepts a `seedingMethod` option (how initial node positions are seeded), and
   the `render`/`render_widget` methods accept `min_fps`/`max_fps` to cap the rendering frame rate.
 
 ## Bug fixes
