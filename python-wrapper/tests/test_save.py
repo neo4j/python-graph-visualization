@@ -224,7 +224,7 @@ class TestSave:
         widget = _fake_frontend(_make_widget(), respond)
         widget._nvl_ready = False
 
-        with pytest.raises(TimeoutError, match="did not finish loading"):
+        with pytest.raises(TimeoutError, match="did not finish rendering"):
             asyncio.run(widget.save(tmp_path / "graph.png", timeout=0.05))
 
         # nothing sent while the frontend is not ready

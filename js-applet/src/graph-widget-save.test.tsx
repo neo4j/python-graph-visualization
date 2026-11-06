@@ -1,6 +1,6 @@
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import NVL from "@neo4j-nvl/base";
+import NVL, { type ExternalCallbacks } from "@neo4j-nvl/base";
 
 /**
  * Tests for the Python `GraphWidget.save()` round trip: the `msg:custom`
@@ -14,8 +14,12 @@ import NVL from "@neo4j-nvl/base";
  * our request/reply wiring on top of it.
  */
 
-// Per-test stand-in for the NVL instance the wrapper would normally create.
-const nvlState = vi.hoisted(() => ({ nvl: null as NVL | null }));
+// Per-test stand-in for the NVL instance and lifecycle callbacks the wrapper
+// would normally create.
+const nvlState = vi.hoisted(() => ({
+  nvl: null as NVL | null,
+  callbacks: null as ExternalCallbacks | null,
+}));
 
 vi.mock("@neo4j-nvl/react", async () => {
   const actual = await vi.importActual<typeof import("@neo4j-nvl/react")>("@neo4j-nvl/react");
@@ -24,9 +28,16 @@ vi.mock("@neo4j-nvl/react", async () => {
     // Installs the fake NVL during render (no act()/effects needed — writing
     // the plain ref object during render is side-effect free here). React 19
     // passes `ref` as a regular prop, which is how react-graph hands over the
-    // widget's nvlRef.
-    InteractiveNvlWrapper: ({ ref }: { ref?: { current: NVL | null } }) => {
+    // widget's nvlRef. The lifecycle callbacks are captured so tests can fire them.
+    InteractiveNvlWrapper: ({
+      ref,
+      nvlCallbacks,
+    }: {
+      ref?: { current: NVL | null };
+      nvlCallbacks?: ExternalCallbacks;
+    }) => {
       if (ref) ref.current = nvlState.nvl;
+      nvlState.callbacks = nvlCallbacks ?? null;
       return null;
     },
   };
@@ -34,6 +45,10 @@ vi.mock("@neo4j-nvl/react", async () => {
 
 import widget, { handleSaveRequest } from "./graph-widget";
 import { createLocalModel } from "./local-model";
+
+function fakeNvl(overrides: Record<string, unknown> = {}): NVL {
+  return { isLayoutMoving: () => false, ...overrides } as unknown as NVL;
+}
 
 type WidgetState = {
   nodes: Array<{ id: string; caption?: string; properties: Record<string, unknown> }>;
@@ -129,6 +144,7 @@ async function renderWidgetWithCommModel(): Promise<{
 afterEach(() => {
   document.body.innerHTML = "";
   nvlState.nvl = null;
+  nvlState.callbacks = null;
   vi.restoreAllMocks();
 });
 
@@ -235,7 +251,7 @@ describe("handleSaveRequest", () => {
 describe("mounted widget save wiring", () => {
   it("replies to a png save request with the rendered data url", async () => {
     const getImageDataUrl = vi.fn(() => "data:image/png;base64,AAA");
-    nvlState.nvl = { getImageDataUrl } as unknown as NVL;
+    nvlState.nvl = fakeNvl({ getImageDataUrl });
     const { model, teardown } = await renderWidgetWithCommModel();
 
     try {
@@ -254,7 +270,7 @@ describe("mounted widget save wiring", () => {
 
   it("passes the background color from the request", async () => {
     const getImageDataUrl = vi.fn(() => "data:image/png;base64,AAA");
-    nvlState.nvl = { getImageDataUrl } as unknown as NVL;
+    nvlState.nvl = fakeNvl({ getImageDataUrl });
     const { model, teardown } = await renderWidgetWithCommModel();
 
     try {
@@ -277,7 +293,7 @@ describe("mounted widget save wiring", () => {
     const getSvgDataUrl = vi.fn(() =>
       Promise.resolve("data:image/svg+xml;charset=utf-8,%3Csvg%3E"),
     );
-    nvlState.nvl = { getSvgDataUrl } as unknown as NVL;
+    nvlState.nvl = fakeNvl({ getSvgDataUrl });
     const { model, teardown } = await renderWidgetWithCommModel();
 
     try {
@@ -323,7 +339,7 @@ describe("mounted widget save wiring", () => {
 
   it("ignores custom messages that are not save requests", async () => {
     const getImageDataUrl = vi.fn();
-    nvlState.nvl = { getImageDataUrl } as unknown as NVL;
+    nvlState.nvl = fakeNvl({ getImageDataUrl });
     const { model, teardown } = await renderWidgetWithCommModel();
 
     try {
@@ -339,14 +355,40 @@ describe("mounted widget save wiring", () => {
     }
   });
 
-  it("signals readiness to Python once NVL is mounted", async () => {
-    nvlState.nvl = { getImageDataUrl: vi.fn() } as unknown as NVL;
+  it("signals readiness once the layout settles", async () => {
+    nvlState.nvl = fakeNvl({ getImageDataUrl: vi.fn() });
     const { model, teardown } = await renderWidgetWithCommModel();
 
     try {
-      await vi.waitFor(() => {
-        expect(model.get("_nvl_ready")).toBe(true);
-      });
+      expect(model.get("_nvl_ready")).toBeFalsy();
+      act(() => nvlState.callbacks?.onInitialization?.());
+      act(() => nvlState.callbacks?.onLayoutDone?.());
+      expect(model.get("_nvl_ready")).toBe(true);
+    } finally {
+      if (typeof teardown === "function") await teardown();
+    }
+  });
+
+  it("does not signal readiness while the layout is still moving", async () => {
+    nvlState.nvl = fakeNvl({ isLayoutMoving: () => true });
+    const { model, teardown } = await renderWidgetWithCommModel();
+
+    try {
+      act(() => nvlState.callbacks?.onInitialization?.());
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      expect(model.get("_nvl_ready")).toBeFalsy();
+    } finally {
+      if (typeof teardown === "function") await teardown();
+    }
+  });
+
+  it("signals readiness for a layout that never moves", async () => {
+    nvlState.nvl = fakeNvl();
+    const { model, teardown } = await renderWidgetWithCommModel();
+
+    try {
+      act(() => nvlState.callbacks?.onInitialization?.());
+      await vi.waitFor(() => expect(model.get("_nvl_ready")).toBe(true), { timeout: 2000 });
     } finally {
       if (typeof teardown === "function") await teardown();
     }

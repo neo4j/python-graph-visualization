@@ -61,6 +61,7 @@ type WidgetState = {
     visible?: boolean;
   };
   _css?: string;
+  _nvl_ready?: boolean;
 };
 
 // The static HTML render path uses the real `createLocalModel` shim, so tests

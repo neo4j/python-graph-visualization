@@ -209,7 +209,7 @@ class GraphWidget(anywidget.AnyWidget):
 
     _nvl_ready: traitlets.Bool[bool, bool | int] = traitlets.Bool(
         default_value=False,
-        help="Set by the frontend once the renderer is mounted; `save()` waits for it.",
+        help="Set by the frontend once the graph has rendered (initial layout settled); `save()` waits for it.",
     ).tag(sync=True)
 
     _max_allowed_nodes: int = 10_000
@@ -406,8 +406,9 @@ class GraphWidget(anywidget.AnyWidget):
         SVG export is still marked experimental upstream.
 
         The frontend renders the image, so `save` first waits for it to signal that the
-        widget is ready. Calling `save` immediately after displaying the widget is safe:
-        the request is sent once the frontend has loaded, within `timeout`.
+        graph has rendered, including the initial layout. Calling `save` immediately after
+        displaying the widget is safe: the request is sent once the layout has settled,
+        within `timeout`.
 
         Parameters
         ----------
@@ -424,9 +425,9 @@ class GraphWidget(anywidget.AnyWidget):
             (full list: https://docs.pydantic.dev/2.0/usage/types/extra_types/color_types/).
             A PNG defaults to the canvas' background, an SVG to transparent.
         timeout:
-            Total time to wait for the frontend to load and render the image, in seconds.
-            This includes waiting for the frontend to finish loading when `save` is called
-            right after the widget is displayed.
+            Total time to wait for the frontend to render the image, in seconds. This
+            includes waiting for the widget to finish its initial layout, which matters
+            when `save` is called right after the widget is displayed.
 
         Returns
         -------
@@ -514,7 +515,7 @@ class GraphWidget(anywidget.AnyWidget):
                 await asyncio.wait_for(ready, timeout=max(0.0, deadline - loop.time()))
         except asyncio.TimeoutError as exc:
             raise TimeoutError(
-                "The widget frontend did not finish loading within the timeout. Make sure the widget "
+                "The widget frontend did not finish rendering within the timeout. Make sure the widget "
                 "is displayed in a live notebook frontend (JupyterLab, Notebook, VS Code, Colab, or "
                 "marimo) with its output visible — not scrolled out of view or collapsed — and the "
                 "browser tab in the foreground, then retry."

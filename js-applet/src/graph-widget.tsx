@@ -1,8 +1,8 @@
 import { createRender, useModel, useModelState } from "@anywidget/react";
 import { Gesture, GraphSelection, GraphVisualization } from "@neo4j-ndl/react-graph";
 import type NVL from "@neo4j-nvl/base";
-import type { Layout, NvlOptions } from "@neo4j-nvl/base";
-import { useEffect, useMemo, useRef, useState } from "react";
+import type { ExternalCallbacks, Layout, NvlOptions } from "@neo4j-nvl/base";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   SerializedNode,
   SerializedRelationship,
@@ -384,21 +384,42 @@ function GraphWidget() {
     return () => model.off("msg:custom", onSaveRequest);
   }, [model]);
 
-  // Signal the renderer is up so Python `save()` can wait instead of racing the load.
-  // Poll nvlRef (NVL comes from react-graph); timer, not rAF, so background tabs work.
+  // Signal Python once the graph has rendered, so `save()` waits instead of racing the
+  // frontend. The image is re-rendered from the current layout positions, so "rendered"
+  // means the initial layout has settled — not just that NVL exists.
+  const nvlInitializedRef = useRef(false);
+  const nvlReadySentRef = useRef(false);
+  const signalNvlReady = useCallback(() => {
+    if (nvlReadySentRef.current) return;
+    nvlReadySentRef.current = true;
+    setNvlReady(true);
+  }, [setNvlReady]);
+  const nvlCallbacks = useMemo<ExternalCallbacks>(
+    () => ({
+      // Fires when the layout stops moving, i.e. the graph is fully drawn.
+      onLayoutDone: signalNvlReady,
+      onInitialization: () => {
+        nvlInitializedRef.current = true;
+      },
+    }),
+    [signalNvlReady],
+  );
+  // Static layouts (e.g. "free") never move and may not fire onLayoutDone, so fall back
+  // to polling isLayoutMoving(); timer, not rAF, so it still fires in a background tab.
   useEffect(() => {
-    if (nvlRef.current) {
-      setNvlReady(true);
-      return;
-    }
+    let stillFrames = 0;
     const interval = setInterval(() => {
-      if (nvlRef.current) {
-        setNvlReady(true);
+      if (nvlReadySentRef.current) {
         clearInterval(interval);
+        return;
       }
+      const nvl = nvlRef.current;
+      const settled = nvlInitializedRef.current && nvl !== null && !nvl.isLayoutMoving();
+      stillFrames = settled ? stillFrames + 1 : 0;
+      if (stillFrames >= 3) signalNvlReady();
     }, 100);
     return () => clearInterval(interval);
-  }, [setNvlReady]);
+  }, [signalNvlReady]);
 
   const [neoNodes, neoRelationships] = useMemo(
     () => [transformNodes(nodes ?? []), transformRelationships(relationships ?? [])],
@@ -490,6 +511,7 @@ function GraphWidget() {
           layout={layout}
           setLayout={setLayout}
           nvlOptions={nvlOptionsWithoutWorkers}
+          nvlCallbacks={nvlCallbacks}
           nvlRef={nvlRef}
           zoom={zoom}
           pan={pan}
