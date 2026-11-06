@@ -387,25 +387,19 @@ function GraphWidget() {
   // Signal Python once the graph has rendered, so `save()` waits instead of racing the
   // frontend. The image is re-rendered from the current layout positions, so "rendered"
   // means the initial layout has settled — not just that NVL exists.
-  const nvlInitializedRef = useRef(false);
   const nvlReadySentRef = useRef(false);
   const signalNvlReady = useCallback(() => {
     if (nvlReadySentRef.current) return;
     nvlReadySentRef.current = true;
     setNvlReady(true);
   }, [setNvlReady]);
+  // Fires when the layout stops moving, i.e. the graph is fully drawn.
   const nvlCallbacks = useMemo<ExternalCallbacks>(
-    () => ({
-      // Fires when the layout stops moving, i.e. the graph is fully drawn.
-      onLayoutDone: signalNvlReady,
-      onInitialization: () => {
-        nvlInitializedRef.current = true;
-      },
-    }),
+    () => ({ onLayoutDone: signalNvlReady }),
     [signalNvlReady],
   );
-  // Static layouts (e.g. "free") never move and may not fire onLayoutDone, so fall back
-  // to polling isLayoutMoving(); timer, not rAF, so it still fires in a background tab.
+  // Static layouts (e.g. "free") never move and may not fire onLayoutDone, so fall back to
+  // polling isLayoutMoving(); timer, not rAF, so it still fires in a background tab.
   useEffect(() => {
     let stillFrames = 0;
     const interval = setInterval(() => {
@@ -414,8 +408,7 @@ function GraphWidget() {
         return;
       }
       const nvl = nvlRef.current;
-      const settled = nvlInitializedRef.current && nvl !== null && !nvl.isLayoutMoving();
-      stillFrames = settled ? stillFrames + 1 : 0;
+      stillFrames = nvl !== null && !nvl.isLayoutMoving() ? stillFrames + 1 : 0;
       if (stillFrames >= 3) signalNvlReady();
     }, 100);
     return () => clearInterval(interval);

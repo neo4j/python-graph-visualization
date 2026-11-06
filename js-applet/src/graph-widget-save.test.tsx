@@ -361,7 +361,6 @@ describe("mounted widget save wiring", () => {
 
     try {
       expect(model.get("_nvl_ready")).toBeFalsy();
-      act(() => nvlState.callbacks?.onInitialization?.());
       act(() => nvlState.callbacks?.onLayoutDone?.());
       expect(model.get("_nvl_ready")).toBe(true);
     } finally {
@@ -374,7 +373,6 @@ describe("mounted widget save wiring", () => {
     const { model, teardown } = await renderWidgetWithCommModel();
 
     try {
-      act(() => nvlState.callbacks?.onInitialization?.());
       await new Promise((resolve) => setTimeout(resolve, 350));
       expect(model.get("_nvl_ready")).toBeFalsy();
     } finally {
@@ -387,7 +385,6 @@ describe("mounted widget save wiring", () => {
     const { model, teardown } = await renderWidgetWithCommModel();
 
     try {
-      act(() => nvlState.callbacks?.onInitialization?.());
       await vi.waitFor(() => expect(model.get("_nvl_ready")).toBe(true), { timeout: 2000 });
     } finally {
       if (typeof teardown === "function") await teardown();
