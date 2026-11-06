@@ -28,9 +28,9 @@ Further you can change the layout of the graph using the `layout` parameter, whi
 
 * `Layout.FORCE_DIRECTED` - Nodes are arranged using the Force-Directed algorithm, which simulates physical forces.
 To customize the layout, use _ForceDirectedOptions_ via _layout_options_.
-* `Layout.PHYSICS` - Nodes are arranged using NVL's GPU-accelerated physics engine. It requires
-`Renderer.WEB_GL` (with the canvas renderer it falls back to `Layout.FORCE_DIRECTED`), and is the layout that
-supports xref:rendering.adoc#clustering[clustering] of connected nodes.
+* `Layout.GPU_FORCE` - Nodes are arranged using NVL's GPU-accelerated force simulation. It requires
+`Renderer.WEB_GL` (on the canvas renderer it is identical to `Layout.FORCE_DIRECTED`, so passing it there raises a
+`ValueError`), and is the layout that supports xref:rendering.adoc#clustering[clustering] of connected nodes.
 To customize the layout, use _ForceDirectedOptions_ via _layout_options_.
 * `Layout.HIERARCHICAL` - Arranges nodes by the directionality of their relationships, creating a tree-like structure.
 To customize the layout use _HierarchicalLayoutOptions_ via _layout_options_. It also supports clustering, via the
@@ -47,20 +47,20 @@ Note that the WebGL renderer does not render captions; the canvas renderer does.
 [[clustering]]
 === Clustering nodes
 
-The `Layout.PHYSICS` and `Layout.HIERARCHICAL` layouts can group nodes into clusters. Nodes that share the same
-value for a chosen node property are placed together, and the physics layout can additionally draw an outline or a
+The `Layout.GPU_FORCE` and `Layout.HIERARCHICAL` layouts can group nodes into clusters. Nodes that share the same
+value for a chosen node property are placed together, and the GPU force layout can additionally draw an outline or a
 halo around each cluster.
 
 Clustering is configured through the `layout_options` parameter, using `ClusteringOptions` inside
-`ForceDirectedLayoutOptions` for the physics layout:
+`ForceDirectedLayoutOptions` for the GPU force layout:
 
 [source, python]
 ----
 from neo4j_viz import ClusteringOptions, ForceDirectedLayoutOptions, Layout, Renderer
 
 VG.render_widget(
-    layout=Layout.PHYSICS,
-    renderer=Renderer.WEB_GL,  # the physics engine requires the WebGL renderer
+    layout=Layout.GPU_FORCE,
+    renderer=Renderer.WEB_GL,  # the GPU force layout requires the WebGL renderer
     layout_options=ForceDirectedLayoutOptions(
         clustering=ClusteringOptions(clusterBy="community", drawOutline=True, drawHalo=True),
     ),
@@ -71,8 +71,9 @@ Here each node's `community` property determines its cluster; nodes without the 
 Coloring the nodes by the same property (see xref:customizing.adoc#coloring-the-graph[]) makes the clusters easy to
 tell apart, and the halo is only drawn when all nodes in a cluster share one color.
 
-NOTE: The physics layout runs on the WebGL renderer, which does not render captions. On the canvas renderer
-`Layout.PHYSICS` falls back to `Layout.FORCE_DIRECTED`, and clustering is ignored.
+NOTE: The GPU force layout runs on the WebGL renderer, which does not render captions. It cannot be combined with
+the canvas renderer (that raises a `ValueError`), because on canvas it is identical to `Layout.FORCE_DIRECTED` and
+clustering would be ignored.
 
 For the hierarchical layout, clustering is enabled directly with the `clusterBy` option:
 

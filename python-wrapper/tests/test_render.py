@@ -174,6 +174,18 @@ def test_render_with_wrong_layout_options() -> None:
         VG.render(layout=Layout.FORCE_DIRECTED, layout_options={"direction": "left"})
 
 
+def test_render_gpu_force_layout_requires_webgl() -> None:
+    nodes = [Node(id="4:d09f48a4-5fca-421d-921d-a30a896c604d:0", caption="Person", x=1, y=10)]
+    VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+    # The default renderer is canvas, which the GPU force layout requires WebGL instead of.
+    with pytest.raises(ValueError, match="GPU force layout requires the WebGL renderer"):
+        VG.render(layout=Layout.GPU_FORCE)
+
+    with pytest.raises(ValueError, match="GPU force layout requires the WebGL renderer"):
+        VG.render_widget(layout=Layout.GPU_FORCE, renderer=Renderer.CANVAS)
+
+
 def _data_block(html: str) -> re.Match[str]:
     match = re.search(
         r'<script type="application/json" id="(neo4j-viz-data-[0-9a-f]+)">(.*?)</script>',
