@@ -35,6 +35,7 @@ from .options import (
     RenderOptions,
     SelectionMode,
     WidgetOptions,
+    check_physics_layout_renderer,
     construct_layout_options,
 )
 from .relationship import Relationship, RelationshipIdType
@@ -995,6 +996,10 @@ class GraphWidget(anywidget.AnyWidget):
         js = RenderOptions(layout=layout, layout_options=layout_options).to_widget_options()
 
         new = self._render_options()
+        # The physics layout needs the WebGL renderer; the widget defaults to canvas when unset.
+        current = new.nvl_options
+        renderer = Renderer.CANVAS if current is None or current.disable_web_gl is not False else Renderer.WEB_GL
+        check_physics_layout_renderer(layout, renderer)
         new.layout = js.layout
         new.layout_options = js.layout_options
         self.options = new
