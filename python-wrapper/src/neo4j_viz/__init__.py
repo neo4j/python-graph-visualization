@@ -3,6 +3,7 @@ from .icons import Icons, icon_from_file, icon_from_svg, icon_from_url, icons_fr
 from .node import Node
 from .options import (
     CaptionAlignment,
+    ClusteringOptions,
     ContinuousLegendSection,
     Direction,
     DiscreteLegendSection,
@@ -18,6 +19,7 @@ from .options import (
     Packing,
     PanPosition,
     Renderer,
+    SeedingMethod,
     SelectionMode,
     WidgetOptions,
 )
@@ -54,6 +56,8 @@ __all__ = [
     "SelectionMode",
     "ForceDirectedLayoutOptions",
     "HierarchicalLayoutOptions",
+    "ClusteringOptions",
     "Direction",
     "Packing",
+    "SeedingMethod",
 ]

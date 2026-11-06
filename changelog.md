@@ -8,6 +8,13 @@
   corner badge). Icons are set by name from a built-in catalog (`neo4j_viz.Icons`) or by URL, and local
   or remote images can be inlined with `neo4j_viz.icon_from_file`, `neo4j_viz.icon_from_url`, or a whole
   directory with `neo4j_viz.icons_from_directory`.
+* The `Layout.PHYSICS` layout uses NVL's GPU-accelerated physics engine. It supports clustering of nodes by
+  a node property, with an optional cluster outline or halo, via `ClusteringOptions` in
+  `ForceDirectedLayoutOptions`. It requires `Renderer.WEB_GL`.
+* The `Layout.HIERARCHICAL` layout supports clustering of nodes by a node property via the
+  `HierarchicalLayoutOptions.clusterBy` option.
+* The force-directed layout accepts a `seedingMethod` option (how initial node positions are seeded), and
+  the `render`/`render_widget` methods accept `min_fps`/`max_fps` to cap the rendering frame rate.
 
 ## Bug fixes
 
@@ -17,5 +24,8 @@
   racing it.
 
 ## Improvements
+
+* Since NVL 2.0 the WebGL renderer renders node icons and relationship arrowheads, so the warning shown when
+  selecting `Renderer.WEB_GL` now only mentions captions (which remain canvas-only).
 
 ## Other changes

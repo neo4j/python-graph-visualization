@@ -17,6 +17,7 @@ from .options import (
     Legend,
     Renderer,
     RenderOptions,
+    check_physics_layout_renderer,
     construct_layout_options,
 )
 from .relationship import Relationship
@@ -435,6 +436,8 @@ class VisualizationGraph:
         show_layout_button: bool,
         show_search_button: bool,
         on_dangling: OnDangling,
+        min_fps: int | None = None,
+        max_fps: int | None = None,
     ) -> RenderOptions:
         """Shared validation + option building for render / render_widget."""
         num_nodes = len(self.nodes)
@@ -456,6 +459,9 @@ class VisualizationGraph:
             layout = Layout.FORCE_DIRECTED
         if isinstance(layout, str):
             layout = Layout(layout.lower())
+
+        check_physics_layout_renderer(layout, renderer)
+
         if not layout_options:
             layout_options = {}
 
@@ -474,6 +480,8 @@ class VisualizationGraph:
             min_zoom=min_zoom,
             max_zoom=max_zoom,
             allow_dynamic_min_zoom=allow_dynamic_min_zoom,
+            min_fps=min_fps,
+            max_fps=max_fps,
             show_layout_button=show_layout_button,
             show_search_button=show_search_button,
         )
@@ -495,6 +503,8 @@ class VisualizationGraph:
         on_dangling: OnDangling = "warn",
         show_search_button: bool = True,
         show_layout_button: bool = True,
+        min_fps: int | None = None,
+        max_fps: int | None = None,
     ) -> HTML:
         """
         Render the graph as an HTML object.
@@ -534,6 +544,10 @@ class VisualizationGraph:
             Whether to show the search button that highlights matching nodes and relationships.
         show_layout_button:
             Whether to show the layout selector button.
+        min_fps:
+            Target minimum presentation frames per second while the layout is active (1-120).
+        max_fps:
+            Target maximum presentation frames per second while the layout is active (1-120).
 
         Example
         -------
@@ -553,6 +567,8 @@ class VisualizationGraph:
             show_layout_button=show_layout_button,
             show_search_button=show_search_button,
             on_dangling=on_dangling,
+            min_fps=min_fps,
+            max_fps=max_fps,
         )
 
         return NVL().render(
@@ -582,6 +598,8 @@ class VisualizationGraph:
         on_dangling: OnDangling = "warn",
         show_search_button: bool = True,
         show_layout_button: bool = True,
+        min_fps: int | None = None,
+        max_fps: int | None = None,
     ) -> GraphWidget:
         """
         Render the graph as an interactive Jupyter widget (anywidget).
@@ -621,6 +639,10 @@ class VisualizationGraph:
             Whether to show the search button that highlights matching nodes and relationships.
         show_layout_button:
             Whether to show the layout selector button.
+        min_fps:
+            Target minimum presentation frames per second while the layout is active (1-120).
+        max_fps:
+            Target maximum presentation frames per second while the layout is active (1-120).
         """
         render_options = self._build_render_options(
             layout,
@@ -635,6 +657,8 @@ class VisualizationGraph:
             show_layout_button=show_layout_button,
             show_search_button=show_search_button,
             on_dangling=on_dangling,
+            min_fps=min_fps,
+            max_fps=max_fps,
         )
 
         return GraphWidget.from_graph_data(

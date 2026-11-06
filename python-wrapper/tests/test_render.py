@@ -132,8 +132,8 @@ def test_no_dangling_with_mixed_id_types() -> None:
 
     with pytest.warns(
         UserWarning,
-        match="Although better for performance, the WebGL renderer cannot render text, icons and arrowheads on "
-        "relationships. If you need these features, use the canvas renderer by setting the `renderer` parameter",
+        match="Although better for performance, the WebGL renderer cannot render captions. "
+        "If you need captions, use the canvas renderer by setting the `renderer` parameter",
     ):
         VG.render(max_allowed_nodes=20_000, renderer=Renderer.WEB_GL)
 

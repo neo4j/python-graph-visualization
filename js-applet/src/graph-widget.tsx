@@ -11,6 +11,7 @@ import {
 } from "./data-transforms";
 import { hasLegendContent, Legend, LegendData } from "./legend";
 import { GraphErrorBoundary } from "./graph-error-boundary";
+import { buildLayoutOptions } from "./layout-options";
 import { Divider, IconButton, IconButtonArray, NeedleThemeProvider } from "@neo4j-ndl/react";
 import { SwatchIconOutline } from "@neo4j-ndl/react/icons";
 
@@ -434,6 +435,13 @@ function GraphWidget() {
     }),
     [nvlOptions],
   );
+
+  // Resolve the declarative clustering spec (a node property name) into the function NVL expects.
+  // Memoized so the layout options keep a stable reference across renders.
+  const nvlLayoutOptions = useMemo(
+    () => buildLayoutOptions(layoutOptions, nodes ?? []),
+    [layoutOptions, nodes],
+  );
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [sidePanelWidth, setSidePanelWidth] = useState(300);
 
@@ -514,7 +522,7 @@ function GraphWidget() {
           nvlRef={nvlRef}
           zoom={zoom}
           pan={pan}
-          layoutOptions={layoutOptions}
+          layoutOptions={nvlLayoutOptions}
           sidepanel={{
             isSidePanelOpen,
             setIsSidePanelOpen,
