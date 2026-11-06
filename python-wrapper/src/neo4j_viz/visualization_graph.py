@@ -17,6 +17,7 @@ from .options import (
     Legend,
     Renderer,
     RenderOptions,
+    check_force_directed_layout_options,
     construct_layout_options,
 )
 from .relationship import Relationship
@@ -471,6 +472,8 @@ class VisualizationGraph:
             layout_options_typed = construct_layout_options(layout, layout_options)
         else:
             layout_options_typed = layout_options
+
+        check_force_directed_layout_options(layout, layout_options_typed)
 
         return RenderOptions(
             layout=layout,

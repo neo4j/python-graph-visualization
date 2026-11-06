@@ -28,6 +28,8 @@
 * `Renderer.WEB_GL` now selects NVL's WebGL renderer (it previously only enabled the GPU context without changing
   how the graph was drawn). WebGL drawing is faster for large graphs but does not render captions; the warning is
   now only shown when the graph actually has captions that would be dropped.
+* The wrapper warns when force-directed layout options (`gravity`, `simulationStopVelocity`, `seedingMethod`,
+  `clustering`) are set on `Layout.FORCE_DIRECTED`, since NVL's d3-force layout ignores them; use `Layout.GPU_FORCE`.
 * Since NVL 2.0 the WebGL renderer renders node icons and relationship arrowheads; only captions remain canvas-only.
 
 ## Other changes
