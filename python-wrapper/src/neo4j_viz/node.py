@@ -9,6 +9,7 @@ from pydantic_extra_types.color import Color, ColorType
 from .colors import to_color, to_hex
 from .node_size import RealNumber
 from .options import CaptionAlignment
+from .overlay_icon import OverlayIcon
 
 NodeIdType = str | int
 
@@ -60,6 +61,16 @@ class Node(
     size: Optional[RealNumber] = Field(None, ge=0, description="The size of the node as radius in pixel")
     #: The color of the node. Allowed input is for example "#FF0000", "red" or (255, 0, 0)
     color: Optional[ColorType] = Field(None, description="The color of the node")
+    #: The icon displayed inside the node. Either the name of a built-in icon (see `Icons`) or a URL.
+    #: Icons are expected to be square and black; on a dark node color the icon is inverted to white.
+    icon: Optional[str] = Field(
+        None,
+        description="The icon displayed inside the node. Either the name of a built-in icon (see `Icons`) or a URL",
+    )
+    #: An icon displayed on top of the node, for example a badge in a corner
+    overlay_icon: Optional[OverlayIcon] = Field(
+        None, description="An icon displayed on top of the node, for example a badge in a corner"
+    )
     #: Whether the node is pinned in the visualization
     pinned: Optional[bool] = Field(None, description="Whether the node is pinned in the visualization")
     #: The x-coordinate of the node

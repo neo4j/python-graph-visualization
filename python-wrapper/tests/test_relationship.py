@@ -1,6 +1,6 @@
 import pytest
 
-from neo4j_viz import CaptionAlignment
+from neo4j_viz import CaptionAlignment, OverlayIcon
 from neo4j_viz.relationship import Relationship
 
 
@@ -89,6 +89,12 @@ def test_trg_aliases(trg_alias: str) -> None:
     assert {"id", "from", "to", "properties"} == set(rel_dict.keys())
     assert rel_dict["from"] == "1"
     assert rel_dict["to"] == "2"
+
+
+def test_rel_with_overlay_icon() -> None:
+    rel = Relationship(source="1", target="2", overlay_icon=OverlayIcon(url="Heartbeat"))
+
+    assert rel.to_dict()["overlayIcon"] == {"url": "Heartbeat"}
 
 
 def test_rel_casing() -> None:

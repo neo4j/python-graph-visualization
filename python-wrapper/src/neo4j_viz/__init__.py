@@ -1,4 +1,5 @@
 from .colors import ColorSpace
+from .icons import Icons, icon_from_file, icon_from_svg, icon_from_url, icons_from_directory
 from .node import Node
 from .options import (
     CaptionAlignment,
@@ -20,6 +21,7 @@ from .options import (
     SelectionMode,
     WidgetOptions,
 )
+from .overlay_icon import OverlayIcon
 from .relationship import Relationship
 from .visualization_graph import VisualizationGraph
 from .widget import GraphWidget
@@ -40,6 +42,12 @@ __all__ = [
     "ContinuousLegendSection",
     "Node",
     "Relationship",
+    "OverlayIcon",
+    "Icons",
+    "icon_from_file",
+    "icon_from_svg",
+    "icon_from_url",
+    "icons_from_directory",
     "CaptionAlignment",
     "Layout",
     "Renderer",
