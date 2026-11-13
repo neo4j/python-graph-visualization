@@ -218,9 +218,14 @@ would otherwise show an empty cell. To avoid that, `render_widget` stores a PNG 
 a second output next to the widget, and viewers that cannot render widgets show that image instead.
 
 The snapshot is taken automatically once the initial layout has settled, and refreshed after the graph
-changes (adding nodes, recoloring, resizing, switching the layout, and so on). Nothing has to be called:
-display the widget and save the notebook with its outputs. In a live notebook the stored image is hidden,
-so the widget stays the only thing on screen and remains fully interactive.
+changes (adding nodes, recoloring, resizing, switching the layout, and so on), about half a second after
+the last change. Nothing has to be called: display the widget and save the notebook with its outputs. In a
+live notebook the stored image is hidden, so the widget stays the only thing on screen and remains fully
+interactive.
+
+The image captures the current view of the canvas, including the zoom and pan, and keeps the theme the
+notebook was rendered in, so a notebook in the dark theme stores a dark preview. The widget's width and
+height set the image size.
 
 Turn it off per widget with the `fallback` parameter, either when rendering or later:
 
@@ -232,18 +237,14 @@ widget = VG.render_widget(fallback=False)
 widget.fallback = False
 ----
 
-Snapshots larger than 2 MB are skipped, keeping any earlier snapshot, to avoid bloating the notebook with
-an image that would not be readable anyway. This only happens for very large graphs on high-resolution
-displays.
+Snapshots larger than 2 MiB are skipped, keeping the previous one.
 
-The fallback has a few limitations to be aware of:
+The preview has a few limitations:
 
-* It needs a live browser. A notebook executed headlessly (`nbconvert --execute`, `papermill`, a docs
-  build) has no frontend to render the image, so nothing is stored.
-* It applies to `render_widget` only. The object returned by the `render` method is static HTML with no
-  channel back to the kernel, so it cannot store an image — use `render_widget` in notebooks.
-* The snapshot captures the graph canvas, not the widget's UI chrome (toolbar, search box, legend).
-* The image is stored in the notebook output, so it is only there if the notebook was saved with its
-  outputs. Tools that strip outputs on commit (`nbstripout`, this repository's own
-  `scripts/clean_notebooks.py`) remove it, unless the cell carries the `preserve-output` tag.
+* Notebooks executed without a live frontend store no preview, so the committed notebook shows an empty
+  cell.
+* Only `render_widget` stores a preview, because `render` has no channel back to the kernel.
+* The image shows only the graph, not the toolbar, search box, or legend.
+* Tools that strip outputs, for example link:https://github.com/kynan/nbstripout[nbstripout], remove the
+  preview too.
 
