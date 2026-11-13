@@ -132,6 +132,25 @@ The project contains of three parts:
 - a Python package which loads the applet and offers convenience functions to pass data to the applet
 - Jupyter notebooks to test the Python wrapper
 
+### Notebook outputs
+
+The example notebooks under `examples/` are committed without their outputs. `just py-style` strips them
+with `scripts/clean_notebooks.py`. Two cell tags control what is kept:
+
+- `preserve-output` keeps the cell's outputs. An interactive widget output is dropped, because it cannot
+  render without the kernel that produced it; the static PNG preview the widget stores next to it is kept.
+- `skip-execution` keeps a cell out of the headless run that regenerates those outputs, which is how the
+  getting-started notebook skips its `%pip install` cell.
+
+Regenerate the stored outputs after changing such a cell:
+
+```sh
+just regenerate-notebook-outputs getting-started
+```
+
+This runs the tagged cells in a headless browser and writes the notebooks back, cleaned. It needs Chrome or
+`uv run playwright install chromium`, and the notebook must run without external services.
+
 ### JavaScript configs
 
 - `vite.config.ts` - Vite config for the lib build (widget.js + style.css for anywidget)

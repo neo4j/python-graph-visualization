@@ -59,6 +59,9 @@ NOTEBOOK_RUN_ATTEMPTS = 2
 DONE_MARKER = "_done.txt"
 ERROR_MARKER = "_error.txt"
 
+# How long the frontend gets to write a saved notebook back to disk.
+NOTEBOOK_SAVE_TIMEOUT = 30
+
 # A rendered NVL widget shows as a canvas in the cell's output area. Every
 # notebook driven by this harness renders the widget in one cell and exercises
 # it in the next, so waiting for the canvas before the last cell generically
@@ -68,6 +71,10 @@ WIDGET_CANVAS_SELECTOR = ".jp-OutputArea canvas"
 # Runs the selected cell. Unlike Shift+Enter this cannot be swallowed by a
 # dialog that grabbed keyboard focus.
 RUN_CELL_COMMAND = "notebook:run-cell-and-select-next"
+
+# Saves the open notebook. Used when a run's artifact is the notebook file itself
+# (see `run_existing_notebook_in_browser`).
+SAVE_COMMAND = "docmanager:save"
 
 # A finished cell shows its execution count in the prompt, e.g. "[3]:".
 CELL_COMPLETE_RE = re.compile(r"^\[\d+\]:$")
@@ -200,13 +207,13 @@ def marimo_server(root: Path, app: Path) -> Iterator[MarimoServer]:
         _stop_server(process)
 
 
-def create_notebook(server: JupyterServer, cells: Sequence[str]) -> str:
-    """Create a notebook with the given code cells via the contents REST API."""
-    notebook = nbformat.v4.new_notebook(  # type: ignore[no-untyped-call]
-        cells=[nbformat.v4.new_code_cell(cell) for cell in cells],  # type: ignore[no-untyped-call]
-        metadata={"kernelspec": {"display_name": "Python 3 (ipykernel)", "language": "python", "name": "python3"}},
-    )
-    name = f"nb-{uuid.uuid4().hex[:8]}.ipynb"
+def put_notebook(server: JupyterServer, name: str, notebook: nbformat.NotebookNode) -> None:
+    """Write ``notebook`` into the server root through the contents REST API.
+
+    Going through the API rather than the file system is what makes JupyterLab
+    treat the notebook as trusted, so its cells run without a confirmation
+    dialog.
+    """
     body = {"type": "notebook", "format": "json", "content": json.loads(nbformat.writes(notebook))}  # type: ignore[no-untyped-call]
     request = urllib.request.Request(
         f"{server.url}/api/contents/{name}",
@@ -216,6 +223,16 @@ def create_notebook(server: JupyterServer, cells: Sequence[str]) -> str:
     )
     with urllib.request.urlopen(request, timeout=10) as response:
         json.loads(response.read().decode("utf-8"))
+
+
+def create_notebook(server: JupyterServer, cells: Sequence[str]) -> str:
+    """Create a notebook with the given code cells via the contents REST API."""
+    notebook = nbformat.v4.new_notebook(  # type: ignore[no-untyped-call]
+        cells=[nbformat.v4.new_code_cell(cell) for cell in cells],  # type: ignore[no-untyped-call]
+        metadata={"kernelspec": {"display_name": "Python 3 (ipykernel)", "language": "python", "name": "python3"}},
+    )
+    name = f"nb-{uuid.uuid4().hex[:8]}.ipynb"
+    put_notebook(server, name, notebook)
     return name
 
 
@@ -402,6 +419,37 @@ def _execute_notebook_in_browser(page: Page, cells: Sequence[str]) -> None:
         _run_cell(page, index)
 
 
+def _wait_for_new_mtime(path: Path, mtime_before: int, timeout: float) -> bool:
+    """Wait until the frontend rewrites ``path``, i.e. the notebook was saved."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if path.stat().st_mtime_ns != mtime_before:
+            return True
+        time.sleep(0.25)
+    return False
+
+
+def _save_notebook(page: Page, path: Path, mtime_before: int, timeout: float) -> None:
+    """Save the open notebook and wait for the file on disk to be rewritten.
+
+    The keyboard accelerator needs the notebook focused while the toolbar's Save
+    button works regardless, so each gets half the timeout (as in `_issue_run`).
+    """
+    accel = "Meta" if sys.platform == "darwin" else "Control"
+    save_button = page.locator(f'.jp-NotebookPanel-toolbar [data-command="{SAVE_COMMAND}"]')
+    for attempt in range(2):
+        _accept_visible_dialogs(page)
+        if attempt == 0:
+            page.keyboard.press(f"{accel}+S")
+        elif save_button.count():
+            save_button.first.click()
+        else:
+            break
+        if _wait_for_new_mtime(path, mtime_before, timeout / 2):
+            return
+    raise RuntimeError(f"the frontend did not save {path.name} within {timeout}s")
+
+
 def _await_notebook_markers(server: JupyterServer) -> None:
     deadline = time.monotonic() + NOTEBOOK_RUN_TIMEOUT
     while time.monotonic() < deadline:
@@ -576,6 +624,86 @@ def run_notebook_in_browser(
                     flush=True,
                 )
     raise RuntimeError(f"notebook did not run after {NOTEBOOK_RUN_ATTEMPTS} attempts:\n\n" + "\n\n".join(errors))
+
+
+def run_existing_notebook_in_browser(
+    server: JupyterServer,
+    notebook: str,
+    *,
+    run_cells: Sequence[int],
+    check: Callable[[Page], None] | None = None,
+    settle_ms: int = 3000,
+) -> None:
+    """Run selected cells of an existing notebook on ``server`` and save it with its outputs.
+
+    Unlike ``run_notebook_in_browser``, the notebook already exists in the server
+    root (it is one of the repository's own files) and the artifact is the saved
+    notebook rather than a marker file. Only ``run_cells`` (indices into the
+    notebook's cells) are executed, so a notebook can skip setup cells that the
+    harness environment cannot run, such as a ``%pip install``. When ``check`` is
+    given it runs against the live page before the notebook is saved.
+
+    The point of saving is the widget's static fallback image: the frontend renders
+    the graph while the cells run and sends the snapshot back through the kernel,
+    so ``settle_ms`` covers that round trip before the notebook is written.
+    """
+    path = server.root / notebook
+    mtime_before = path.stat().st_mtime_ns
+    total_cells = len(nbformat.read(path, as_version=4).cells)  # type: ignore[no-untyped-call]
+    console_messages: list[str] = []
+    console_errors: list[str] = []
+
+    def record_console(message: ConsoleMessage) -> None:
+        entry = f"{message.type}: {message.text}"
+        if message.type == "error":
+            # The failing URL makes a 404 (a missing relative image, say) actionable.
+            entry += f" [{message.location.get('url', '')}]"
+            console_errors.append(entry)
+        console_messages.append(entry)
+
+    with sync_playwright() as playwright:
+        browser = _launch_chromium(playwright)
+        try:
+            page = browser.new_page(viewport={"width": 1400, "height": 1000})
+            page.on("console", record_console)
+            page.on("pageerror", lambda error: console_errors.append(f"uncaught page error: {error}"))
+            try:
+                # A fresh workspace id per run: all /lab/tree URLs share the
+                # `default` workspace, which restores every previously opened
+                # notebook as an extra tab (and extra .jp-Cell elements).
+                workspace = uuid.uuid4().hex[:8]
+                page.goto(f"{server.url}/lab/workspaces/{workspace}/tree/{notebook}")
+                _wait_for_kernel_idle(server, notebook)
+                expect(page.locator(".jp-Cell")).to_have_count(total_cells, timeout=LAB_LOAD_TIMEOUT * 1000)
+                for index in run_cells:
+                    _accept_visible_dialogs(page)
+                    _run_cell(page, index)
+                # The widget mounts once its cell has run, and only then does the
+                # frontend have something to snapshot. A notebook without a widget
+                # is fine, hence the tolerant wait.
+                try:
+                    page.wait_for_selector(WIDGET_CANVAS_SELECTOR, timeout=WIDGET_MOUNT_TIMEOUT * 1000)
+                except PlaywrightError:
+                    pass
+                page.wait_for_timeout(settle_ms)
+                if check is not None:
+                    check(page)
+                _save_notebook(page, path, mtime_before, NOTEBOOK_SAVE_TIMEOUT)
+            except Exception as exc:
+                _dump_debug_artifacts(server, page, console_messages)
+                raise RuntimeError(
+                    f"{exc}\n"
+                    f"--- sessions ---\n{json.dumps(_sessions(server), indent=2)}\n"
+                    f"--- browser console tail ---\n{_console_tail(console_messages)}\n"
+                    f"--- jupyter-server.log tail ---\n{_tail_text(server.log_path)}"
+                ) from exc
+        finally:
+            browser.close()
+            # Best-effort: the kernel would otherwise outlive the run and can
+            # interfere with the next notebook driven by the same server.
+            _delete_session(server, notebook)
+    if console_errors:
+        raise RuntimeError(f"browser console errors: {console_errors}")
 
 
 def run_marimo_app_in_browser(server: MarimoServer, check: Callable[[Page], None]) -> None:

@@ -209,3 +209,42 @@ An explicit `format="png"`/`format="svg"` argument must match the extension.
 A PNG captures the current view (the canvas at its rendered size, including the current zoom and pan), while an SVG always contains the entire graph.
 
 NOTE: The image is rendered by the widget frontend in the browser, so `save` must be `await`-ed while the widget is displayed in a live notebook (JupyterLab, Notebook, VS Code, Colab, or marimo). Outside a running kernel, for example in a plain Python script, there is no renderer and saving raises an error — use xref:rendering.adoc#exporting-to-html[Exporting to HTML] there instead. The frontend must also be able to render: if the widget's output is scrolled out of view or collapsed, or its browser tab is in the background, `save` raises a timeout error.
+
+[[static-previews]]
+== Static previews in committed notebooks
+
+GitHub and other static notebook viewers strip the interactive widget output, so a committed notebook
+would otherwise show an empty cell. To avoid that, `render_widget` stores a PNG snapshot of the graph in
+a second output next to the widget, and viewers that cannot render widgets show that image instead.
+
+The snapshot is taken automatically once the initial layout has settled, and refreshed after the graph
+changes (adding nodes, recoloring, resizing, switching the layout, and so on), about half a second after
+the last change. Nothing has to be called: display the widget and save the notebook with its outputs. In a
+live notebook the stored image is hidden, so the widget stays the only thing on screen and remains fully
+interactive.
+
+The image captures the current view of the canvas, including the zoom and pan, and keeps the theme the
+notebook was rendered in, so a notebook in the dark theme stores a dark preview. The widget's width and
+height set the image size.
+
+Turn it off per widget with the `fallback` parameter, either when rendering or later:
+
+[source, python]
+----
+widget = VG.render_widget(fallback=False)
+
+# or, on an existing widget
+widget.fallback = False
+----
+
+Snapshots larger than 2 MiB are skipped, keeping the previous one.
+
+The preview has a few limitations:
+
+* Notebooks executed without a live frontend store no preview, so the committed notebook shows an empty
+  cell.
+* Only `render_widget` stores a preview, because `render` has no channel back to the kernel.
+* The image shows only the graph, not the toolbar, search box, or legend.
+* Tools that strip outputs, for example link:https://github.com/kynan/nbstripout[nbstripout], remove the
+  preview too.
+
