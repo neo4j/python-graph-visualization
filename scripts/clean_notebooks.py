@@ -13,6 +13,11 @@ from nbconvert.preprocessors import Preprocessor
 PRESERVE_CELL_OUTPUT_KEY = "preserve-output"
 METADATA_TAG_KEY = "tags"
 
+# An interactive widget output only renders against the kernel that produced it.
+# Reopened without one, it shows an error next to the static image stored for the
+# same cell, so a committed notebook keeps the static outputs only.
+WIDGET_VIEW_MIME = "application/vnd.jupyter.widget-view+json"
+
 
 class OutputMode(Enum):
     STDOUT = "stdout"
@@ -31,11 +36,23 @@ class CustomClearOutputPreprocessor(Preprocessor):
         """
         Apply a transformation on each cell. See base.py for details.
         """
-        if cell.cell_type == "code" and PRESERVE_CELL_OUTPUT_KEY not in cell[
-            "metadata"
-        ].get(METADATA_TAG_KEY, []):
-            cell.outputs = []
+        if cell.cell_type != "code":
+            return cell, resources
+
+        if PRESERVE_CELL_OUTPUT_KEY in cell["metadata"].get(METADATA_TAG_KEY, []):
+            cell.outputs = [
+                output
+                for output in cell.outputs
+                if WIDGET_VIEW_MIME not in output.get("data", {})
+            ]
+            # A committed notebook holds a curated result, not a run log: the stored
+            # cells are regenerated on their own, so their counts would not line up
+            # with the rest of the notebook.
             cell.execution_count = None
+            return cell, resources
+
+        cell.outputs = []
+        cell.execution_count = None
         return cell, resources
 
 
