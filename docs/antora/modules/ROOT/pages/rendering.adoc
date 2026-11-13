@@ -209,3 +209,41 @@ An explicit `format="png"`/`format="svg"` argument must match the extension.
 A PNG captures the current view (the canvas at its rendered size, including the current zoom and pan), while an SVG always contains the entire graph.
 
 NOTE: The image is rendered by the widget frontend in the browser, so `save` must be `await`-ed while the widget is displayed in a live notebook (JupyterLab, Notebook, VS Code, Colab, or marimo). Outside a running kernel, for example in a plain Python script, there is no renderer and saving raises an error — use xref:rendering.adoc#exporting-to-html[Exporting to HTML] there instead. The frontend must also be able to render: if the widget's output is scrolled out of view or collapsed, or its browser tab is in the background, `save` raises a timeout error.
+
+[[static-previews]]
+== Static previews in committed notebooks
+
+GitHub and other static notebook viewers strip the interactive widget output, so a committed notebook
+would otherwise show an empty cell. To avoid that, `render_widget` stores a PNG snapshot of the graph in
+a second output next to the widget, and viewers that cannot render widgets show that image instead.
+
+The snapshot is taken automatically once the initial layout has settled, and refreshed after the graph
+changes (adding nodes, recoloring, resizing, switching the layout, and so on). Nothing has to be called:
+display the widget and save the notebook with its outputs. In a live notebook the stored image is hidden,
+so the widget stays the only thing on screen and remains fully interactive.
+
+Turn it off per widget with the `fallback` parameter, either when rendering or later:
+
+[source, python]
+----
+widget = VG.render_widget(fallback=False)
+
+# or, on an existing widget
+widget.fallback = False
+----
+
+Snapshots larger than 2 MB are skipped, keeping any earlier snapshot, to avoid bloating the notebook with
+an image that would not be readable anyway. This only happens for very large graphs on high-resolution
+displays.
+
+The fallback has a few limitations to be aware of:
+
+* It needs a live browser. A notebook executed headlessly (`nbconvert --execute`, `papermill`, a docs
+  build) has no frontend to render the image, so nothing is stored.
+* It applies to `render_widget` only. The object returned by the `render` method is static HTML with no
+  channel back to the kernel, so it cannot store an image — use `render_widget` in notebooks.
+* The snapshot captures the graph canvas, not the widget's UI chrome (toolbar, search box, legend).
+* The image is stored in the notebook output, so it is only there if the notebook was saved with its
+  outputs. Tools that strip outputs on commit (`nbstripout`, this repository's own
+  `scripts/clean_notebooks.py`) remove it, unless the cell carries the `preserve-output` tag.
+

@@ -68,6 +68,25 @@ export type SaveResponse = {
   error?: string;
 };
 
+/**
+ * A PNG snapshot of the rendered graph, sent to Python once the layout settles and
+ * after changes.
+ *
+ * A committed notebook only stores the outputs the kernel emitted, so Python stores the
+ * snapshot as an `image/png` output next to the widget. Frontends that cannot render
+ * widgets (GitHub, nbviewer) then show the image instead of nothing.
+ */
+export type SnapshotMessage = {
+  kind: "snapshot";
+  dataUrl: string;
+};
+
+/** How long to wait after the last change before taking a snapshot. */
+const SNAPSHOT_DELAY_MS = 500;
+
+/** How long to wait for the fallback image to reach the DOM before giving up on hiding it. */
+const HIDE_TIMEOUT_MS = 10_000;
+
 export type WidgetData = {
   nodes: SerializedNode[];
   relationships: SerializedRelationship[];
@@ -78,6 +97,8 @@ export type WidgetData = {
   selected: GraphSelection;
   legend: LegendData;
   last_event: InteractionEvent | null;
+  /** Whether Python stores a static PNG fallback next to the widget output. */
+  fallback?: boolean;
   /**
    * The NDL stylesheet, provided by the host (anywidget syncs the widget's `_css`
    * trait; Streamlit passes it in the component state). Never bundled into the JS.
@@ -249,6 +270,62 @@ export function handleSaveRequest(
   }
 }
 
+/**
+ * Hide the static fallback image the kernel stores next to this widget.
+ *
+ * The image is what makes a committed notebook preview on GitHub, but in a live frontend
+ * it would render as a duplicate below the interactive graph. It only reaches the DOM
+ * after a round trip through Python, so watch for the element carrying the snapshot we
+ * just sent and hide it: in JupyterLab the whole output row, elsewhere the image itself.
+ *
+ * Best-effort: a frontend that renders the output elsewhere, or not at all, simply gets
+ * no hiding, and the observer gives up after `HIDE_TIMEOUT_MS`.
+ */
+export function hideFallbackImage(widgetEl: HTMLElement, src: string): () => void {
+  const hide = (img: HTMLImageElement): void => {
+    const target = img.closest<HTMLElement>(".jp-OutputArea-child") ?? img;
+    target.style.display = "none";
+  };
+
+  const match = (root: ParentNode): HTMLImageElement | undefined =>
+    Array.from(root.querySelectorAll("img")).find((img) => img.getAttribute("src") === src);
+
+  // The output may already be in the DOM, e.g. when the widget was displayed again.
+  const existing = match(widgetEl.closest(".jp-OutputArea") ?? document.body);
+  if (existing) {
+    hide(existing);
+    return () => {};
+  }
+
+  let observer: MutationObserver | undefined = new MutationObserver((records) => {
+    for (const record of records) {
+      for (const node of Array.from(record.addedNodes)) {
+        if (!(node instanceof HTMLElement)) continue;
+        const img =
+          node instanceof HTMLImageElement
+            ? node.getAttribute("src") === src
+              ? node
+              : undefined
+            : match(node);
+        if (img) {
+          hide(img);
+          observer?.disconnect();
+          observer = undefined;
+          return;
+        }
+      }
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  const timeout = setTimeout(() => observer?.disconnect(), HIDE_TIMEOUT_MS);
+  return () => {
+    observer?.disconnect();
+    observer = undefined;
+    clearTimeout(timeout);
+  };
+}
+
 function GraphWidget() {
   const [nodes] = useModelState<WidgetData["nodes"]>("nodes");
   const [relationships] = useModelState<WidgetData["relationships"]>("relationships");
@@ -264,6 +341,7 @@ function GraphWidget() {
   // being bundled into the JS payload.
   const [ndlCss] = useModelState<string>("_css");
   const [, setNvlReady] = useModelState<boolean>("_nvl_ready");
+  const [fallbackEnabled] = useModelState<WidgetData["fallback"]>("fallback");
   const {
     layout,
     nvlOptions,
@@ -397,11 +475,54 @@ function GraphWidget() {
     nvlReadySentRef.current = true;
     setNvlReady(true);
   }, [setNvlReady]);
+
+  // Static PNG fallback (`fallback` trait on the Python widget). The kernel stores a
+  // snapshot next to the widget output so committed notebooks still show the graph on
+  // GitHub and other frontends that cannot render widgets. It is taken once the layout
+  // settles and, debounced, after every later change.
+  const [snapshotUrl, setSnapshotUrl] = useState<string>();
+  const snapshotTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const sendSnapshot = useCallback(() => {
+    const nvl = nvlRef.current;
+    if (!nvl) return;
+    let dataUrl: string;
+    try {
+      const background = wrapperRef.current?.querySelector(".ndl-graph-visualization");
+      dataUrl = nvl.getImageDataUrl({
+        backgroundColor: background ? getComputedStyle(background).backgroundColor : undefined,
+      });
+    } catch {
+      return; // best-effort: taking a snapshot must never break the widget
+    }
+    if (!dataUrl) return;
+    setSnapshotUrl(dataUrl);
+    model.send({ kind: "snapshot", dataUrl } satisfies SnapshotMessage);
+  }, [model]);
+
+  const scheduleSnapshot = useCallback(() => {
+    if (!fallbackEnabled || typeof model.send !== "function") return;
+    clearTimeout(snapshotTimerRef.current);
+    snapshotTimerRef.current = setTimeout(sendSnapshot, SNAPSHOT_DELAY_MS);
+  }, [fallbackEnabled, model, sendSnapshot]);
+
+  useEffect(() => () => clearTimeout(snapshotTimerRef.current), []);
+
+  // The image output only reaches the DOM after a round trip through Python, so hide it
+  // once it shows up.
+  useEffect(() => {
+    if (!snapshotUrl || !wrapperRef.current) return;
+    return hideFallbackImage(wrapperRef.current, snapshotUrl);
+  }, [snapshotUrl]);
+
+  // Readiness and the first fallback snapshot share one moment: the layout has settled and
+  // the canvas has something to capture.
+  const onReady = useCallback(() => {
+    signalNvlReady();
+    scheduleSnapshot();
+  }, [signalNvlReady, scheduleSnapshot]);
   // Fires when the layout stops moving, i.e. the graph is fully drawn.
-  const nvlCallbacks = useMemo<ExternalCallbacks>(
-    () => ({ onLayoutDone: signalNvlReady }),
-    [signalNvlReady],
-  );
+  const nvlCallbacks = useMemo<ExternalCallbacks>(() => ({ onLayoutDone: onReady }), [onReady]);
   // Static layouts (e.g. "free") never move and may not fire onLayoutDone, so fall back to
   // polling isLayoutMoving(); timer, not rAF, so it still fires in a background tab.
   useEffect(() => {
@@ -413,10 +534,18 @@ function GraphWidget() {
       }
       const nvl = nvlRef.current;
       stillFrames = nvl !== null && !nvl.isLayoutMoving() ? stillFrames + 1 : 0;
-      if (stillFrames >= 3) signalNvlReady();
+      if (stillFrames >= 3) onReady();
     }, 100);
     return () => clearInterval(interval);
-  }, [signalNvlReady]);
+  }, [onReady]);
+
+  // Refresh the stored snapshot after changes. Before the layout has settled there is
+  // nothing worth capturing, so the first snapshot always comes from `onReady` above (and
+  // it covers any change made in the meantime).
+  useEffect(() => {
+    if (!nvlReadySentRef.current) return;
+    scheduleSnapshot();
+  }, [nodes, relationships, options, legend, scheduleSnapshot]);
 
   const [neoNodes, neoRelationships] = useMemo(
     () => [
