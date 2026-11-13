@@ -631,6 +631,7 @@ def run_existing_notebook_in_browser(
     notebook: str,
     *,
     run_cells: Sequence[int],
+    check: Callable[[Page], None] | None = None,
     settle_ms: int = 3000,
 ) -> None:
     """Run selected cells of an existing notebook on ``server`` and save it with its outputs.
@@ -639,7 +640,8 @@ def run_existing_notebook_in_browser(
     root (it is one of the repository's own files) and the artifact is the saved
     notebook rather than a marker file. Only ``run_cells`` (indices into the
     notebook's cells) are executed, so a notebook can skip setup cells that the
-    harness environment cannot run, such as a ``%pip install``.
+    harness environment cannot run, such as a ``%pip install``. When ``check`` is
+    given it runs against the live page before the notebook is saved.
 
     The point of saving is the widget's static fallback image: the frontend renders
     the graph while the cells run and sends the snapshot back through the kernel,
@@ -684,6 +686,8 @@ def run_existing_notebook_in_browser(
                 except PlaywrightError:
                     pass
                 page.wait_for_timeout(settle_ms)
+                if check is not None:
+                    check(page)
                 _save_notebook(page, path, mtime_before, NOTEBOOK_SAVE_TIMEOUT)
             except Exception as exc:
                 _dump_debug_artifacts(server, page, console_messages)
