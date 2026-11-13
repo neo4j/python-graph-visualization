@@ -591,6 +591,7 @@ class VisualizationGraph:
         on_dangling: OnDangling = "warn",
         show_search_button: bool = True,
         show_layout_button: bool = True,
+        fallback: bool = True,
     ) -> GraphWidget:
         """
         Render the graph as an interactive Jupyter widget (anywidget).
@@ -630,6 +631,11 @@ class VisualizationGraph:
             Whether to show the search button that highlights matching nodes and relationships.
         show_layout_button:
             Whether to show the layout selector button.
+        fallback:
+            Whether to store a static PNG snapshot of the graph next to the widget output,
+            so committed notebooks still show the graph on frontends that cannot render
+            widgets (GitHub, nbviewer). The snapshot is refreshed after the initial layout
+            and after changes. Set to False to skip it.
         """
         render_options = self._build_render_options(
             layout,
@@ -655,4 +661,5 @@ class VisualizationGraph:
             theme=theme,
             legend=self.legend,
             max_allowed_nodes=max_allowed_nodes,
+            fallback=fallback,
         )
