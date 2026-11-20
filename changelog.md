@@ -18,8 +18,9 @@
   widget. Disable it per widget with `render_widget(fallback=False)`.
 * `render()` and `render_widget()` frame the whole graph once its initial layout has settled, for every
   layout. An explicitly set `pan_position` or `initial_zoom` is left alone; pass `fit=False` to keep the
-  default view instead, or `fit=True` to require framing. `GraphWidget.fit()` frames the graph again
-  on demand, optionally for a subset of nodes, for example after changing the graph or the layout.
+  default view instead, or `fit=True` to require framing. `fit` also accepts a list of node ids to frame
+  only those nodes. `GraphWidget.fit()` frames the graph again on demand, optionally for a subset of
+  nodes, for example after changing the graph or the layout.
 
 ## Bug fixes
 

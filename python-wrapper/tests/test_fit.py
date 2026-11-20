@@ -92,7 +92,7 @@ class TestFit:
     def test_fit_rejects_an_empty_node_id_list(self) -> None:
         widget = _fake_frontend(_make_widget(), lambda request: {"kind": "fit_response"})
 
-        with pytest.raises(ValueError, match="`node_ids` is empty"):
+        with pytest.raises(ValueError, match="node ids to frame are empty"):
             asyncio.run(widget.fit([]))
 
     def test_fit_raises_frontend_error(self) -> None:

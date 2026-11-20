@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Sequence
 from typing import Literal, TypeVar
 
-from .node import Node
+from .node import Node, NodeIdType
 from .relationship import Relationship
 
 OnDangling = Literal["error", "warn", "none"]
@@ -115,3 +116,44 @@ def check_dangling_relationships(
     if on_dangling == "error":
         raise ValueError(message)
     warnings.warn(message)
+
+
+def resolve_fit_node_ids(node_ids: Sequence[NodeIdType] | None, nodes: Sequence[Node]) -> list[str] | None:
+    """Validate the node ids to frame and normalize them to the strings the frontend matches.
+
+    Returns None when every node should be framed.
+    """
+    if node_ids is None:
+        return None
+
+    requested = [str(node_id) for node_id in node_ids]
+    if not requested:
+        raise ValueError("The node ids to frame are empty. Omit them to frame every node in the graph.")
+
+    known = {str(node.id) for node in nodes}
+    unknown = [node_id for node_id in requested if node_id not in known]
+    if unknown:
+        raise ValueError(f"Unknown node ids: {', '.join(unknown)}")
+    return requested
+
+
+def resolve_fit(
+    fit: bool | None | Sequence[NodeIdType],
+    nodes: Sequence[Node],
+) -> tuple[bool | None, list[str] | None]:
+    """Split the `fit` render option into whether to frame, and which nodes to frame.
+
+    `bool` is checked before the id types, so `False`/`True` are the flag while a sequence is a set
+    of node ids. A bare node id is rejected rather than accepted as a single-node list: an int flag
+    (`0`/`1`) is indistinguishable from a node id, so guessing would silently frame a node.
+    """
+    if fit is None or isinstance(fit, bool):
+        return fit, None
+
+    if isinstance(fit, (str, bytes)) or not isinstance(fit, Sequence):
+        raise TypeError(
+            "`fit` must be a bool, None, or a sequence of node ids. Pass a list to frame specific "
+            f"nodes, for example `fit=['0']`, not {fit!r}."
+        )
+
+    return True, resolve_fit_node_ids(fit, nodes)
