@@ -44,6 +44,16 @@ def test_widget_options_layout_coordinate() -> None:
     assert js["layout"] == "free"
 
 
+def test_widget_options_fit_is_dropped_when_unset() -> None:
+    # `fit` is a render-time default; an unset option leaves the frontend's own default alone.
+    assert "fit" not in RenderOptions().to_widget_options().to_json()
+
+
+def test_widget_options_fit_passes_through() -> None:
+    assert RenderOptions(fit=True).to_widget_options().to_json()["fit"] is True
+    assert RenderOptions(fit=False).to_widget_options().to_json()["fit"] is False
+
+
 def test_widget_options_renderer_canvas() -> None:
     options = RenderOptions(renderer=Renderer.CANVAS)
     js = options.to_widget_options().to_json()

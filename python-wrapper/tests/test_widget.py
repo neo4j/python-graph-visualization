@@ -691,6 +691,7 @@ class TestRenderWidget:
             initial_zoom=2.0,
             min_zoom=0.1,
             max_zoom=5.0,
+            fit=False,
         )
 
         assert widget.options.layout == "hierarchical"

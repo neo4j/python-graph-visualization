@@ -40,12 +40,20 @@ class Layout(StrEnum):
     COORDINATE = "free"
     """
     The coordinate layout sets the position of each node based on the `x` and `y` properties of the node.
+
+    The coordinates are canvas coordinates, whose origin ``(0, 0)`` is the center of the canvas, so
+    nodes without ``x``/``y`` are stacked at the center. Unlike the layouts that compute positions,
+    this layout preserves the given coordinates exactly; make sure they are centered around the
+    origin and reasonably scaled, or the graph renders off-screen or with sub-pixel nodes.
     """
     GRID = "grid"
     """
-    A basic circular layout.
+    The nodes are placed on a grid.
     """
     CIRCULAR = "circular"
+    """
+    The nodes are placed on a circle.
+    """
 
 
 class Direction(StrEnum):
@@ -395,6 +403,7 @@ class WidgetOptions(
     nvl_options: Optional[NvlOptions] = None
     zoom: Optional[float] = None
     pan: Optional[PanPosition] = None
+    fit: Optional[bool] = None
     show_layout_button: Optional[bool] = None
     show_search_button: Optional[bool] = None
     selection_mode: Optional[SelectionMode] = None
@@ -425,6 +434,8 @@ class RenderOptions(BaseModel, extra="allow"):
     )
     min_zoom: Optional[float] = Field(None, serialization_alias="minZoom", description="The minimum zoom level allowed")
     allow_dynamic_min_zoom: Optional[bool] = Field(None, serialization_alias="allowDynamicMinZoom")
+
+    fit: Optional[bool] = None
 
     selection_mode: Optional[SelectionMode] = Field(None, serialization_alias="selectionMode")
 
@@ -479,6 +490,9 @@ class RenderOptions(BaseModel, extra="allow"):
 
         if self.pan_X is not None or self.pan_Y is not None:
             result.pan = PanPosition(x=self.pan_X or 0, y=self.pan_Y or 0)
+
+        if self.fit is not None:
+            result.fit = self.fit
 
         result.show_layout_button = self.show_layout_button
         result.show_search_button = self.show_search_button
