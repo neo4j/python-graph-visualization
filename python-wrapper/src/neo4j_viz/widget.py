@@ -6,6 +6,7 @@ import json
 import pathlib
 import urllib.parse
 import uuid
+from collections.abc import Sequence
 from functools import cached_property
 from typing import Any, Callable, Literal, TypeVar, Union, cast
 
@@ -529,8 +530,13 @@ class GraphWidget(anywidget.AnyWidget):
         path.write_bytes(_decode_data_url(data_url))
         return path
 
-    async def fit(self, *, timeout: float = 30.0) -> None:
-        """Frame the whole graph in the viewport.
+    async def fit(
+        self,
+        node_ids: Sequence[NodeIdType] | None = None,
+        *,
+        timeout: float = 30.0,
+    ) -> None:
+        """Frame the whole graph, or the given nodes, in the viewport.
 
         The view is controlled by the widget frontend (in the browser), so this sends a request
         over the widget channel and waits for it to be applied. It must be awaited from a notebook
@@ -539,20 +545,38 @@ class GraphWidget(anywidget.AnyWidget):
         renderer to update.
 
         The graph is already framed once when it first renders (see the `fit` parameter of
-        `render_widget`), so use this to frame it again after changing the graph or the layout:
+        `render_widget`), so use this to frame it again after changing it, or to zoom in on part
+        of it, such as the current selection:
 
-        >>> widget.nodes.append(Node(id="new", caption="Node"))
-        >>> widget.sync_nodes()
         >>> await widget.fit()
+        >>> await widget.fit(widget.selected.nodeIds)
 
         Parameters
         ----------
+        node_ids:
+            The ids of the nodes to frame. Defaults to every node in the graph.
         timeout:
             Total time to wait for the frontend to apply the fit, in seconds. This includes
             waiting for the widget to finish its initial render, which matters when `fit` is
             called right after the widget is displayed.
+
+        Raises
+        ------
+        ValueError
+            If `node_ids` is empty, or contains an id that is not in the graph.
         """
         self._check_live_frontend("fit")
+
+        request: dict[str, Any] = {"kind": "fit"}
+        if node_ids is not None:
+            requested = [str(node_id) for node_id in node_ids]
+            if not requested:
+                raise ValueError("`node_ids` is empty. Omit it to frame every node in the graph.")
+            known = {str(node.id) for node in self.nodes}
+            unknown = [node_id for node_id in requested if node_id not in known]
+            if unknown:
+                raise ValueError(f"Unknown node ids: {', '.join(unknown)}")
+            request["nodeIds"] = requested
 
         loop = asyncio.get_running_loop()
         deadline = loop.time() + timeout
@@ -564,7 +588,7 @@ class GraphWidget(anywidget.AnyWidget):
         self._pending_fit_requests[request_id] = future
 
         try:
-            self.send({"kind": "fit", "id": request_id})
+            self.send({**request, "id": request_id})
             response = await asyncio.wait_for(future, timeout=max(0.0, deadline - loop.time()))
         except asyncio.TimeoutError as exc:
             raise TimeoutError(
