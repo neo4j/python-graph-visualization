@@ -77,6 +77,8 @@ export type SaveResponse = {
 export type FitRequest = {
   kind: "fit";
   id: string;
+  /** The nodes to frame, or every node in the graph when omitted. */
+  nodeIds?: string[];
 };
 
 export type FitResponse = {
@@ -288,22 +290,27 @@ export function handleSaveRequest(
 }
 
 /**
- * Frame every node currently in the graph.
+ * Frame the given nodes, or every node in the graph when none are given.
  *
  * NVL's `fit` takes the ids of the nodes to frame and silently does nothing without them, so the
  * ids are always read from the instance rather than passed in. It also gives up quietly on
  * positions it cannot compute a center for, so those are rejected here instead: the Python
  * `GraphWidget.fit()` call then reports why, and the initial framing logs it.
  */
-function fitToNodes(nvl: NVL, options?: ZoomOptions): void {
+function fitToNodes(nvl: NVL, options?: ZoomOptions, nodeIds?: string[]): void {
   const nodes = nvl.getNodes();
-  // An empty graph is a legitimate state with nothing to frame, not a failure.
-  if (nodes.length === 0) return;
-  if (!nodes.every((node) => Number.isFinite(node.x) && Number.isFinite(node.y))) {
+  const framed = nodeIds === undefined ? nodes : nodes.filter((node) => nodeIds.includes(node.id));
+  if (framed.length === 0) {
+    // Nothing to frame is only fine when the whole graph was asked for: an empty graph is a
+    // legitimate state, while a subset that matches no node would frame something else.
+    if (nodeIds === undefined) return;
+    throw new Error("none of the given node ids are in the graph");
+  }
+  if (!framed.every((node) => Number.isFinite(node.x) && Number.isFinite(node.y))) {
     throw new Error("the node positions are not finite");
   }
   nvl.fit(
-    nodes.map((node) => node.id),
+    framed.map((node) => node.id),
     options,
   );
 }
@@ -312,7 +319,7 @@ function fitToNodes(nvl: NVL, options?: ZoomOptions): void {
  * Handles a `fit` custom message from Python `GraphWidget.fit()`.
  *
  * The reply acknowledges that the view was updated, or carries an error message when the graph
- * is not rendered yet or NVL rejected the fit.
+ * is not rendered yet, the node ids are malformed, or NVL rejected the fit.
  */
 export function handleFitRequest(
   msg: unknown,
@@ -323,6 +330,15 @@ export function handleFitRequest(
   const request = msg as Partial<FitRequest>;
   if (request.kind !== "fit" || typeof request.id !== "string") return;
 
+  const { nodeIds } = request;
+  if (
+    nodeIds !== undefined &&
+    (!Array.isArray(nodeIds) || !nodeIds.every((id) => typeof id === "string"))
+  ) {
+    reply(request.id, { error: "the node ids to frame must be a list of strings" });
+    return;
+  }
+
   if (!nvl) {
     reply(request.id, {
       error: "The graph is not rendered yet; display the widget before fitting.",
@@ -331,7 +347,7 @@ export function handleFitRequest(
   }
 
   try {
-    fitToNodes(nvl);
+    fitToNodes(nvl, undefined, nodeIds);
     reply(request.id, {});
   } catch (error) {
     reply(request.id, { error: error instanceof Error ? error.message : String(error) });

@@ -53,6 +53,47 @@ class TestFit:
         assert len(requests) == 1
         assert requests[0]["kind"] == "fit"
         assert isinstance(requests[0]["id"], str)
+        # No ids means every node in the graph.
+        assert "nodeIds" not in requests[0]
+
+    def test_fit_frames_the_given_node_ids(self) -> None:
+        requests: list[dict[str, Any]] = []
+
+        def respond(request: dict[str, Any]) -> dict[str, Any]:
+            requests.append(request)
+            return {"kind": "fit_response"}
+
+        widget = _fake_frontend(_make_widget(), respond)
+
+        asyncio.run(widget.fit(["n2"]))
+
+        assert requests[0]["nodeIds"] == ["n2"]
+
+    def test_fit_converts_node_ids_to_strings(self) -> None:
+        # The frontend matches node ids as strings, whatever the Python-side id type.
+        requests: list[dict[str, Any]] = []
+
+        def respond(request: dict[str, Any]) -> dict[str, Any]:
+            requests.append(request)
+            return {"kind": "fit_response"}
+
+        widget = _fake_frontend(GraphWidget(nodes=[Node(id=0), Node(id=1)]), respond)
+
+        asyncio.run(widget.fit([1]))
+
+        assert requests[0]["nodeIds"] == ["1"]
+
+    def test_fit_rejects_unknown_node_ids(self) -> None:
+        widget = _fake_frontend(_make_widget(), lambda request: {"kind": "fit_response"})
+
+        with pytest.raises(ValueError, match="Unknown node ids: nope, other"):
+            asyncio.run(widget.fit(["n1", "nope", "other"]))
+
+    def test_fit_rejects_an_empty_node_id_list(self) -> None:
+        widget = _fake_frontend(_make_widget(), lambda request: {"kind": "fit_response"})
+
+        with pytest.raises(ValueError, match="`node_ids` is empty"):
+            asyncio.run(widget.fit([]))
 
     def test_fit_raises_frontend_error(self) -> None:
         widget = _fake_frontend(_make_widget(), lambda request: {"kind": "fit_response", "error": "boom"})

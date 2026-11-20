@@ -170,6 +170,48 @@ describe("handleFitRequest", () => {
     expect(reply).toHaveBeenCalledWith("1", {});
   });
 
+  it("frames only the given node ids", () => {
+    const fit = vi.fn();
+    const nvl = {
+      getNodes: () => [
+        { id: "n1", x: 0, y: 0 },
+        { id: "n2", x: 10, y: 20 },
+        { id: "n3", x: 30, y: 40 },
+      ],
+      fit,
+    } as unknown as NVL;
+
+    handleFitRequest({ kind: "fit", id: "1a", nodeIds: ["n2", "n3"] }, nvl, reply);
+
+    expect(fit).toHaveBeenCalledWith(["n2", "n3"], undefined);
+    expect(reply).toHaveBeenCalledWith("1a", {});
+  });
+
+  it("reports a subset that matches no node", () => {
+    // Framing a different set than the one asked for is worse than refusing.
+    const fit = vi.fn();
+    const nvl = { getNodes: () => [{ id: "n1", x: 0, y: 0 }], fit } as unknown as NVL;
+
+    handleFitRequest({ kind: "fit", id: "1d", nodeIds: ["gone"] }, nvl, reply);
+
+    expect(fit).not.toHaveBeenCalled();
+    expect(reply).toHaveBeenCalledWith("1d", {
+      error: "none of the given node ids are in the graph",
+    });
+  });
+
+  it("reports node ids that are not a list of strings", () => {
+    const fit = vi.fn();
+    const nvl = { getNodes: () => [{ id: "n1", x: 0, y: 0 }], fit } as unknown as NVL;
+
+    handleFitRequest({ kind: "fit", id: "1e", nodeIds: [1, 2] }, nvl, reply);
+
+    expect(fit).not.toHaveBeenCalled();
+    expect(reply).toHaveBeenCalledWith("1e", {
+      error: "the node ids to frame must be a list of strings",
+    });
+  });
+
   it("reports positions NVL cannot frame instead of claiming success", () => {
     // NVL gives up quietly when the positions yield no center, so the fit would otherwise
     // acknowledge a request that changed nothing.
@@ -244,6 +286,23 @@ describe("mounted widget fit wiring", () => {
 
       expect(fit).toHaveBeenCalledWith(NODE_IDS, undefined);
       expect(model.sent).toEqual([{ kind: "fit_response", id: "req-1" }]);
+    } finally {
+      if (typeof teardown === "function") await teardown();
+    }
+  });
+
+  it("frames only the node ids from the request", async () => {
+    const fit = vi.fn();
+    nvlState.nvl = fakeNvl({ fit });
+    const { model, teardown } = await renderWidgetWithCommModel();
+
+    try {
+      await act(async () => {
+        model.emitCustom({ kind: "fit", id: "req-subset", nodeIds: ["n2"] });
+      });
+
+      expect(fit).toHaveBeenCalledWith(["n2"], undefined);
+      expect(model.sent).toEqual([{ kind: "fit_response", id: "req-subset" }]);
     } finally {
       if (typeof teardown === "function") await teardown();
     }
