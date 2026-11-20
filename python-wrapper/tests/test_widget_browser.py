@@ -99,6 +99,36 @@ except Exception:
     assert png[:8] == b"\x89PNG\r\n\x1a\n"
 
 
+def test_fit_end_to_end(jupyter_lab_server: JupyterServer) -> None:
+    """``GraphWidget.fit()`` round-trips through a real frontend and NVL instance.
+
+    The coordinate layout is used because its initial view is the one that is *not* framed
+    automatically by NVL: the nodes sit far from the canvas origin until ``fit()`` frames them.
+    """
+    setup_cell = """\
+from neo4j_viz import Node, Relationship, VisualizationGraph, Layout
+nodes = [Node(id='0', caption='Alice', x=10000, y=10000), Node(id='1', caption='Bob', x=10100, y=10100)]
+rels = [Relationship(source='0', target='1', caption='KNOWS')]
+widget = VisualizationGraph(nodes=nodes, relationships=rels).render_widget(
+    height='400px', layout=Layout.COORDINATE
+)
+widget
+"""
+    fit_cell = f"""\
+import traceback
+from pathlib import Path
+try:
+    await widget.fit()
+    Path('{DONE_MARKER}').write_text('ok')
+except Exception:
+    Path('{ERROR_MARKER}').write_text(traceback.format_exc())
+"""
+    try:
+        run_notebook_in_browser(jupyter_lab_server, [setup_cell, fit_cell])
+    except BrowserUnavailableError as exc:
+        pytest.skip(str(exc))
+
+
 def test_widget_does_not_restyle_jupyter_page(jupyter_lab_server: JupyterServer) -> None:
     setup_cell = """\
 from neo4j_viz import Node, Relationship, VisualizationGraph

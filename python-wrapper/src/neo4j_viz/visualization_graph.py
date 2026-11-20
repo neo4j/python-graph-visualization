@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from functools import cached_property
 from typing import Any, Literal
 
@@ -441,6 +442,7 @@ class VisualizationGraph:
         show_layout_button: bool,
         show_search_button: bool,
         on_dangling: OnDangling,
+        fit: bool,
     ) -> RenderOptions:
         """Shared validation + option building for render / render_widget."""
         num_nodes = len(self.nodes)
@@ -478,6 +480,23 @@ class VisualizationGraph:
 
         check_force_directed_layout_options(layout, layout_options_typed)
 
+        if fit and (pan_position is not None or initial_zoom is not None):
+            warnings.warn(
+                "`fit=True` is ignored because `pan_position`/`initial_zoom` set the initial view "
+                "explicitly. Pass `fit=False` to silence this warning.",
+                stacklevel=3,
+            )
+
+        if layout == Layout.COORDINATE:
+            missing = sum(1 for node in self.nodes if node.x is None or node.y is None)
+            if missing:
+                warnings.warn(
+                    f"{missing} node(s) have no `x`/`y` coordinates. The `Layout.COORDINATE` layout "
+                    "places nodes at the given coordinates and stacks the ones without any at the "
+                    "center of the canvas (0, 0).",
+                    stacklevel=3,
+                )
+
         return RenderOptions(
             layout=layout,
             layout_options=layout_options_typed,
@@ -488,6 +507,7 @@ class VisualizationGraph:
             min_zoom=min_zoom,
             max_zoom=max_zoom,
             allow_dynamic_min_zoom=allow_dynamic_min_zoom,
+            fit=fit,
             show_layout_button=show_layout_button,
             show_search_button=show_search_button,
         )
@@ -509,6 +529,7 @@ class VisualizationGraph:
         on_dangling: OnDangling = "warn",
         show_search_button: bool = True,
         show_layout_button: bool = True,
+        fit: bool = True,
     ) -> HTML:
         """
         Render the graph as an HTML object.
@@ -529,9 +550,9 @@ class VisualizationGraph:
         height:
             The height of the rendered graph.
         pan_position:
-            The initial pan position.
+            The initial pan position. When set, the view is fixed and `fit` is ignored.
         initial_zoom:
-            The initial zoom level.
+            The initial zoom level. When set, the view is fixed and `fit` is ignored.
         min_zoom:
             The minimum zoom level.
         max_zoom:
@@ -548,6 +569,10 @@ class VisualizationGraph:
             Whether to show the search button that highlights matching nodes and relationships.
         show_layout_button:
             Whether to show the layout selector button.
+        fit:
+            Whether to frame the whole graph once its initial layout has settled (default). Set to
+            ``False`` to keep the default view (centered on the canvas origin) instead. Ignored
+            when `pan_position` or `initial_zoom` sets the view explicitly.
 
         Example
         -------
@@ -567,6 +592,7 @@ class VisualizationGraph:
             show_layout_button=show_layout_button,
             show_search_button=show_search_button,
             on_dangling=on_dangling,
+            fit=fit,
         )
 
         return NVL().render(
@@ -597,6 +623,7 @@ class VisualizationGraph:
         show_search_button: bool = True,
         show_layout_button: bool = True,
         fallback: bool = True,
+        fit: bool = True,
     ) -> GraphWidget:
         """
         Render the graph as an interactive Jupyter widget (anywidget).
@@ -617,9 +644,9 @@ class VisualizationGraph:
         height:
             The height of the rendered graph.
         pan_position:
-            The initial pan position.
+            The initial pan position. When set, the view is fixed and `fit` is ignored.
         initial_zoom:
-            The initial zoom level.
+            The initial zoom level. When set, the view is fixed and `fit` is ignored.
         min_zoom:
             The minimum zoom level.
         max_zoom:
@@ -641,6 +668,11 @@ class VisualizationGraph:
             so committed notebooks still show the graph on frontends that cannot render
             widgets (GitHub, nbviewer). The snapshot is refreshed after the initial layout
             and after changes. Set to False to skip it.
+        fit:
+            Whether to frame the whole graph once its initial layout has settled (default). Set to
+            ``False`` to keep the default view (centered on the canvas origin) instead. Ignored
+            when `pan_position` or `initial_zoom` sets the view explicitly. Use the widget's
+            `fit` method to frame the graph again later.
         """
         render_options = self._build_render_options(
             layout,
@@ -655,6 +687,7 @@ class VisualizationGraph:
             show_layout_button=show_layout_button,
             show_search_button=show_search_button,
             on_dangling=on_dangling,
+            fit=fit,
         )
 
         return GraphWidget.from_graph_data(
