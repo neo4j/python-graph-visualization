@@ -210,7 +210,7 @@ class VisualizationGraph:
         sizes: dict[NodeIdType, RealNumber] | None = None,
         node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
         property: str | None = None,
-        sizing: NodeSizing = NodeSizing.AREA,
+        sizing: NodeSizing | str = NodeSizing.AREA,
     ) -> None:
         """
         Resize the nodes in the graph.
@@ -227,10 +227,7 @@ class VisualizationGraph:
         property:
             The property of the nodes to use for sizing. Must be None if `sizes` is provided.
         sizing:
-            How the sizes map to node radii when they are scaled to fit `node_radius_min_max`, see `NodeSizing`.
-            The default is `NodeSizing.AREA`, which grows the node area linearly with the size. Pass
-            `NodeSizing.RADIUS` to grow the radius linearly instead, as earlier versions did, or `NodeSizing.LOG` to
-            compress skewed size distributions such as degree or PageRank. Ignored if `node_radius_min_max` is None.
+            The `NodeSizing` to use. Ignored if `node_radius_min_max` is None.
         """
         self._entity_ops.resize_nodes(
             sizes=sizes, node_radius_min_max=node_radius_min_max, property=property, sizing=sizing

@@ -174,7 +174,7 @@ class GraphEntityOperations:
         sizes: dict[NodeIdType, RealNumber] | None = None,
         node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
         property: str | None = None,
-        sizing: NodeSizing = NodeSizing.AREA,
+        sizing: NodeSizing | str = NodeSizing.AREA,
     ) -> None:
         """Resize nodes from explicit sizes or a property. See `VisualizationGraph.resize_nodes` for details."""
         if sizes is not None and property is not None:

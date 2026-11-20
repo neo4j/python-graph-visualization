@@ -57,7 +57,7 @@ def verify_radii(node_radius_min_max: tuple[RealNumber, RealNumber]) -> None:
 def scale_sizes(
     values: dict[SizeKey, RealNumber],
     node_radius_min_max: tuple[RealNumber, RealNumber],
-    sizing: NodeSizing = NodeSizing.AREA,
+    sizing: NodeSizing | str = NodeSizing.AREA,
 ) -> dict[SizeKey, RealNumber]:
     """
     Scale the given values to the given radius range, according to the sizing mode.
