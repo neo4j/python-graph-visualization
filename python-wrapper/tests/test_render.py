@@ -1,5 +1,6 @@
 import json
 import re
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
 
@@ -45,7 +46,15 @@ def test_basic_render(render_option: dict[str, Any], tmp_path: Path) -> None:
 
     VG = VisualizationGraph(nodes=nodes, relationships=relationships)
 
-    html = VG.render(**render_option)
+    # The coordinate layout keeps the given coordinates as-is, and the nodes here are only
+    # partially positioned, so it warns that the rest stack at the canvas center.
+    expect_warning = (
+        pytest.warns(UserWarning, match="have no `x`/`y` coordinates")
+        if render_option.get("layout") == Layout.COORDINATE
+        else nullcontext()
+    )
+    with expect_warning:
+        html = VG.render(**render_option)
 
     file_path = tmp_path / "basic_render.html"
 
@@ -193,6 +202,51 @@ def test_render_warns_on_ignored_force_directed_options() -> None:
 
     # The GPU force layout accepts them without warning.
     VG.render(layout=Layout.GPU_FORCE, layout_options={"gravity": 0.1})
+
+
+def test_render_fit_defaults_on() -> None:
+    VG = VisualizationGraph(nodes=[Node(id="0")], relationships=[])
+
+    options = json.loads(_data_block(VG.render().data).group(2))["options"]
+    assert options["fit"] is True
+
+
+def test_render_fit_can_be_disabled() -> None:
+    VG = VisualizationGraph(nodes=[Node(id="0")], relationships=[])
+
+    options = json.loads(_data_block(VG.render(fit=False).data).group(2))["options"]
+    assert options["fit"] is False
+
+
+def test_render_fit_warns_when_the_view_is_set_explicitly() -> None:
+    VG = VisualizationGraph(nodes=[Node(id="0")], relationships=[])
+
+    # An explicit view wins over fit, and the combination is a likely mistake.
+    with pytest.warns(UserWarning, match="`fit=True` is ignored"):
+        VG.render(pan_position=(1.0, 2.0))
+
+    with pytest.warns(UserWarning, match="`fit=True` is ignored"):
+        VG.render(initial_zoom=2.0)
+
+    # Opting out of fit silences the warning, as does fitting with no explicit view.
+    VG.render(pan_position=(1.0, 2.0), fit=False)
+    VG.render(initial_zoom=2.0, fit=False)
+    VG.render()
+
+
+def test_render_coordinate_layout_warns_on_missing_coordinates() -> None:
+    VG = VisualizationGraph(nodes=[Node(id="0", x=1.0, y=2.0), Node(id="1")], relationships=[])
+
+    with pytest.warns(UserWarning, match="1 node\\(s\\) have no `x`/`y` coordinates"):
+        VG.render(layout=Layout.COORDINATE)
+
+    # Other layouts position the nodes themselves, so coordinates are optional.
+    VG.render(layout=Layout.FORCE_DIRECTED)
+    VG.render(layout=Layout.GRID)
+
+    # Fully positioned graphs are silent.
+    VG_positioned = VisualizationGraph(nodes=[Node(id="0", x=1.0, y=2.0)], relationships=[])
+    VG_positioned.render(layout=Layout.COORDINATE)
 
 
 def _data_block(html: str) -> re.Match[str]:

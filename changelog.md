@@ -16,9 +16,19 @@
   still shows the graph on frontends that cannot render widgets, such as GitHub and nbviewer. The snapshot is
   taken once the initial layout has settled and refreshed after changes; live frontends keep the interactive
   widget. Disable it per widget with `render_widget(fallback=False)`.
+* `render()` and `render_widget()` frame the whole graph once its initial layout has settled, for every
+  layout. Pass `fit=False` to keep the default view instead. `GraphWidget.fit()` frames the graph again
+  on demand, for example after changing the graph or the layout.
 
 ## Bug fixes
 
+* An explicit `initial_zoom` or `pan_position` is no longer overridden once the layout settles. Previously
+  only the force-directed and hierarchical layouts were framed automatically, and that framing also ignored
+  the zoom and pan set from Python.
+
 ## Improvements
+
+* Rendering with `Layout.COORDINATE` warns when nodes have no coordinates, since those nodes stack at the
+  center of the canvas. The `Layout` docstrings now describe how each layout uses node coordinates.
 
 ## Other changes
