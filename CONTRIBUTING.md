@@ -149,7 +149,10 @@ just regenerate-notebook-outputs getting-started
 ```
 
 This runs the tagged cells in a headless browser and writes the notebooks back, cleaned. It needs Chrome or
-`uv run playwright install chromium`, and the notebook must run without external services.
+`uv run playwright install chromium`. The database examples (`neo4j-example`, `gds-example`) are skipped
+unless `NEO4J_URI` is set — start `just local-neo4j-setup` and export `NEO4J_URI=bolt://localhost:7687` to
+include them. Those examples create their own data, so the run continues into their cleanup cells and leaves
+the database as it found it.
 
 ### JavaScript configs
 
