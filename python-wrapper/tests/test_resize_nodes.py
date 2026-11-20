@@ -140,7 +140,7 @@ def test_resize_nodes_sizing_accepts_string() -> None:
     ]
     VG = VisualizationGraph(nodes=nodes, relationships=[])
 
-    VG.resize_nodes(property="degree", node_radius_min_max=(1, 4), sizing="log")  # type: ignore
+    VG.resize_nodes(property="degree", node_radius_min_max=(1, 4), sizing="log")
 
     assert VG.nodes[0].size == 1
     assert VG.nodes[1].size == 4
@@ -150,11 +150,11 @@ def test_resize_nodes_unknown_sizing_raises() -> None:
     VG = VisualizationGraph(nodes=[Node(id=42, size=10)], relationships=[])
 
     with pytest.raises(ValueError, match="diagonal"):
-        VG.resize_nodes(node_radius_min_max=(3, 60), sizing="diagonal")  # type: ignore
+        VG.resize_nodes(node_radius_min_max=(3, 60), sizing="diagonal")
 
     # The mode is validated even when the sizes are not scaled
     with pytest.raises(ValueError, match="diagonal"):
-        VG.resize_nodes(sizes={42: 10}, node_radius_min_max=None, sizing="diagonal")  # type: ignore
+        VG.resize_nodes(sizes={42: 10}, node_radius_min_max=None, sizing="diagonal")
 
 
 def test_resize_nodes_sizing_ignored_without_range() -> None:
@@ -175,7 +175,7 @@ def test_scale_sizes() -> None:
     assert area_middle[43] == pytest.approx(sqrt(1804.5))
 
     with pytest.raises(ValueError, match="diagonal"):
-        scale_sizes({42: 7}, (3, 60), "diagonal")  # type: ignore
+        scale_sizes({42: 7}, (3, 60), "diagonal")
 
 
 def test_resize_nodes_with_scaling_constant() -> None:
