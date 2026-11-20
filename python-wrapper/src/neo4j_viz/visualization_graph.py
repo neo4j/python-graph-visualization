@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Sequence
 from functools import cached_property
 from typing import Any, Literal
 
 from IPython.display import HTML
 
 from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
-from ._validation import OnDangling, check_dangling_relationships
+from ._validation import OnDangling, check_dangling_relationships, resolve_fit
 from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
 from .node_size import NodeSizing, RealNumber
@@ -442,7 +443,7 @@ class VisualizationGraph:
         show_layout_button: bool,
         show_search_button: bool,
         on_dangling: OnDangling,
-        fit: bool | None,
+        fit: bool | None | Sequence[NodeIdType],
     ) -> RenderOptions:
         """Shared validation + option building for render / render_widget."""
         num_nodes = len(self.nodes)
@@ -480,9 +481,11 @@ class VisualizationGraph:
 
         check_force_directed_layout_options(layout, layout_options_typed)
 
-        if fit is True and (pan_position is not None or initial_zoom is not None):
+        fit_flag, fit_node_ids = resolve_fit(fit, self.nodes)
+
+        if fit_flag is True and (pan_position is not None or initial_zoom is not None):
             warnings.warn(
-                "`fit=True` is ignored because `pan_position`/`initial_zoom` set the initial view "
+                "`fit` is ignored because `pan_position`/`initial_zoom` set the initial view "
                 "explicitly. Leave `fit` unset to frame the graph only when no view is set, or pass "
                 "`fit=False` to silence this warning.",
                 stacklevel=3,
@@ -508,7 +511,8 @@ class VisualizationGraph:
             min_zoom=min_zoom,
             max_zoom=max_zoom,
             allow_dynamic_min_zoom=allow_dynamic_min_zoom,
-            fit=fit,
+            fit=fit_flag,
+            fit_node_ids=fit_node_ids,
             show_layout_button=show_layout_button,
             show_search_button=show_search_button,
         )
@@ -530,7 +534,7 @@ class VisualizationGraph:
         on_dangling: OnDangling = "warn",
         show_search_button: bool = True,
         show_layout_button: bool = True,
-        fit: bool | None = None,
+        fit: bool | None | Sequence[NodeIdType] = None,
     ) -> HTML:
         """
         Render the graph as an HTML object.
@@ -571,10 +575,11 @@ class VisualizationGraph:
         show_layout_button:
             Whether to show the layout selector button.
         fit:
-            Whether to frame the whole graph once its initial layout has settled. By default the
-            graph is framed unless `pan_position` or `initial_zoom` sets the view explicitly.
-            Pass ``False`` to keep the default view (centered on the canvas origin) instead, or
-            ``True`` to require framing, which warns when an explicit view makes that impossible.
+            What to frame once the initial layout has settled. By default the graph is framed
+            unless `pan_position` or `initial_zoom` sets the view explicitly. Pass ``False`` to keep
+            the default view (centered on the canvas origin) instead, ``True`` to require framing
+            (which warns when an explicit view makes that impossible), or a sequence of node ids to
+            frame only those nodes, for example ``fit=["0", "1"]``.
 
         Example
         -------
@@ -625,7 +630,7 @@ class VisualizationGraph:
         show_search_button: bool = True,
         show_layout_button: bool = True,
         fallback: bool = True,
-        fit: bool | None = None,
+        fit: bool | None | Sequence[NodeIdType] = None,
     ) -> GraphWidget:
         """
         Render the graph as an interactive Jupyter widget (anywidget).
@@ -671,10 +676,11 @@ class VisualizationGraph:
             widgets (GitHub, nbviewer). The snapshot is refreshed after the initial layout
             and after changes. Set to False to skip it.
         fit:
-            Whether to frame the whole graph once its initial layout has settled. By default the
-            graph is framed unless `pan_position` or `initial_zoom` sets the view explicitly.
-            Pass ``False`` to keep the default view (centered on the canvas origin) instead, or
-            ``True`` to require framing, which warns when an explicit view makes that impossible.
+            What to frame once the initial layout has settled. By default the graph is framed
+            unless `pan_position` or `initial_zoom` sets the view explicitly. Pass ``False`` to keep
+            the default view (centered on the canvas origin) instead, ``True`` to require framing
+            (which warns when an explicit view makes that impossible), or a sequence of node ids to
+            frame only those nodes, for example ``fit=["0", "1"]``.
             Use the widget's `fit` method to frame the graph again later.
         """
         render_options = self._build_render_options(

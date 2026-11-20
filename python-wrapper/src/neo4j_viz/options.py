@@ -404,6 +404,7 @@ class WidgetOptions(
     zoom: Optional[float] = None
     pan: Optional[PanPosition] = None
     fit: Optional[bool] = None
+    fit_node_ids: Optional[list[str]] = None
     show_layout_button: Optional[bool] = None
     show_search_button: Optional[bool] = None
     selection_mode: Optional[SelectionMode] = None
@@ -436,6 +437,7 @@ class RenderOptions(BaseModel, extra="allow"):
     allow_dynamic_min_zoom: Optional[bool] = Field(None, serialization_alias="allowDynamicMinZoom")
 
     fit: Optional[bool] = None
+    fit_node_ids: Optional[list[str]] = Field(None, serialization_alias="fitNodeIds")
 
     selection_mode: Optional[SelectionMode] = Field(None, serialization_alias="selectionMode")
 
@@ -493,6 +495,9 @@ class RenderOptions(BaseModel, extra="allow"):
 
         if self.fit is not None:
             result.fit = self.fit
+
+        if self.fit_node_ids is not None:
+            result.fit_node_ids = self.fit_node_ids
 
         result.show_layout_button = self.show_layout_button
         result.show_search_button = self.show_search_button

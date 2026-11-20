@@ -129,12 +129,17 @@ The final picture does not preserve them.
 
 By default, `render_widget` and `render` frame the whole graph once its layout has settled, so
 whatever the layout produces fills the visible area.
-Pass `fit=False` to keep the default view instead, which is centered on the origin at a fixed zoom:
+Pass a list of node ids to frame only those nodes, or `fit=False` to keep the default view, which is
+centered on the origin at a fixed zoom:
 
 [source, python]
 ----
-widget = VG.render_widget(fit=False)
+widget = VG.render_widget(fit=["0", "1"])  # frame two nodes
+widget = VG.render_widget(fit=False)  # keep the default view
 ----
+
+The ids must be nodes of the graph. A single id has to be in a list, since a bare node id is
+indistinguishable from the `True`/`False` flag for an integer id.
 
 Setting `pan_position` or `initial_zoom` also fixes the view, and takes precedence over `fit`.
 The wrapper warns when you pass `fit=True` as well, since the two contradict.
