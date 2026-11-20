@@ -290,6 +290,8 @@ The preview has a few limitations:
   cell.
 * Only `render_widget` stores a preview, because `render` has no channel back to the kernel.
 * The image shows only the graph, not the toolbar, search box, or legend.
+* The preview follows the graph and its options rather than the view: panning, zooming, or framing
+  the graph later with `widget.fit()` leaves the stored image as it was.
 * Tools that strip outputs, for example link:https://github.com/kynan/nbstripout[nbstripout], remove the
   preview too.
 
