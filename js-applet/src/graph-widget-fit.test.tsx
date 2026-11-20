@@ -58,6 +58,7 @@ type WidgetOptions = {
   zoom?: number;
   pan?: { x: number; y: number };
   fit?: boolean;
+  fitNodeIds?: string[];
 };
 
 type WidgetState = {
@@ -378,6 +379,20 @@ describe("mounted widget fit wiring", () => {
         "[neo4j-viz] Could not frame the graph:",
         expect.anything(),
       );
+    } finally {
+      if (typeof teardown === "function") await teardown();
+    }
+  });
+
+  it("frames only the configured node ids on the initial framing", async () => {
+    const fit = vi.fn();
+    nvlState.nvl = fakeNvl({ fit });
+    const { teardown } = await renderWidgetWithCommModel({ fit: true, fitNodeIds: ["n2"] });
+
+    try {
+      act(() => nvlState.callbacks?.onLayoutDone?.());
+
+      expect(fit).toHaveBeenCalledExactlyOnceWith(["n2"], { animated: false });
     } finally {
       if (typeof teardown === "function") await teardown();
     }

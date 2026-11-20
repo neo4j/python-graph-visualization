@@ -220,15 +220,43 @@ def test_render_fit_can_be_disabled() -> None:
     assert options["fit"] is False
 
 
-def test_render_fit_warns_only_when_required_explicitly() -> None:
-    VG = VisualizationGraph(nodes=[Node(id="0")], relationships=[])
+def test_render_fit_accepts_node_ids() -> None:
+    VG = VisualizationGraph(nodes=[Node(id=0), Node(id=1)], relationships=[])
 
-    # Requiring a fit and fixing the view contradict each other.
-    with pytest.warns(UserWarning, match="`fit=True` is ignored"):
+    options = json.loads(_data_block(VG.render(fit=[0]).data).group(2))["options"]
+    assert options["fit"] is True
+    # Node ids reach the frontend as strings, whatever the Python-side type.
+    assert options["fitNodeIds"] == ["0"]
+
+
+def test_render_fit_rejects_a_bare_node_id() -> None:
+    VG = VisualizationGraph(nodes=[Node(id=0), Node(id=1)], relationships=[])
+
+    # An int flag (0/1) and a node id are indistinguishable, and a string is a sequence of
+    # characters, so neither is accepted as a single node id.
+    for bare in (0, 1, "0"):
+        with pytest.raises(TypeError, match="must be a bool, None, or a sequence of node ids"):
+            VG.render(fit=bare)  # type: ignore[arg-type]
+
+
+def test_render_fit_rejects_unknown_and_empty_node_ids() -> None:
+    VG = VisualizationGraph(nodes=[Node(id=0)], relationships=[])
+
+    with pytest.raises(ValueError, match="Unknown node ids: 7"):
+        VG.render(fit=[0, 7])
+    with pytest.raises(ValueError, match="node ids to frame are empty"):
+        VG.render(fit=[])
+
+
+def test_render_fit_warns_only_when_required_explicitly() -> None:
+    VG = VisualizationGraph(nodes=[Node(id=0)], relationships=[])
+
+    # Requiring a fit and fixing the view contradict each other, with ids or without.
+    with pytest.warns(UserWarning, match="`fit` is ignored"):
         VG.render(pan_position=(1.0, 2.0), fit=True)
 
-    with pytest.warns(UserWarning, match="`fit=True` is ignored"):
-        VG.render(initial_zoom=2.0, fit=True)
+    with pytest.warns(UserWarning, match="`fit` is ignored"):
+        VG.render(initial_zoom=2.0, fit=[0])
 
     # Setting a view without asking for a fit is not a mistake, so it stays quiet.
     VG.render(pan_position=(1.0, 2.0))

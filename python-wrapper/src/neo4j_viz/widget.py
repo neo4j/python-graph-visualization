@@ -21,7 +21,7 @@ from ._events import _to_full_event_type
 from ._fallback_outputs import FallbackOutputs, split_data_url
 from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
 from ._icon_refs import apply_icon_refs, build_icon_refs
-from ._validation import OnDangling, OnDuplicate, check_dangling_relationships, merge_on_duplicate
+from ._validation import OnDangling, OnDuplicate, check_dangling_relationships, merge_on_duplicate, resolve_fit_node_ids
 from .colors import ColorSpace, ColorsType, to_hex
 from .node import Node, NodeIdType
 from .node_size import NodeSizing, RealNumber
@@ -568,14 +568,8 @@ class GraphWidget(anywidget.AnyWidget):
         self._check_live_frontend("fit")
 
         request: dict[str, Any] = {"kind": "fit"}
-        if node_ids is not None:
-            requested = [str(node_id) for node_id in node_ids]
-            if not requested:
-                raise ValueError("`node_ids` is empty. Omit it to frame every node in the graph.")
-            known = {str(node.id) for node in self.nodes}
-            unknown = [node_id for node_id in requested if node_id not in known]
-            if unknown:
-                raise ValueError(f"Unknown node ids: {', '.join(unknown)}")
+        requested = resolve_fit_node_ids(node_ids, self.nodes)
+        if requested is not None:
             request["nodeIds"] = requested
 
         loop = asyncio.get_running_loop()

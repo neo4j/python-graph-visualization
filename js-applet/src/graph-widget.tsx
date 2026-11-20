@@ -24,6 +24,8 @@ export type GraphOptions = {
   pan?: { x: number; y: number };
   /** Whether to frame the whole graph once the initial layout has settled. Defaults to true. */
   fit?: boolean;
+  /** The nodes to frame when `fit` applies; every node when unset. */
+  fitNodeIds?: string[];
   layoutOptions?: Record<string, unknown>;
   showLayoutButton: boolean;
   showSearchButton?: boolean;
@@ -622,7 +624,7 @@ function GraphWidget() {
     const { fit, zoom, pan } = optionsRef.current ?? {};
     if (nvl && fit !== false && zoom == null && pan == null) {
       try {
-        fitToNodes(nvl, { animated: false });
+        fitToNodes(nvl, { animated: false }, optionsRef.current?.fitNodeIds);
       } catch (error) {
         // best-effort: framing the graph must never break the widget, but stay visible when it fails
         console.warn("[neo4j-viz] Could not frame the graph:", error);
