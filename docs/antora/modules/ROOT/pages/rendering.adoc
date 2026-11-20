@@ -38,6 +38,9 @@ To customize the layout, use _ForceDirectedOptions_ via _layout_options_.
 To customize the layout use _HierarchicalLayoutOptions_ via _layout_options_. It also supports clustering, via the
 `clusterBy` option.
 * `Layout.COORDINATE` - Arranges nodes based on coordinates defined in _x_ and _y_ properties on each node.
+Refer to xref:rendering.adoc#coordinates[Coordinates and the initial view] for how the coordinates are used.
+* `Layout.GRID` - Places the nodes on a grid.
+* `Layout.CIRCULAR` - Places the nodes on a circle.
 
 Another thing of note is the `max_allowed_nodes` parameter, which controls the maximum number of nodes that is allowed
 for the graph to contain in order to be rendered.
@@ -112,6 +115,44 @@ xref:rendering.adoc#exporting-to-html[export it to an HTML file].
 It accepts the same `width`, `height`, `layout`, `max_allowed_nodes`, and `on_dangling` parameters as `render_widget`.
 The full list of parameters of the `render` method is listed in the API
 reference: link:{api-docs-uri}/visualization-graph/#neo4j_viz.VisualizationGraph.render[neo4j_viz.VisualizationGraph.render()].
+
+[[coordinates]]
+== Coordinates and the initial view
+
+The graph is drawn on a canvas whose origin `(0, 0)` is the center of the canvas.
+Where a node ends up on that canvas depends on the layout:
+
+* `Layout.COORDINATE` places each node at its `x` and `y` coordinates, exactly as given.
+* `Layout.FORCE_DIRECTED` and `Layout.GPU_FORCE` use the coordinates only as starting positions, and then move the nodes.
+The final picture does not preserve them.
+* `Layout.HIERARCHICAL`, `Layout.GRID`, and `Layout.CIRCULAR` compute the positions themselves and ignore the coordinates.
+
+By default, `render_widget` and `render` frame the whole graph once its layout has settled, so
+whatever the layout produces fills the visible area.
+Pass `fit=False` to keep the default view instead, which is centered on the origin at a fixed zoom:
+
+[source, python]
+----
+widget = VG.render_widget(fit=False)
+----
+
+Setting `pan_position` or `initial_zoom` also fixes the view, and takes precedence over `fit`.
+The wrapper warns when you set both.
+
+The coordinate layout shows exactly the coordinates you provide, so center them around the origin and
+keep them reasonably scaled.
+The coordinates of an embedding, for example, are often large and need normalizing first, otherwise a
+view fitted to them renders nodes smaller than a pixel.
+Nodes without coordinates are placed at the origin, which means they stack at the center of the canvas,
+and the wrapper warns about them.
+
+To frame the graph again later, for example after adding nodes or switching the layout, call the
+widget's `fit` method:
+
+[source, python]
+----
+await widget.fit()
+----
 
 == Using with Streamlit
 
