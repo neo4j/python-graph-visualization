@@ -9,6 +9,7 @@ on:
     paths:
       - "python-wrapper/**" # python code
       - "docs/**" # documentation
+      - "examples/**" # notebooks rendered into the tutorials
     branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab
