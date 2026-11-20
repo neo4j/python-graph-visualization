@@ -73,13 +73,9 @@ class Node(
     )
     #: Whether the node is pinned in the visualization
     pinned: Optional[bool] = Field(None, description="Whether the node is pinned in the visualization")
-    #: The x-coordinate of the node, in canvas coordinates whose origin is the center of the
-    #: canvas. Used as the node position by `Layout.COORDINATE`, and only as a starting position
-    #: by the force-directed layouts; the hierarchical, grid and circular layouts ignore it.
+    #: The x-coordinate of the node, in canvas coordinates whose origin is the center of the canvas
     x: Optional[RealNumber] = Field(None, description="The x-coordinate of the node")
-    #: The y-coordinate of the node, in canvas coordinates whose origin is the center of the
-    #: canvas. Used as the node position by `Layout.COORDINATE`, and only as a starting position
-    #: by the force-directed layouts; the hierarchical, grid and circular layouts ignore it.
+    #: The y-coordinate of the node, in canvas coordinates whose origin is the center of the canvas
     y: Optional[RealNumber] = Field(None, description="The y-coordinate of the node")
     #: Additional properties of the node that do not directly impact the visualization
     properties: dict[str, Any] = Field(
