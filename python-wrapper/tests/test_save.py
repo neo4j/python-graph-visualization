@@ -272,3 +272,12 @@ class TestSave:
             asyncio.run(widget.save(tmp_path / "graph.png"))
 
         assert widget._pending_save_requests == {}
+
+    def test_dispatcher_state_is_per_widget(self) -> None:
+        """The dispatcher state is instance state, not shared through a class default."""
+        first, second = _make_widget(), _make_widget()
+        first._ensure_frontend_dispatcher()
+        first._pending_save_requests["req"] = Mock()
+
+        assert second._pending_save_requests == {}
+        assert second._frontend_dispatcher_registered is False

@@ -28,7 +28,8 @@ import tempfile
 from collections.abc import Sequence
 
 GIT_ROOT = pathlib.Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(GIT_ROOT / "scripts"))
+# `tests/` is not installed with the package, and a script's own directory is the only
+# one Python puts on sys.path — so add its parent, as regenerate_docs_images.py does.
 sys.path.insert(0, str(GIT_ROOT / "python-wrapper"))
 
 import nbformat
