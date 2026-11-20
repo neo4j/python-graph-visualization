@@ -1,7 +1,7 @@
 import { createRender, useModel, useModelState } from "@anywidget/react";
 import { Gesture, GraphSelection, GraphVisualization } from "@neo4j-ndl/react-graph";
 import type NVL from "@neo4j-nvl/base";
-import type { ExternalCallbacks, Layout, NvlOptions } from "@neo4j-nvl/base";
+import type { ExternalCallbacks, Layout, NvlOptions, ZoomOptions } from "@neo4j-nvl/base";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   SerializedNode,
@@ -22,6 +22,10 @@ export type GraphOptions = {
   nvlOptions?: Partial<NvlOptions>;
   zoom?: number;
   pan?: { x: number; y: number };
+  /** Whether to frame the whole graph once the initial layout has settled. Defaults to true. */
+  fit?: boolean;
+  /** The nodes to frame when `fit` applies; every node when unset. */
+  fitNodeIds?: string[];
   layoutOptions?: Record<string, unknown>;
   showLayoutButton: boolean;
   showSearchButton?: boolean;
@@ -65,6 +69,23 @@ export type SaveResponse = {
   kind: "save_response";
   id: string;
   dataUrl?: string;
+  error?: string;
+};
+
+/**
+ * Request from Python `GraphWidget.fit()`: framing the graph is an NVL call in the browser,
+ * so Python sends a `fit` custom message and awaits the matching `fit_response` ack.
+ */
+export type FitRequest = {
+  kind: "fit";
+  id: string;
+  /** The nodes to frame, or every node in the graph when omitted. */
+  nodeIds?: string[];
+};
+
+export type FitResponse = {
+  kind: "fit_response";
+  id: string;
   error?: string;
 };
 
@@ -271,6 +292,71 @@ export function handleSaveRequest(
 }
 
 /**
+ * Frame the given nodes, or every node in the graph when none are given.
+ *
+ * NVL's `fit` takes the ids of the nodes to frame and silently does nothing without them, so the
+ * ids are always read from the instance rather than passed in. It also gives up quietly on
+ * positions it cannot compute a center for, so those are rejected here instead: the Python
+ * `GraphWidget.fit()` call then reports why, and the initial framing logs it.
+ */
+function fitToNodes(nvl: NVL, options?: ZoomOptions, nodeIds?: string[]): void {
+  const nodes = nvl.getNodes();
+  const framed = nodeIds === undefined ? nodes : nodes.filter((node) => nodeIds.includes(node.id));
+  if (framed.length === 0) {
+    // Nothing to frame is only fine when the whole graph was asked for: an empty graph is a
+    // legitimate state, while a subset that matches no node would frame something else.
+    if (nodeIds === undefined) return;
+    throw new Error("none of the given node ids are in the graph");
+  }
+  if (!framed.every((node) => Number.isFinite(node.x) && Number.isFinite(node.y))) {
+    throw new Error("the node positions are not finite");
+  }
+  nvl.fit(
+    framed.map((node) => node.id),
+    options,
+  );
+}
+
+/**
+ * Handles a `fit` custom message from Python `GraphWidget.fit()`.
+ *
+ * The reply acknowledges that the view was updated, or carries an error message when the graph
+ * is not rendered yet, the node ids are malformed, or NVL rejected the fit.
+ */
+export function handleFitRequest(
+  msg: unknown,
+  nvl: NVL | null,
+  reply: (id: string, payload: { error?: string }) => void,
+): void {
+  if (typeof msg !== "object" || msg === null) return;
+  const request = msg as Partial<FitRequest>;
+  if (request.kind !== "fit" || typeof request.id !== "string") return;
+
+  const { nodeIds } = request;
+  if (
+    nodeIds !== undefined &&
+    (!Array.isArray(nodeIds) || !nodeIds.every((id) => typeof id === "string"))
+  ) {
+    reply(request.id, { error: "the node ids to frame must be a list of strings" });
+    return;
+  }
+
+  if (!nvl) {
+    reply(request.id, {
+      error: "The graph is not rendered yet; display the widget before fitting.",
+    });
+    return;
+  }
+
+  try {
+    fitToNodes(nvl, undefined, nodeIds);
+    reply(request.id, {});
+  } catch (error) {
+    reply(request.id, { error: error instanceof Error ? error.message : String(error) });
+  }
+}
+
+/**
  * Hide the static fallback image the kernel stores next to this widget.
  *
  * The image is what makes a committed notebook preview on GitHub, but in a live frontend
@@ -450,20 +536,24 @@ function GraphWidget() {
     };
   }, []);
 
-  // Python `GraphWidget.save()` support. NVL renders the graph in the browser,
-  // so Python sends a `save_request` custom message and awaits the matching
-  // `save_response` (a data URL or an error) sent back over the comm. The
-  // kernel-less model shims (static HTML, Streamlit) never emit "msg:custom",
-  // so this listener is inert outside a notebook kernel.
+  // Python `GraphWidget.save()` / `GraphWidget.fit()` support. NVL renders the graph in the
+  // browser, so Python sends a `save_request` and awaits the matching `save_response` (a data
+  // URL or an error), and a `fit` and awaits a `fit_response` ack. The kernel-less model shims
+  // (static HTML, Streamlit) never emit "msg:custom", so this listener is inert outside a
+  // notebook kernel.
   const model = useModel();
   useEffect(() => {
-    const onSaveRequest = (msg: unknown) =>
+    const onCustomMessage = (msg: unknown) => {
       handleSaveRequest(msg, nvlRef.current, (id, payload) =>
         model.send({ kind: "save_response", id, ...payload } satisfies SaveResponse),
       );
+      handleFitRequest(msg, nvlRef.current, (id, payload) =>
+        model.send({ kind: "fit_response", id, ...payload } satisfies FitResponse),
+      );
+    };
 
-    model.on("msg:custom", onSaveRequest);
-    return () => model.off("msg:custom", onSaveRequest);
+    model.on("msg:custom", onCustomMessage);
+    return () => model.off("msg:custom", onCustomMessage);
   }, [model]);
 
   // Signal Python once the graph has rendered, so `save()` waits instead of racing the
@@ -517,12 +607,38 @@ function GraphWidget() {
 
   // Readiness and the first fallback snapshot share one moment: the layout has settled and
   // the canvas has something to capture.
+  //
+  // The same moment frames the graph, unless Python asked for a fixed view: `fit=False`, or an
+  // explicit `zoom`/`pan` (which the frontend is the source of truth for — Python warns about
+  // the combination). It runs on every layout completion, so switching layouts in the UI
+  // re-frames the graph too. `animated: false` applies the viewport on the next frame, so the
+  // snapshot below captures the fitted view rather than one mid-transition. The options are
+  // read through a ref so that `onReady` keeps a stable identity across option changes.
+  const optionsRef = useRef(options);
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
   const onReady = useCallback(() => {
     signalNvlReady();
+    const nvl = nvlRef.current;
+    const { fit, zoom, pan } = optionsRef.current ?? {};
+    if (nvl && fit !== false && zoom == null && pan == null) {
+      try {
+        fitToNodes(nvl, { animated: false }, optionsRef.current?.fitNodeIds);
+      } catch (error) {
+        // best-effort: framing the graph must never break the widget, but stay visible when it fails
+        console.warn("[neo4j-viz] Could not frame the graph:", error);
+      }
+    }
     scheduleSnapshot();
   }, [signalNvlReady, scheduleSnapshot]);
-  // Fires when the layout stops moving, i.e. the graph is fully drawn.
-  const nvlCallbacks = useMemo<ExternalCallbacks>(() => ({ onLayoutDone: onReady }), [onReady]);
+  // Fires when the layout stops moving, i.e. the graph is fully drawn. `onLayoutComputing` is
+  // passed as `undefined` to switch off the wrapper's own default auto-fit — zoom-only, animated,
+  // and only ever firing for the async layouts; framing is handled once in `onReady` above.
+  const nvlCallbacks = useMemo<ExternalCallbacks>(
+    () => ({ onLayoutDone: onReady, onLayoutComputing: undefined }),
+    [onReady],
+  );
   // Static layouts (e.g. "free") never move and may not fire onLayoutDone, so fall back to
   // polling isLayoutMoving(); timer, not rAF, so it still fires in a background tab.
   useEffect(() => {

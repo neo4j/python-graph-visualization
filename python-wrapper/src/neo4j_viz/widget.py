@@ -6,6 +6,7 @@ import json
 import pathlib
 import urllib.parse
 import uuid
+from collections.abc import Sequence
 from functools import cached_property
 from typing import Any, Callable, Literal, TypeVar, Union, cast
 
@@ -20,7 +21,7 @@ from ._events import _to_full_event_type
 from ._fallback_outputs import FallbackOutputs, split_data_url
 from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
 from ._icon_refs import apply_icon_refs, build_icon_refs
-from ._validation import OnDangling, OnDuplicate, check_dangling_relationships, merge_on_duplicate
+from ._validation import OnDangling, OnDuplicate, check_dangling_relationships, merge_on_duplicate, resolve_fit_node_ids
 from .colors import ColorSpace, ColorsType, to_hex
 from .node import Node, NodeIdType
 from .node_size import NodeSizing, RealNumber
@@ -242,10 +243,11 @@ class GraphWidget(anywidget.AnyWidget):
 
     _max_allowed_nodes: int = 10_000
 
-    # Save requests awaiting their `save_response`, and whether the message dispatcher
+    # Save/fit requests awaiting their response, and whether the message dispatcher
     # that routes them (and the fallback snapshots) is registered. Per-instance state,
     # hence traits rather than plain class attributes.
     _pending_save_requests: traitlets.Dict[str, asyncio.Future[dict[str, Any]]] = traitlets.Dict()
+    _pending_fit_requests: traitlets.Dict[str, asyncio.Future[dict[str, Any]]] = traitlets.Dict()
     _frontend_dispatcher_registered: traitlets.Bool[bool, bool | int] = traitlets.Bool(default_value=False)
 
     # Maps a data URI icon back to its short reference; kept in sync with `_icon_refs`.
@@ -486,7 +488,7 @@ class GraphWidget(anywidget.AnyWidget):
             except ValueError as exc:
                 raise ValueError(f"Invalid background_color {background_color!r}: {exc}") from exc
 
-        self._check_save_frontend()
+        self._check_live_frontend("save")
 
         loop = asyncio.get_running_loop()
         # one deadline for load + render, not one per phase
@@ -528,6 +530,73 @@ class GraphWidget(anywidget.AnyWidget):
         path.write_bytes(_decode_data_url(data_url))
         return path
 
+    async def fit(
+        self,
+        node_ids: Sequence[NodeIdType] | None = None,
+        *,
+        timeout: float = 30.0,
+    ) -> None:
+        """Frame the whole graph, or the given nodes, in the viewport.
+
+        The view is controlled by the widget frontend (in the browser), so this sends a request
+        over the widget channel and waits for it to be applied. It must be awaited from a notebook
+        cell while the widget is displayed in a live frontend (JupyterLab, Notebook, VS Code,
+        Colab, or marimo). Outside a running kernel, e.g. in a plain Python script, there is no
+        renderer to update.
+
+        The graph is already framed once when it first renders (see the `fit` parameter of
+        `render_widget`), so use this to frame it again after changing it, or to zoom in on part
+        of it, such as the current selection:
+
+        >>> await widget.fit()
+        >>> await widget.fit(widget.selected.nodeIds)
+
+        Parameters
+        ----------
+        node_ids:
+            The ids of the nodes to frame. Defaults to every node in the graph.
+        timeout:
+            Total time to wait for the frontend to apply the fit, in seconds. This includes
+            waiting for the widget to finish its initial render, which matters when `fit` is
+            called right after the widget is displayed.
+
+        Raises
+        ------
+        ValueError
+            If `node_ids` is empty, or contains an id that is not in the graph.
+        """
+        self._check_live_frontend("fit")
+
+        request: dict[str, Any] = {"kind": "fit"}
+        requested = resolve_fit_node_ids(node_ids, self.nodes)
+        if requested is not None:
+            request["nodeIds"] = requested
+
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+        await self._wait_for_frontend_ready(loop, deadline)
+
+        request_id = uuid.uuid4().hex
+        future: asyncio.Future[dict[str, Any]] = loop.create_future()
+        self._ensure_frontend_dispatcher()
+        self._pending_fit_requests[request_id] = future
+
+        try:
+            self.send({**request, "id": request_id})
+            response = await asyncio.wait_for(future, timeout=max(0.0, deadline - loop.time()))
+        except asyncio.TimeoutError as exc:
+            raise TimeoutError(
+                f"Fitting the graph timed out after {timeout} seconds. The widget must be displayed "
+                "in a live notebook frontend (JupyterLab, Notebook, VS Code, Colab, or marimo) for "
+                "fit() to work. If the widget was only just displayed, the frontend may still be "
+                "loading — retry the call."
+            ) from exc
+        finally:
+            self._pending_fit_requests.pop(request_id, None)
+
+        if response.get("error"):
+            raise RuntimeError(f"Could not fit the graph: {response['error']}")
+
     async def _wait_for_frontend_ready(self, loop: asyncio.AbstractEventLoop, deadline: float) -> None:
         """Wait until the frontend signals that the renderer is mounted.
 
@@ -558,8 +627,8 @@ class GraphWidget(anywidget.AnyWidget):
         finally:
             self.unobserve(handler, names=["_nvl_ready"])
 
-    def _check_save_frontend(self) -> None:
-        """Fail fast when no live kernel comm can carry a save request to the frontend.
+    def _check_live_frontend(self, method: str) -> None:
+        """Fail fast when no live kernel comm can carry a request to the frontend.
 
         Mirrors the check `Widget.send` performs before delivering a message: a missing,
         dummy (kernel-less), or dead-kernel comm means the request would silently go
@@ -568,10 +637,10 @@ class GraphWidget(anywidget.AnyWidget):
         comm = self.comm
         if comm is None or isinstance(comm, DummyComm) or (hasattr(comm, "kernel") and comm.kernel is None):
             raise RuntimeError(
-                "GraphWidget.save() requires a live notebook frontend: outside a running kernel "
+                f"GraphWidget.{method}() requires a live notebook frontend: outside a running kernel "
                 "(e.g. in a plain Python script) there is no browser to render the graph. Display "
                 "the widget in a notebook (JupyterLab, Notebook, VS Code, Colab, or marimo) and "
-                "call save() from a cell."
+                f"call {method}() from a cell."
             )
 
     def _ipython_display_(self, **kwargs: Any) -> None:
@@ -598,8 +667,9 @@ class GraphWidget(anywidget.AnyWidget):
     def _ensure_frontend_dispatcher(self) -> None:
         """Register the dispatcher backing the frontend messages this widget consumes.
 
-        It routes `save_response` to the awaiting :meth:`save` call and `snapshot` to the
-        PNG fallback output. Registered once per widget, on first display or save.
+        It routes `save_response` to the awaiting :meth:`save` call, `fit_response` to the
+        awaiting :meth:`fit` call, and `snapshot` to the PNG fallback output. Registered once
+        per widget, on first display or request.
         """
         if self._frontend_dispatcher_registered:
             return
@@ -611,12 +681,19 @@ class GraphWidget(anywidget.AnyWidget):
         if (data_url := _snapshot_data_url(content)) is not None:
             self._fallback_outputs.store(data_url)
             return
-        if not isinstance(content, dict) or content.get("kind") != "save_response":
+        if not isinstance(content, dict):
+            return
+        kind = content.get("kind")
+        if kind == "save_response":
+            pending = self._pending_save_requests
+        elif kind == "fit_response":
+            pending = self._pending_fit_requests
+        else:
             return
         request_id = content.get("id")
         if not isinstance(request_id, str):
             return
-        future = self._pending_save_requests.get(request_id)
+        future = pending.get(request_id)
         if future is not None and not future.done():
             future.set_result(content)
 
