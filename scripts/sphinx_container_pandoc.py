@@ -14,7 +14,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-from typing import Any, Optional
+from typing import Any
 
 # Single source of truth for the pandoc version used to render the docs.
 # Newest version published as an official `pandoc/core` image; upstream may be ahead.
@@ -33,7 +33,10 @@ def _run(args: list[str], source: str, encoding: str = "utf-8") -> str:
     """
     cmd = ["docker", "run", "-i", "--rm", _image(), *args]
     try:
-        proc = subprocess.run(cmd, input=source.encode(encoding), stdout=subprocess.PIPE)
+        # check=False: a non-zero exit is reported below with the failing command.
+        proc = subprocess.run(
+            cmd, check=False, input=source.encode(encoding), stdout=subprocess.PIPE
+        )
     except FileNotFoundError as err:
         raise RuntimeError(
             "Docker is required to render the docs (pandoc runs in a container), "
@@ -41,7 +44,9 @@ def _run(args: list[str], source: str, encoding: str = "utf-8") -> str:
         ) from err
 
     if proc.returncode != 0:
-        raise RuntimeError(f"pandoc container failed (exit {proc.returncode}): {' '.join(cmd)}")
+        raise RuntimeError(
+            f"pandoc container failed (exit {proc.returncode}): {' '.join(cmd)}"
+        )
 
     return proc.stdout.decode(encoding, "replace")
 
@@ -50,7 +55,7 @@ def container_pandoc(
     source: str,
     fmt: str,
     to: str,
-    extra_args: Optional[list[str]] = None,
+    extra_args: list[str] | None = None,
     encoding: str = "utf-8",
 ) -> str:
     """Drop-in for nbconvert.utils.pandoc.pandoc that runs pandoc in a container."""
@@ -101,7 +106,7 @@ def _patch() -> None:
         setattr(module, attr, replacement)
 
 
-def main(argv: Optional[list[str]] = None) -> None:
+def main(argv: list[str] | None = None) -> None:
     _patch()
 
     from sphinx.cmd.build import main as sphinx_main
