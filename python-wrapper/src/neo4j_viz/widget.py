@@ -6,7 +6,6 @@ import json
 import pathlib
 import urllib.parse
 import uuid
-import warnings
 from functools import cached_property
 from typing import Any, Callable, Literal, TypeVar, Union, cast
 
@@ -14,9 +13,11 @@ import anywidget
 import pydantic
 import traitlets
 from comm import DummyComm
+from IPython.display import display
 from pydantic_extra_types.color import ColorType
 
 from ._events import _to_full_event_type
+from ._fallback_outputs import FallbackOutputs, split_data_url
 from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
 from ._icon_refs import apply_icon_refs, build_icon_refs
 from ._validation import OnDangling, OnDuplicate, check_dangling_relationships, merge_on_duplicate
@@ -127,27 +128,24 @@ def _decode_data_url(data_url: str) -> bytes:
     NVL returns PNGs base64-encoded ("data:image/png;base64,...") and SVGs URL-encoded
     ("data:image/svg+xml;charset=utf-8,...").
     """
-    meta, separator, payload = data_url.partition(",")
-    if not data_url.startswith("data:") or not separator:
+    parts = split_data_url(data_url)
+    if parts is None:
         raise ValueError(f"The frontend returned an unexpected image payload: {data_url[:64]!r}")
+    meta, payload = parts
     if meta.endswith(";base64"):
         return base64.b64decode(payload)
     return urllib.parse.unquote(payload).encode("utf-8")
 
 
+def _snapshot_data_url(content: object) -> str | None:
+    """The image data URL of a `snapshot` message, or `None` for anything else."""
+    if not isinstance(content, dict) or content.get("kind") != "snapshot":
+        return None
+    data_url = content.get("dataUrl")
+    return data_url if isinstance(data_url, str) else None
+
+
 _ModelT = TypeVar("_ModelT", bound=pydantic.BaseModel)
-
-# The static PNG fallback: the frontend renders the graph to a PNG data URL and sends
-# it over the comm, and the kernel stores it in a notebook output next to the widget
-# (see `GraphWidget._on_snapshot`). Frontends that cannot render widgets then still show
-# the graph.
-_FALLBACK_PNG_PREFIX = "data:image/png;base64,"
-
-# Cap on a stored snapshot, in decoded bytes. Real snapshots sit far below this (tens to
-# a few hundred KB); the cap only trims pathological captures — a very large canvas on a
-# high-DPI display with a dense graph — where the base64 payload would bloat the notebook
-# without adding a readable preview.
-_FALLBACK_MAX_BYTES = 2 * 1024 * 1024
 
 
 class PydanticTrait(traitlets.Instance[_ModelT]):
@@ -244,12 +242,11 @@ class GraphWidget(anywidget.AnyWidget):
 
     _max_allowed_nodes: int = 10_000
 
-    # display_id of every output created for this widget's PNG fallback. A widget can be
-    # displayed more than once, so a snapshot fills all of them.
-    _image_slot_ids: traitlets.List[str] = traitlets.List([])
-
-    # Whether the oversize-snapshot warning was already emitted, so it fires once per widget.
-    _fallback_warned: bool = False
+    # Save requests awaiting their `save_response`, and whether the message dispatcher
+    # that routes them (and the fallback snapshots) is registered. Per-instance state,
+    # hence traits rather than plain class attributes.
+    _pending_save_requests: traitlets.Dict[str, asyncio.Future[dict[str, Any]]] = traitlets.Dict()
+    _frontend_dispatcher_registered: traitlets.Bool[bool, bool | int] = traitlets.Bool(default_value=False)
 
     # Maps a data URI icon back to its short reference; kept in sync with `_icon_refs`.
     _icon_uri_to_ref: dict[str, str] = {}
@@ -422,8 +419,6 @@ class GraphWidget(anywidget.AnyWidget):
         self.observe(handler, names=["last_event"])
         return handler
 
-    _pending_save_requests: dict[str, asyncio.Future[dict[str, Any]]]
-
     async def save(
         self,
         file: str | pathlib.Path,
@@ -585,10 +580,8 @@ class GraphWidget(anywidget.AnyWidget):
         The slot is created here, while the cell is executing: a display message emitted
         later from a comm callback belongs to no cell, so a slot created when the first
         snapshot arrives would not be recorded. The widget's own bundle is displayed
-        unchanged; `_on_snapshot` fills the slot once the frontend reports an image.
+        unchanged; the fallback fills the slot once the frontend reports an image.
         """
-        from IPython.display import display
-
         bundle = self._repr_mimebundle_(**kwargs)
         data, metadata = bundle if isinstance(bundle, tuple) else (bundle, None)
         if not data:
@@ -597,57 +590,26 @@ class GraphWidget(anywidget.AnyWidget):
         self._ensure_frontend_dispatcher()
 
         if self.fallback:
-            slot_id = f"neo4j-viz-image-{uuid.uuid4().hex}"
-            self._image_slot_ids = [*self._image_slot_ids, slot_id]
-            display({"text/plain": ""}, raw=True, display_id=slot_id)  # type: ignore[no-untyped-call]
+            self._fallback_outputs.add_slot()
 
+        # IPython's display helpers are untyped, and mypy runs `no-untyped-call`.
         display(data, raw=True, metadata=metadata)  # type: ignore[no-untyped-call]
-
-    def _on_snapshot(self, content: dict[str, Any]) -> None:
-        """Store a PNG snapshot from the frontend in this widget's fallback slot(s).
-
-        Keeps the last good snapshot: an oversized update is dropped rather than
-        replacing an image that is already stored.
-        """
-        from IPython.display import update_display
-
-        data_url = content.get("dataUrl")
-        if not isinstance(data_url, str) or not data_url.startswith(_FALLBACK_PNG_PREFIX):
-            return
-
-        payload = data_url[len(_FALLBACK_PNG_PREFIX) :]
-        if len(payload) * 3 // 4 > _FALLBACK_MAX_BYTES:
-            if not self._fallback_warned:
-                self._fallback_warned = True
-                warnings.warn(
-                    f"Skipping the static PNG fallback: the snapshot is larger than "
-                    f"{_FALLBACK_MAX_BYTES // (1024 * 1024)} MB, which would bloat the notebook. "
-                    "Render a smaller graph or widget to store one, or set `fallback=False` to "
-                    "silence this warning.",
-                )
-            return
-
-        for slot_id in self._image_slot_ids:
-            update_display(  # type: ignore[no-untyped-call]
-                {"image/png": payload, "text/plain": "Graph visualization"},
-                raw=True,
-                display_id=slot_id,
-            )
 
     def _ensure_frontend_dispatcher(self) -> None:
         """Register the dispatcher backing the frontend messages this widget consumes.
 
         It routes `save_response` to the awaiting :meth:`save` call and `snapshot` to the
-        PNG fallback slot. Registered once per widget, on first display or save.
+        PNG fallback output. Registered once per widget, on first display or save.
         """
-        if not hasattr(self, "_pending_save_requests"):
-            self._pending_save_requests = {}
-            self.on_msg(self._on_frontend_msg)
+        if self._frontend_dispatcher_registered:
+            return
+        self._frontend_dispatcher_registered = True
+        self.on_msg(self._on_frontend_msg)
 
     def _on_frontend_msg(self, widget: object, content: object, buffers: object) -> None:
         """Route messages from the frontend to their handler."""
-        if isinstance(content, dict) and content.get("kind") == "snapshot":
-            self._on_snapshot(content)
+        if (data_url := _snapshot_data_url(content)) is not None:
+            self._fallback_outputs.store(data_url)
             return
         if not isinstance(content, dict) or content.get("kind") != "save_response":
             return
@@ -691,6 +653,11 @@ class GraphWidget(anywidget.AnyWidget):
     @cached_property
     def _entity_ops(self) -> GraphEntityOperations:
         return GraphEntityOperations(self)
+
+    @cached_property
+    def _fallback_outputs(self) -> FallbackOutputs:
+        """Bookkeeping for the static PNG snapshots stored beside this widget's outputs."""
+        return FallbackOutputs()
 
     def sync_nodes(self) -> None:
         """Manually trigger a sync of the `nodes` list to the frontend."""
