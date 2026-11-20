@@ -13,19 +13,22 @@ so the preview reflects what that cell displayed rather than a later mutation.
 Cells tagged ``skip-execution`` are not run, which is how a notebook skips setup
 cells that the harness environment cannot execute, such as ``%pip install``.
 
-The notebook must run without external services. Requires Chrome, or Playwright's
-Chromium (``uv run playwright install chromium``). Run from anywhere inside the
-repo.
+The database examples need a running Neo4j (``just local-neo4j-setup``) and are
+skipped unless ``NEO4J_URI`` is set; they also run their trailing cleanup cells, so a
+regeneration leaves the database as it found it. Requires Chrome, or Playwright's
+Chromium (``uv run playwright install chromium``). Run from anywhere inside the repo.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import shutil
 import sys
 import tempfile
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 GIT_ROOT = pathlib.Path(__file__).resolve().parent.parent
 # `tests/` is not installed with the package, and a script's own directory is the only
@@ -49,14 +52,32 @@ _SKIP_TAG = "skip-execution"
 _ATTEMPTS = 2
 
 
+@dataclass(frozen=True)
+class NotebookSpec:
+    """What a notebook's tags cannot express about regenerating it."""
+
+    # Skip the notebook unless this environment variable is set (its database is up).
+    requires_env: str | None = None
+    # Run the cells after the last preserved one as well: in the database examples those
+    # are the cleanup that leaves the database ready for the next run.
+    run_to_end: bool = False
+
+
+_SPECS: dict[str, NotebookSpec] = {
+    "neo4j-example": NotebookSpec(requires_env="NEO4J_URI", run_to_end=True),
+    "gds-example": NotebookSpec(requires_env="NEO4J_URI", run_to_end=True),
+}
+
+
 def _tags(cell: nbformat.NotebookNode) -> list[str]:
     return list(cell.get("metadata", {}).get("tags", []))
 
 
-def _run_cells(notebook: nbformat.NotebookNode) -> list[int]:
+def _run_cells(notebook: nbformat.NotebookNode, spec: NotebookSpec) -> list[int]:
     """Indices of the cells to execute: the code cells up to the last preserved one.
 
-    Markdown cells are skipped, and so is anything tagged ``skip-execution``.
+    Markdown cells are skipped, and so is anything tagged ``skip-execution``. With
+    ``spec.run_to_end`` the trailing cells run too.
     """
     preserved = [
         index
@@ -65,10 +86,14 @@ def _run_cells(notebook: nbformat.NotebookNode) -> list[int]:
     ]
     if not preserved:
         return []
+    last = len(notebook.cells) - 1 if spec.run_to_end else preserved[-1]
     return [
         index
-        for index in range(preserved[-1] + 1)
+        for index in range(last + 1)
         if notebook.cells[index].cell_type == "code"
+        # An empty cell has nothing to execute, and JupyterLab never runs one (the
+        # harness would wait for a prompt that never changes).
+        and notebook.cells[index].source.strip()
         and _SKIP_TAG not in _tags(notebook.cells[index])
     ]
 
@@ -94,9 +119,9 @@ def _check_outputs(notebook: nbformat.NotebookNode, path: pathlib.Path) -> None:
             )
 
 
-def _regenerate(path: pathlib.Path, server: JupyterServer) -> None:
+def _regenerate(path: pathlib.Path, server: JupyterServer, spec: NotebookSpec) -> None:
     notebook = nbformat.read(path, as_version=4)  # type: ignore[no-untyped-call]
-    run_cells = _run_cells(notebook)
+    run_cells = _run_cells(notebook, spec)
     if not run_cells:
         raise RuntimeError(f"{path.name} has no preserve-output cell to regenerate")
 
@@ -166,6 +191,13 @@ def main() -> int:
             ignore=shutil.ignore_patterns(".jupyter", "jupyter-server.log"),
         )
         for path in notebooks:
+            spec = _SPECS.get(path.stem, NotebookSpec())
+            if spec.requires_env and not os.environ.get(spec.requires_env):
+                print(
+                    f"Skipping {path.name} (set {spec.requires_env} to regenerate)",
+                    flush=True,
+                )
+                continue
             print(
                 f"Regenerating outputs of {path.relative_to(GIT_ROOT)} ...", flush=True
             )
@@ -176,7 +208,7 @@ def main() -> int:
                     # outputs behind.
                     put_notebook(server, path.name, nbformat.read(path, as_version=4))  # type: ignore[no-untyped-call]
                     try:
-                        _regenerate(path, server)
+                        _regenerate(path, server, spec)
                     except BrowserUnavailableError:
                         raise
                     except (AssertionError, RuntimeError) as exc:
