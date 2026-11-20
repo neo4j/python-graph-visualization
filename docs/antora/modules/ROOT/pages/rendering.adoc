@@ -147,12 +147,16 @@ Nodes without coordinates are placed at the origin, which means they stack at th
 and the wrapper warns about them.
 
 To frame the graph again later, for example after adding nodes or switching the layout, call the
-widget's `fit` method:
+widget's `fit` method.
+Pass node ids to frame only those nodes, for example a community or the current selection:
 
 [source, python]
 ----
-await widget.fit()
+await widget.fit()  # the whole graph
+await widget.fit(widget.selected.nodeIds)  # only the selected nodes
 ----
+
+The ids must be nodes of the graph, and the list must not be empty.
 
 == Using with Streamlit
 
