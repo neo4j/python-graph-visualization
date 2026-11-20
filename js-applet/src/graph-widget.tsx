@@ -290,12 +290,20 @@ export function handleSaveRequest(
 /**
  * Frame every node currently in the graph.
  *
- * NVL's `fit` takes the ids of the nodes to frame and silently does nothing when the list is
- * empty, so the ids are always read from the instance rather than passed in.
+ * NVL's `fit` takes the ids of the nodes to frame and silently does nothing without them, so the
+ * ids are always read from the instance rather than passed in. It also gives up quietly on
+ * positions it cannot compute a center for, so those are rejected here instead: the Python
+ * `GraphWidget.fit()` call then reports why, and the initial framing logs it.
  */
 function fitToNodes(nvl: NVL, options?: ZoomOptions): void {
+  const nodes = nvl.getNodes();
+  // An empty graph is a legitimate state with nothing to frame, not a failure.
+  if (nodes.length === 0) return;
+  if (!nodes.every((node) => Number.isFinite(node.x) && Number.isFinite(node.y))) {
+    throw new Error("the node positions are not finite");
+  }
   nvl.fit(
-    nvl.getNodes().map((node) => node.id),
+    nodes.map((node) => node.id),
     options,
   );
 }
@@ -303,8 +311,8 @@ function fitToNodes(nvl: NVL, options?: ZoomOptions): void {
 /**
  * Handles a `fit` custom message from Python `GraphWidget.fit()`.
  *
- * The reply acknowledges that the view was updated, or carries an error message when the
- * graph is not rendered yet or NVL rejected the fit.
+ * The reply acknowledges that the view was updated, or carries an error message when the graph
+ * is not rendered yet or NVL rejected the fit.
  */
 export function handleFitRequest(
   msg: unknown,
@@ -326,7 +334,7 @@ export function handleFitRequest(
     fitToNodes(nvl);
     reply(request.id, {});
   } catch (error) {
-    reply(request.id, { error: `Failed to fit the graph: ${String(error)}` });
+    reply(request.id, { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -599,8 +607,9 @@ function GraphWidget() {
     if (nvl && fit !== false && zoom == null && pan == null) {
       try {
         fitToNodes(nvl, { animated: false });
-      } catch {
-        // best-effort: framing the graph must never break the widget
+      } catch (error) {
+        // best-effort: framing the graph must never break the widget, but stay visible when it fails
+        console.warn("[neo4j-viz] Could not frame the graph:", error);
       }
     }
     scheduleSnapshot();
