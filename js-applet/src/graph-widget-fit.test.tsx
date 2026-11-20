@@ -46,7 +46,7 @@ const NODE_IDS = ["n1", "n2"];
 function fakeNvl(overrides: Record<string, unknown> = {}): NVL {
   return {
     isLayoutMoving: () => false,
-    getNodes: () => NODE_IDS.map((id) => ({ id })),
+    getNodes: () => NODE_IDS.map((id) => ({ id, x: 0, y: 0 })),
     ...overrides,
   } as unknown as NVL;
 }
@@ -155,13 +155,48 @@ describe("handleFitRequest", () => {
 
   it("frames every node currently in the graph", () => {
     const fit = vi.fn();
-    const nvl = { getNodes: () => [{ id: "n1" }, { id: "n2" }], fit } as unknown as NVL;
+    const nvl = {
+      getNodes: () => [
+        { id: "n1", x: 0, y: 0 },
+        { id: "n2", x: 10, y: 20 },
+      ],
+      fit,
+    } as unknown as NVL;
 
     handleFitRequest({ kind: "fit", id: "1" }, nvl, reply);
 
     // NVL's fit silently does nothing without node ids, so they must always be passed.
     expect(fit).toHaveBeenCalledWith(["n1", "n2"], undefined);
     expect(reply).toHaveBeenCalledWith("1", {});
+  });
+
+  it("reports positions NVL cannot frame instead of claiming success", () => {
+    // NVL gives up quietly when the positions yield no center, so the fit would otherwise
+    // acknowledge a request that changed nothing.
+    const fit = vi.fn();
+    const nvl = {
+      getNodes: () => [
+        { id: "n1", x: Number.NaN, y: 0 },
+        { id: "n2", x: 10, y: 20 },
+      ],
+      fit,
+    } as unknown as NVL;
+
+    handleFitRequest({ kind: "fit", id: "1b" }, nvl, reply);
+
+    expect(fit).not.toHaveBeenCalled();
+    expect(reply).toHaveBeenCalledWith("1b", { error: "the node positions are not finite" });
+  });
+
+  it("acknowledges an empty graph without fitting", () => {
+    // Nothing to frame is not a failure: the graph may still be filled in later.
+    const fit = vi.fn();
+    const nvl = { getNodes: () => [], fit } as unknown as NVL;
+
+    handleFitRequest({ kind: "fit", id: "1c" }, nvl, reply);
+
+    expect(fit).not.toHaveBeenCalled();
+    expect(reply).toHaveBeenCalledWith("1c", {});
   });
 
   it("replies with an error when the graph is not rendered yet", () => {
@@ -174,7 +209,7 @@ describe("handleFitRequest", () => {
 
   it("replies with an error when fitting throws", () => {
     const nvl = {
-      getNodes: () => [{ id: "n1" }],
+      getNodes: () => [{ id: "n1", x: 0, y: 0 }],
       fit: () => {
         throw new Error("boom");
       },
@@ -182,7 +217,7 @@ describe("handleFitRequest", () => {
 
     handleFitRequest({ kind: "fit", id: "3" }, nvl, reply);
 
-    expect(reply).toHaveBeenCalledWith("3", { error: "Failed to fit the graph: Error: boom" });
+    expect(reply).toHaveBeenCalledWith("3", { error: "boom" });
   });
 
   it("ignores messages that are not fit requests", () => {
@@ -245,6 +280,45 @@ describe("mounted widget fit wiring", () => {
 
       // Instant, so the static PNG fallback captures the fitted view rather than one mid-transition.
       expect(fit).toHaveBeenCalledExactlyOnceWith(NODE_IDS, { animated: false });
+    } finally {
+      if (typeof teardown === "function") await teardown();
+    }
+  });
+
+  it("logs when the initial framing cannot be applied", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fit = vi.fn();
+    nvlState.nvl = fakeNvl({ getNodes: () => [{ id: "n1", x: Number.NaN, y: 0 }], fit });
+    const { teardown } = await renderWidgetWithCommModel();
+
+    try {
+      act(() => nvlState.callbacks?.onLayoutDone?.());
+
+      // The widget still works, so this stays a warning rather than an error.
+      expect(fit).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith(
+        "[neo4j-viz] Could not frame the graph:",
+        expect.any(Error),
+      );
+    } finally {
+      if (typeof teardown === "function") await teardown();
+    }
+  });
+
+  it("does not log for a graph with no nodes", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    nvlState.nvl = fakeNvl({ getNodes: () => [], fit: vi.fn() });
+    const { teardown } = await renderWidgetWithCommModel();
+
+    try {
+      act(() => nvlState.callbacks?.onLayoutDone?.());
+      await new Promise((resolve) => setTimeout(resolve, 350));
+
+      // An empty graph has nothing to frame, which is not a failure worth logging.
+      expect(warn).not.toHaveBeenCalledWith(
+        "[neo4j-viz] Could not frame the graph:",
+        expect.anything(),
+      );
     } finally {
       if (typeof teardown === "function") await teardown();
     }
