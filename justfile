@@ -144,6 +144,8 @@ api-docs:
 # Render the full documentation locally: the Sphinx API reference and the
 # Antora manual, with the manual's links pointing at the locally served API
 # docs. Manual -> http://localhost:8000 ; API reference -> http://localhost:9000
+# The API reference renders notebooks with pandoc from the pinned `pandoc/core`
+# container image, so Docker is required (see scripts/sphinx_container_pandoc.py).
 # Press Ctrl-C to stop both servers.
 render-docs:
     ./scripts/render_docs.sh

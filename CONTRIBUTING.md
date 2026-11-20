@@ -169,6 +169,22 @@ To keep a consistent code-style, we use `ruff` and `mypy`.
 For convenience there are a couple of just targets under `justfile`:
 
 
+### Documentation
+
+Render the documentation locally with:
+
+```sh
+just render-docs
+```
+
+This builds the Sphinx API reference and the Antora manual, and serves both. The
+API reference renders the notebooks with `nbsphinx`, which needs `pandoc`. Rather
+than requiring a local install, it runs from the pinned `pandoc/core` container
+image, so [Docker](https://docs.docker.com/get-docker/) is required. The version
+is set once in `scripts/sphinx_container_pandoc.py` (`PANDOC_VERSION`) and can be
+overridden with the `PANDOC_IMAGE` environment variable.
+
+
 ## Got an idea for a new project?
 
 If you have an idea for a new tool or library, start by talking to other people in the community.
