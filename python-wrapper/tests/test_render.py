@@ -204,11 +204,13 @@ def test_render_warns_on_ignored_force_directed_options() -> None:
     VG.render(layout=Layout.GPU_FORCE, layout_options={"gravity": 0.1})
 
 
-def test_render_fit_defaults_on() -> None:
+def test_render_fit_defaults_to_unset() -> None:
+    # Unset means "frame the graph unless a view is set explicitly", so the frontend's own
+    # default applies and an explicit pan/zoom is left alone without a warning.
     VG = VisualizationGraph(nodes=[Node(id="0")], relationships=[])
 
     options = json.loads(_data_block(VG.render().data).group(2))["options"]
-    assert options["fit"] is True
+    assert "fit" not in options
 
 
 def test_render_fit_can_be_disabled() -> None:
@@ -218,19 +220,20 @@ def test_render_fit_can_be_disabled() -> None:
     assert options["fit"] is False
 
 
-def test_render_fit_warns_when_the_view_is_set_explicitly() -> None:
+def test_render_fit_warns_only_when_required_explicitly() -> None:
     VG = VisualizationGraph(nodes=[Node(id="0")], relationships=[])
 
-    # An explicit view wins over fit, and the combination is a likely mistake.
+    # Requiring a fit and fixing the view contradict each other.
     with pytest.warns(UserWarning, match="`fit=True` is ignored"):
-        VG.render(pan_position=(1.0, 2.0))
+        VG.render(pan_position=(1.0, 2.0), fit=True)
 
     with pytest.warns(UserWarning, match="`fit=True` is ignored"):
-        VG.render(initial_zoom=2.0)
+        VG.render(initial_zoom=2.0, fit=True)
 
-    # Opting out of fit silences the warning, as does fitting with no explicit view.
+    # Setting a view without asking for a fit is not a mistake, so it stays quiet.
+    VG.render(pan_position=(1.0, 2.0))
+    VG.render(initial_zoom=2.0)
     VG.render(pan_position=(1.0, 2.0), fit=False)
-    VG.render(initial_zoom=2.0, fit=False)
     VG.render()
 
 

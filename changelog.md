@@ -17,7 +17,8 @@
   taken once the initial layout has settled and refreshed after changes; live frontends keep the interactive
   widget. Disable it per widget with `render_widget(fallback=False)`.
 * `render()` and `render_widget()` frame the whole graph once its initial layout has settled, for every
-  layout. Pass `fit=False` to keep the default view instead. `GraphWidget.fit()` frames the graph again
+  layout. An explicitly set `pan_position` or `initial_zoom` is left alone; pass `fit=False` to keep the
+  default view instead, or `fit=True` to require framing. `GraphWidget.fit()` frames the graph again
   on demand, for example after changing the graph or the layout.
 
 ## Bug fixes
