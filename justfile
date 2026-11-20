@@ -160,11 +160,9 @@ generate-docs-images *names:
     cd {{py_dir}} && uv sync --group dev --group notebook --extra gds
     cd {{py_dir}} && uv run --group dev --group notebook --extra gds python {{root_dir}}/scripts/regenerate_docs_images.py {{names}}
 
-# Regenerate the stored outputs of the example notebooks: the static PNG preview a
-# graph commits next to its widget. Runs the tagged cells in a headless browser, so
-# it needs Chrome or `uv run playwright install chromium`, and the notebook must run
-# without external services. Optionally restrict to named notebooks:
-# `just regenerate-notebook-outputs getting-started`
+# Regenerate the stored outputs of the example notebooks: the static PNG preview a graph
+# commits next to its widget. Needs Chrome or `uv run playwright install chromium`.
+# Optionally restrict to named notebooks: `just regenerate-notebook-outputs getting-started`
 regenerate-notebook-outputs *names:
     #!/usr/bin/env bash
     set -e
