@@ -137,7 +137,7 @@ widget = VG.render_widget(fit=False)
 ----
 
 Setting `pan_position` or `initial_zoom` also fixes the view, and takes precedence over `fit`.
-The wrapper warns when you set both.
+The wrapper warns when you pass `fit=True` as well, since the two contradict.
 
 The coordinate layout shows exactly the coordinates you provide, so center them around the origin and
 keep them reasonably scaled.
