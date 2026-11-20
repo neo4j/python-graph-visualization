@@ -2,7 +2,15 @@
 
 ## Breaking changes
 
+* `VisualizationGraph.resize_nodes` and `GraphWidget.resize_nodes` now scale the node sizes to the
+  `node_radius_min_max` range by area instead of by radius, so that the node area grows linearly with the size.
+  This matches how the Neo4j Bloom graph app sizes nodes, but it changes the node sizes of existing calls.
+  Pass `sizing=NodeSizing.RADIUS` to keep the linear radius scaling of earlier versions.
+
 ## New features
+
+* `VisualizationGraph.resize_nodes` and `GraphWidget.resize_nodes` take a `sizing` parameter
+  (`NodeSizing.AREA`, `NodeSizing.RADIUS` or `NodeSizing.LOG`) to choose how the node sizes map to node radii.
 
 * `GraphWidget` stores a static PNG snapshot of the graph next to the widget output, so a committed notebook
   still shows the graph on frontends that cannot render widgets, such as GitHub and nbviewer. The snapshot is

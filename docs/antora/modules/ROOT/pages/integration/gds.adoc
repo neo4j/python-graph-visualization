@@ -57,3 +57,14 @@ VG.render_widget()
 ----
 
 See the link:{tutorials-docs-uri}/gds-example[Visualizing Neo4j Graph Data Science (GDS) Graphs tutorial] for a more extensive example.
+
+PageRank scores are heavily skewed, so the logarithmic sizing can spread the smaller scores over a wider range of node
+sizes:
+
+[source, python]
+----
+from neo4j_viz import NodeSizing
+
+# VG is a VisualizationGraph object
+VG.resize_nodes(property="pagerank", sizing=NodeSizing.LOG)
+----

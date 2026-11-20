@@ -1,10 +1,11 @@
 import re
+from math import sqrt
 
 import pytest
 
 from neo4j_viz import Node, VisualizationGraph
 from neo4j_viz.node import NodeIdType
-from neo4j_viz.node_size import RealNumber, verify_radii
+from neo4j_viz.node_size import NodeSizing, RealNumber, scale_sizes, verify_radii
 
 
 def test_verify_radii() -> None:
@@ -86,11 +87,95 @@ def test_resize_nodes_by_property() -> None:
     assert VG.nodes[1].size == 2
     assert VG.nodes[2].size == 8
 
-    VG.resize_nodes(property="age", node_radius_min_max=(1, 4))
+    VG.resize_nodes(property="age", node_radius_min_max=(1, 4), sizing=NodeSizing.RADIUS)
 
     assert VG.nodes[0].size == 2
     assert VG.nodes[1].size == 1
     assert VG.nodes[2].size == 4
+
+
+def test_resize_nodes_by_property_defaults_to_area() -> None:
+    nodes = [
+        Node(id=42, properties={"age": 4}),
+        Node(id="1337", properties={"age": 2}),
+        Node(id=55, properties={"age": 8}),
+    ]
+    VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+    VG.resize_nodes(property="age", node_radius_min_max=(1, 4))
+
+    assert VG.nodes[0].size is not None
+    assert VG.nodes[1].size is not None
+    assert VG.nodes[2].size is not None
+
+    # The area grows linearly with the age, so the radius grows with its square root
+    assert VG.nodes[0].size == pytest.approx(sqrt(6))
+    assert VG.nodes[1].size == 1
+    assert VG.nodes[2].size == 4
+
+    # The squared radius is proportional to the age
+    assert (VG.nodes[0].size ** 2 - VG.nodes[1].size ** 2) / (
+        VG.nodes[2].size ** 2 - VG.nodes[1].size ** 2
+    ) == pytest.approx(1 / 3)
+
+
+def test_resize_nodes_by_property_log() -> None:
+    nodes = [
+        Node(id=42, properties={"degree": 0}),
+        Node(id="1337", properties={"degree": 3}),
+    ]
+    VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+    VG.resize_nodes(property="degree", node_radius_min_max=(1, 4), sizing=NodeSizing.LOG)
+
+    # log1p keeps the zero degree finite, and it maps to the minimum radius
+    assert VG.nodes[0].size == 1
+    assert VG.nodes[1].size == 4
+
+
+def test_resize_nodes_sizing_accepts_string() -> None:
+    nodes = [
+        Node(id=42, properties={"degree": 0}),
+        Node(id="1337", properties={"degree": 3}),
+    ]
+    VG = VisualizationGraph(nodes=nodes, relationships=[])
+
+    VG.resize_nodes(property="degree", node_radius_min_max=(1, 4), sizing="log")  # type: ignore
+
+    assert VG.nodes[0].size == 1
+    assert VG.nodes[1].size == 4
+
+
+def test_resize_nodes_unknown_sizing_raises() -> None:
+    VG = VisualizationGraph(nodes=[Node(id=42, size=10)], relationships=[])
+
+    with pytest.raises(ValueError, match="diagonal"):
+        VG.resize_nodes(node_radius_min_max=(3, 60), sizing="diagonal")  # type: ignore
+
+    # The mode is validated even when the sizes are not scaled
+    with pytest.raises(ValueError, match="diagonal"):
+        VG.resize_nodes(sizes={42: 10}, node_radius_min_max=None, sizing="diagonal")  # type: ignore
+
+
+def test_resize_nodes_sizing_ignored_without_range() -> None:
+    VG = VisualizationGraph(nodes=[Node(id=42)], relationships=[])
+
+    VG.resize_nodes(sizes={42: 5}, node_radius_min_max=None, sizing=NodeSizing.AREA)
+
+    assert VG.nodes[0].size == 5
+
+
+def test_scale_sizes() -> None:
+    assert scale_sizes({}, (3, 60)) == {}
+
+    # All values are equal, so the middle of the range is used
+    assert scale_sizes({42: 7, 43: 7}, (3, 60), NodeSizing.RADIUS) == {42: 31.5, 43: 31.5}
+    area_middle = scale_sizes({42: 7, 43: 7}, (3, 60), NodeSizing.AREA)
+    assert area_middle[42] == pytest.approx(sqrt(1804.5))
+    assert area_middle[43] == pytest.approx(sqrt(1804.5))
+
+    with pytest.raises(ValueError, match="diagonal"):
+        scale_sizes({42: 7}, (3, 60), "diagonal")  # type: ignore
 
 
 def test_resize_nodes_with_scaling_constant() -> None:
@@ -101,7 +186,7 @@ def test_resize_nodes_with_scaling_constant() -> None:
     VG = VisualizationGraph(nodes=nodes, relationships=[])
 
     new_sizes: dict[NodeIdType, RealNumber] = {"1337": 20}
-    VG.resize_nodes(new_sizes, (3, 60))
+    VG.resize_nodes(new_sizes, (3, 60), sizing=NodeSizing.RADIUS)
 
     assert VG.nodes[0].size is None
     # Should just be the default since min == max in VG (only one node)
@@ -117,7 +202,7 @@ def test_resize_nodes_with_scaling_all_sizes_provided() -> None:
     VG = VisualizationGraph(nodes=nodes, relationships=[])
 
     new_sizes: dict[NodeIdType, RealNumber] = {42: 18, 43: 19, "1337": 20}
-    VG.resize_nodes(new_sizes, (3, 60))
+    VG.resize_nodes(new_sizes, (3, 60), sizing=NodeSizing.RADIUS)
 
     assert VG.nodes[0].size == 3
     assert VG.nodes[1].size == 3 + (60 - 3) / 2.0
@@ -132,7 +217,7 @@ def test_resize_nodes_with_scaling_some_sizes_provided() -> None:
     VG = VisualizationGraph(nodes=nodes, relationships=[])
 
     new_sizes: dict[NodeIdType, RealNumber] = {"1337": 1}
-    VG.resize_nodes(new_sizes, (3, 60))
+    VG.resize_nodes(new_sizes, (3, 60), sizing=NodeSizing.RADIUS)
 
     assert VG.nodes[0].size == 60
     assert VG.nodes[1].size == 3
@@ -146,7 +231,7 @@ def test_resize_nodes_with_scaling_only() -> None:
     ]
     VG = VisualizationGraph(nodes=nodes, relationships=[])
 
-    VG.resize_nodes(node_radius_min_max=(3, 60))
+    VG.resize_nodes(node_radius_min_max=(3, 60), sizing=NodeSizing.RADIUS)
 
     assert VG.nodes[0].size == 3
     assert VG.nodes[1].size == 3
