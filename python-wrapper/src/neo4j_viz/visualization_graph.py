@@ -9,7 +9,7 @@ from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
 from ._validation import OnDangling, check_dangling_relationships
 from .colors import ColorSpace, ColorsType
 from .node import Node, NodeIdType
-from .node_size import RealNumber
+from .node_size import NodeSizing, RealNumber
 from .nvl import NVL
 from .options import (
     Layout,
@@ -210,6 +210,7 @@ class VisualizationGraph:
         sizes: dict[NodeIdType, RealNumber] | None = None,
         node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
         property: str | None = None,
+        sizing: NodeSizing = NodeSizing.AREA,
     ) -> None:
         """
         Resize the nodes in the graph.
@@ -225,8 +226,15 @@ class VisualizationGraph:
             node sizes are scaled to fit in the given range. If None, the sizes are used as is.
         property:
             The property of the nodes to use for sizing. Must be None if `sizes` is provided.
+        sizing:
+            How the sizes map to node radii when they are scaled to fit `node_radius_min_max`, see `NodeSizing`.
+            The default is `NodeSizing.AREA`, which grows the node area linearly with the size. Pass
+            `NodeSizing.RADIUS` to grow the radius linearly instead, as earlier versions did, or `NodeSizing.LOG` to
+            compress skewed size distributions such as degree or PageRank. Ignored if `node_radius_min_max` is None.
         """
-        self._entity_ops.resize_nodes(sizes=sizes, node_radius_min_max=node_radius_min_max, property=property)
+        self._entity_ops.resize_nodes(
+            sizes=sizes, node_radius_min_max=node_radius_min_max, property=property, sizing=sizing
+        )
 
     def resize_relationships(
         self,

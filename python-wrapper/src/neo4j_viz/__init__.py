@@ -1,6 +1,7 @@
 from .colors import ColorSpace
 from .icons import Icons, icon_from_file, icon_from_svg, icon_from_url, icons_from_directory
 from .node import Node
+from .node_size import NodeSizing
 from .options import (
     CaptionAlignment,
     ClusteringOptions,
@@ -43,6 +44,7 @@ __all__ = [
     "DiscreteLegendSection",
     "ContinuousLegendSection",
     "Node",
+    "NodeSizing",
     "Relationship",
     "OverlayIcon",
     "Icons",
