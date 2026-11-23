@@ -191,6 +191,11 @@ strict = true
 exclude = [
     '(^build|^\.?venv)',
     'build',
+    # The scripts are dev tooling rather than library code: they import the `docs` dependency
+    # group (Sphinx and nbsphinx install only on Python 3.13+), which `code-style` cannot
+    # install on the oldest supported Python it lints with. The `code-style-scripts` job checks
+    # them on the newest supported Python instead.
+    '^scripts/',
     ]
 plugins = ['pydantic.mypy']
 untyped_calls_exclude=["nbconvert"]
