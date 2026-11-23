@@ -46,11 +46,48 @@ jobs:
           python-version: "3.11"
           enable-cache: true
       - run: uv venv
-      # --group docs: mypy type-checks the docs tooling, which imports nbsphinx and sphinx.
-      - run: uv sync --group dev --group docs --extra pandas --extra neo4j --extra gds --extra snowflake
+      - run: uv sync --group dev --extra pandas --extra neo4j --extra gds --extra snowflake
 
       - name: Check code style
         run: source .venv/bin/activate && cd ${GITHUB_WORKSPACE} && ./scripts/checkstyle.sh
+
+  # Type-check the repository's scripts, which `code-style` cannot: they import the `docs`
+  # dependency group (Sphinx and nbsphinx install only on Python 3.13+) and are dev tooling
+  # rather than library code, so they are checked on the newest supported Python. The mypy
+  # config excludes `scripts/` for that reason, and `MYPYPATH` resolves the test harness that
+  # the notebook scripts import from `python-wrapper/tests`.
+  code-style-scripts:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: python-wrapper
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Patch eMudhra CA compromise (CVE-2026-111943)
+        shell: bash
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install --only-upgrade -y ca-certificates
+          sudo update-ca-certificates --fresh
+
+      - name: Install uv and set the Python version
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.15"
+          enable-cache: true
+
+      - name: Type-check the scripts
+        # Files rather than the directory: mypy's `exclude` applies to a directory target too,
+        # while files named on the command line are checked regardless. `MYPYPATH` resolves the
+        # test harness the notebook scripts import from `python-wrapper/tests`.
+        run: |
+          cd ${GITHUB_WORKSPACE}
+          MYPYPATH=python-wrapper uv run --project python-wrapper --group docs \
+            python -m mypy --config-file python-wrapper/pyproject.toml \
+            $(git ls-files 'scripts/*.py' 'scripts/**/*.py')
 
   # Type-check the v1 (1.22) side of the GDS compat surface.
   code-style-gds-v1:
