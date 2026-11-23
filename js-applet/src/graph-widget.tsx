@@ -89,6 +89,44 @@ export type FitResponse = {
   error?: string;
 };
 
+/** Every request Python sends over the custom-message channel. */
+type WidgetRequest = SaveRequest | FitRequest;
+
+/** Every reply this widget sends back. */
+type WidgetResponse = SaveResponse | FitResponse;
+
+/**
+ * What each request is answered with, so the reply reaches the Python call that asked for it.
+ * Exhaustive over the request kinds: adding a request without its reply kind is a type error.
+ */
+const RESPONSE_KIND = {
+  save_request: "save_response",
+  fit: "fit_response",
+} as const satisfies Record<WidgetRequest["kind"], WidgetResponse["kind"]>;
+
+/**
+ * Read a custom message as a request of the given kind.
+ *
+ * Every request shares the envelope this checks: a `kind` that picks the request, and a string
+ * `id` that ties the reply to the Python call awaiting it. Anything else returns `undefined` and
+ * is ignored, which is what keeps an unknown kind (a newer Python, a message meant for another
+ * widget) from being answered by mistake.
+ */
+function matchRequest<K extends WidgetRequest["kind"]>(
+  msg: unknown,
+  kind: K,
+): Extract<WidgetRequest, { kind: K }> | undefined {
+  if (typeof msg !== "object" || msg === null) return undefined;
+  const request = msg as Partial<WidgetRequest>;
+  if (request.kind !== kind || typeof request.id !== "string") return undefined;
+  return request as Extract<WidgetRequest, { kind: K }>;
+}
+
+/** The error a request that needs the rendered graph is answered with when there is none. */
+function notRendered(action: string): string {
+  return `The graph is not rendered yet; display the widget before ${action}.`;
+}
+
 /**
  * A PNG snapshot of the rendered graph, sent to Python once the layout settles and
  * after changes.
@@ -263,13 +301,12 @@ export function handleSaveRequest(
   nvl: NVL | null,
   reply: (id: string, payload: { dataUrl?: string; error?: string }) => void,
 ): void {
-  if (typeof msg !== "object" || msg === null) return;
-  const request = msg as Partial<SaveRequest>;
-  if (request.kind !== "save_request" || typeof request.id !== "string") return;
+  const request = matchRequest(msg, "save_request");
+  if (!request) return;
   const { id } = request;
 
   if (!nvl) {
-    reply(id, { error: "The graph is not rendered yet; display the widget before saving." });
+    reply(id, { error: notRendered("saving") });
     return;
   }
   const options =
@@ -328,31 +365,28 @@ export function handleFitRequest(
   nvl: NVL | null,
   reply: (id: string, payload: { error?: string }) => void,
 ): void {
-  if (typeof msg !== "object" || msg === null) return;
-  const request = msg as Partial<FitRequest>;
-  if (request.kind !== "fit" || typeof request.id !== "string") return;
+  const request = matchRequest(msg, "fit");
+  if (!request) return;
+  const { id, nodeIds } = request;
 
-  const { nodeIds } = request;
   if (
     nodeIds !== undefined &&
     (!Array.isArray(nodeIds) || !nodeIds.every((id) => typeof id === "string"))
   ) {
-    reply(request.id, { error: "the node ids to frame must be a list of strings" });
+    reply(id, { error: "the node ids to frame must be a list of strings" });
     return;
   }
 
   if (!nvl) {
-    reply(request.id, {
-      error: "The graph is not rendered yet; display the widget before fitting.",
-    });
+    reply(id, { error: notRendered("fitting") });
     return;
   }
 
   try {
     fitToNodes(nvl, undefined, nodeIds);
-    reply(request.id, {});
+    reply(id, {});
   } catch (error) {
-    reply(request.id, { error: error instanceof Error ? error.message : String(error) });
+    reply(id, { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -545,10 +579,10 @@ function GraphWidget() {
   useEffect(() => {
     const onCustomMessage = (msg: unknown) => {
       handleSaveRequest(msg, nvlRef.current, (id, payload) =>
-        model.send({ kind: "save_response", id, ...payload } satisfies SaveResponse),
+        model.send({ kind: RESPONSE_KIND.save_request, id, ...payload } satisfies SaveResponse),
       );
       handleFitRequest(msg, nvlRef.current, (id, payload) =>
-        model.send({ kind: "fit_response", id, ...payload } satisfies FitResponse),
+        model.send({ kind: RESPONSE_KIND.fit, id, ...payload } satisfies FitResponse),
       );
     };
 
