@@ -151,16 +151,14 @@ render-docs:
     ./scripts/render_docs.sh
 
 # Regenerate the documentation images (README, getting-started guide and
-# tutorial notebooks) as widget screenshots in a headless browser. Most images
-# are built locally without a database; the GDS image needs a running Graph Data
-# Science instance (see `just local-neo4j-setup`) and is skipped unless
-# NEO4J_URI is set. Optionally restrict to named images:
+# tutorial notebooks) as widget screenshots in a headless browser. The graphs are
+# built without a database. Optionally restrict to named images:
 # `just generate-docs-images getting-started-widget`
 generate-docs-images *names:
     #!/usr/bin/env bash
     set -e
-    cd {{py_dir}} && uv sync --group dev --group notebook --extra gds
-    cd {{py_dir}} && uv run --group dev --group notebook --extra gds python {{root_dir}}/scripts/regenerate_docs_images.py {{names}}
+    cd {{py_dir}} && uv sync --group dev --group notebook
+    cd {{py_dir}} && uv run --group dev --group notebook python {{root_dir}}/scripts/regenerate_docs_images.py {{names}}
 
 # Regenerate the stored outputs of the example notebooks: the static PNG preview a graph
 # commits next to its widget. Needs Chrome (or `uv run playwright install chromium`) and,
