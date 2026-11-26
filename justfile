@@ -144,18 +144,27 @@ api-docs:
 # Render the full documentation locally: the Sphinx API reference and the
 # Antora manual, with the manual's links pointing at the locally served API
 # docs. Manual -> http://localhost:8000 ; API reference -> http://localhost:9000
+# The API reference renders notebooks with pandoc from the pinned `pandoc/core`
+# container image, so Docker is required (see scripts/sphinx_container_pandoc.py).
 # Press Ctrl-C to stop both servers.
 render-docs:
     ./scripts/render_docs.sh
 
 # Regenerate the documentation images (README, getting-started guide and
-# tutorial notebooks) as widget screenshots in a headless browser. Most images
-# are built locally without a database; the GDS image needs a running Graph Data
-# Science instance (see `just local-neo4j-setup`) and is skipped unless
-# NEO4J_URI is set. Optionally restrict to named images:
+# tutorial notebooks) as widget screenshots in a headless browser. The graphs are
+# built without a database. Optionally restrict to named images:
 # `just generate-docs-images getting-started-widget`
 generate-docs-images *names:
     #!/usr/bin/env bash
     set -e
-    cd {{py_dir}} && uv sync --group dev --group notebook --extra gds
-    cd {{py_dir}} && uv run --group dev --group notebook --extra gds python {{root_dir}}/scripts/regenerate_docs_images.py {{names}}
+    cd {{py_dir}} && uv sync --group dev --group notebook
+    cd {{py_dir}} && uv run --group dev --group notebook python {{root_dir}}/scripts/regenerate_docs_images.py {{names}}
+
+# Regenerate the stored outputs of the example notebooks: the static PNG preview a graph
+# commits next to its widget. Needs Chrome (or `uv run playwright install chromium`) and,
+# for the database examples, NEO4J_URI — see `just local-neo4j-setup`.
+regenerate-notebook-outputs *names:
+    #!/usr/bin/env bash
+    set -e
+    cd {{py_dir}} && uv sync --all-extras --group dev --group notebook
+    cd {{py_dir}} && uv run --all-extras --group dev --group notebook python {{root_dir}}/scripts/regenerate_notebook_outputs.py {{names}}

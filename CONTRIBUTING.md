@@ -132,6 +132,28 @@ The project contains of three parts:
 - a Python package which loads the applet and offers convenience functions to pass data to the applet
 - Jupyter notebooks to test the Python wrapper
 
+### Notebook outputs
+
+The example notebooks under `examples/` are committed without their outputs. `just py-style` strips them
+with `scripts/clean_notebooks.py`. Two cell tags control what is kept:
+
+- `preserve-output` keeps the cell's outputs. An interactive widget output is dropped, because it cannot
+  render without the kernel that produced it; the static PNG preview the widget stores next to it is kept.
+- `skip-execution` keeps a cell out of the headless run that regenerates those outputs, which is how the
+  getting-started notebook skips its `%pip install` cell.
+
+Regenerate the stored outputs after changing such a cell:
+
+```sh
+just regenerate-notebook-outputs getting-started
+```
+
+This runs the tagged cells in a headless browser and writes the notebooks back, cleaned. It needs Chrome or
+`uv run playwright install chromium`. The database examples (`neo4j-example`, `gds-example`) are skipped
+unless `NEO4J_URI` is set — start `just local-neo4j-setup` and export `NEO4J_URI=bolt://localhost:7687` to
+include them. Those examples create their own data, so the run continues into their cleanup cells and leaves
+the database as it found it.
+
 ### JavaScript configs
 
 - `vite.config.ts` - Vite config for the lib build (widget.js + style.css for anywidget)
@@ -145,6 +167,22 @@ Everything is configured inside `pyproject.toml`
 
 To keep a consistent code-style, we use `ruff` and `mypy`.
 For convenience there are a couple of just targets under `justfile`:
+
+
+### Documentation
+
+Render the documentation locally with:
+
+```sh
+just render-docs
+```
+
+This builds the Sphinx API reference and the Antora manual, and serves both. The
+API reference renders the notebooks with `nbsphinx`, which needs `pandoc`. Rather
+than requiring a local install, it runs from the pinned `pandoc/core` container
+image, so [Docker](https://docs.docker.com/get-docker/) is required. The version
+is set once in `scripts/sphinx_container_pandoc.py` (`PANDOC_VERSION`) and can be
+overridden with the `PANDOC_IMAGE` environment variable.
 
 
 ## Got an idea for a new project?

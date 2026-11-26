@@ -296,8 +296,22 @@ sizes to the provided range.
 
 If you provide only the `node_radius_min_max` parameter, the sizes of the nodes will be scaled such that the smallest
 node will have the size of the first value, and the largest node will have the size of the second value.
-The other nodes will be scaled linearly between these two values according to their relative size.
+The other nodes will be scaled between these two values according to their relative size.
 This can be useful if node sizes vary a lot, or are all very small or very big.
+
+The `sizing` parameter controls how the sizes map to radii between those two values, see
+link:{api-docs-uri}/node-size[`NodeSizing`]:
+
+* `NodeSizing.AREA` (the default): the area of a node grows linearly with its size, so the radius grows with the square
+  root of the size.
+  This is how the Neo4j Bloom graph app sizes nodes, and it matches how people read circle sizes.
+* `NodeSizing.RADIUS`: the radius grows linearly with the size, so the area grows with the square of the size.
+  This was the default in earlier versions of `neo4j-viz`.
+* `NodeSizing.LOG`: the radius grows with the logarithm of the size, which compresses skewed size distributions such
+  as degree or PageRank.
+  Zero sizes are supported.
+
+The `sizing` parameter is ignored if `node_radius_min_max` is `None`, since the sizes are then used as they are.
 
 In the following example, we resize the node with ID 42 to have a size of 88 pixels, and then scales all nodes to have
 sizes between 5 and 20 pixels:
@@ -309,6 +323,18 @@ VG.resize_nodes(sizes={42: 88}, node_radius_min_max=(5, 20))
 ----
 
 Note that means that also the node with ID 42 will be scaled to be between 5 and 20 pixels in size.
+
+To size nodes by the logarithm of a skewed property, such as their degree, and to keep the linear radius scaling of
+earlier versions, respectively:
+
+[source, python]
+----
+from neo4j_viz import NodeSizing
+
+# VG is a VisualizationGraph object
+VG.resize_nodes(property="degree", sizing=NodeSizing.LOG)
+VG.resize_nodes(property="degree", sizing=NodeSizing.RADIUS)
+----
 
 === The `resize_relationships` method
 

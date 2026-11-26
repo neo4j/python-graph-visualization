@@ -2,33 +2,35 @@
 
 ## Breaking changes
 
+* `VisualizationGraph.resize_nodes` and `GraphWidget.resize_nodes` now scale the node sizes to the
+  `node_radius_min_max` range by area instead of by radius, so that the node area grows linearly with the size.
+  This matches how the Neo4j Bloom graph app sizes nodes, but it changes the node sizes of existing calls.
+  Pass `sizing=NodeSizing.RADIUS` to keep the linear radius scaling of earlier versions.
+
 ## New features
 
-* Nodes can display an icon, and nodes and relationships can display an overlay icon (for example a
-  corner badge). Icons are set by name from a built-in catalog (`neo4j_viz.Icons`) or by URL, and local
-  or remote images can be inlined with `neo4j_viz.icon_from_file`, `neo4j_viz.icon_from_url`, or a whole
-  directory with `neo4j_viz.icons_from_directory`.
-* The `Layout.GPU_FORCE` layout uses NVL's GPU-accelerated force simulation. It supports clustering of nodes by
-  a node property, with an optional cluster outline or halo, via `ClusteringOptions` in
-  `ForceDirectedLayoutOptions`. It works with any renderer.
-* The `Layout.HIERARCHICAL` layout supports clustering of nodes by a node property via the
-  `HierarchicalLayoutOptions.clusterBy` option.
-* The GPU force layout accepts a `seedingMethod` option (how initial node positions are seeded).
+* `VisualizationGraph.resize_nodes` and `GraphWidget.resize_nodes` take a `sizing` parameter
+  (`NodeSizing.AREA`, `NodeSizing.RADIUS` or `NodeSizing.LOG`) to choose how the node sizes map to node radii.
+
+* `GraphWidget` stores a static PNG snapshot of the graph next to the widget output, so a committed notebook
+  still shows the graph on frontends that cannot render widgets, such as GitHub and nbviewer. The snapshot is
+  taken once the initial layout has settled and refreshed after changes; live frontends keep the interactive
+  widget. Disable it per widget with `render_widget(fallback=False)`.
+* `render()` and `render_widget()` frame the whole graph once its initial layout has settled, for every
+  layout. An explicitly set `pan_position` or `initial_zoom` is left alone; pass `fit=False` to keep the
+  default view instead, or `fit=True` to require framing. `fit` also accepts a list of node ids to frame
+  only those nodes. `GraphWidget.fit()` frames the graph again on demand, optionally for a subset of
+  nodes, for example after changing the graph or the layout.
 
 ## Bug fixes
 
-* Multiple `VG.render()` calls on one page (e.g. several notebook cells) no longer all display the first graph.
-* `GraphWidget.save()` no longer times out intermittently when it is called right after the
-  widget is displayed: the request now waits for the frontend to finish rendering instead of
-  racing it.
+* An explicit `initial_zoom` or `pan_position` is no longer overridden once the layout settles. Previously
+  only the force-directed and hierarchical layouts were framed automatically, and that framing also ignored
+  the zoom and pan set from Python.
 
 ## Improvements
 
-* `Renderer.WEB_GL` now selects NVL's WebGL renderer (it previously only enabled the GPU context without changing
-  how the graph was drawn). WebGL drawing is faster for large graphs but does not render captions; the warning is
-  now only shown when the graph actually has captions that would be dropped.
-* The wrapper warns when force-directed layout options (`gravity`, `simulationStopVelocity`, `seedingMethod`,
-  `clustering`) are set on `Layout.FORCE_DIRECTED`, since NVL's d3-force layout ignores them; use `Layout.GPU_FORCE`.
-* Since NVL 2.0 the WebGL renderer renders node icons and relationship arrowheads; only captions remain canvas-only.
+* Rendering with `Layout.COORDINATE` warns when nodes have no coordinates, since those nodes stack at the
+  center of the canvas. The `Layout` docstrings now describe how each layout uses node coordinates.
 
 ## Other changes

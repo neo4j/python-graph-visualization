@@ -6,6 +6,7 @@ import json
 import pathlib
 import urllib.parse
 import uuid
+from collections.abc import Sequence
 from functools import cached_property
 from typing import Any, Callable, Literal, TypeVar, Union, cast
 
@@ -13,15 +14,17 @@ import anywidget
 import pydantic
 import traitlets
 from comm import DummyComm
+from IPython.display import display
 from pydantic_extra_types.color import ColorType
 
 from ._events import _to_full_event_type
+from ._fallback_outputs import FallbackOutputs, split_data_url
 from ._graph_entity_operations import GraphEntityOperations, LegendSectionInput
 from ._icon_refs import apply_icon_refs, build_icon_refs
-from ._validation import OnDangling, OnDuplicate, check_dangling_relationships, merge_on_duplicate
+from ._validation import OnDangling, OnDuplicate, check_dangling_relationships, merge_on_duplicate, resolve_fit_node_ids
 from .colors import ColorSpace, ColorsType, to_hex
 from .node import Node, NodeIdType
-from .node_size import RealNumber
+from .node_size import NodeSizing, RealNumber
 from .options import (
     GraphSelection,
     InteractionEvent,
@@ -126,12 +129,21 @@ def _decode_data_url(data_url: str) -> bytes:
     NVL returns PNGs base64-encoded ("data:image/png;base64,...") and SVGs URL-encoded
     ("data:image/svg+xml;charset=utf-8,...").
     """
-    meta, separator, payload = data_url.partition(",")
-    if not data_url.startswith("data:") or not separator:
+    parts = split_data_url(data_url)
+    if parts is None:
         raise ValueError(f"The frontend returned an unexpected image payload: {data_url[:64]!r}")
+    meta, payload = parts
     if meta.endswith(";base64"):
         return base64.b64decode(payload)
     return urllib.parse.unquote(payload).encode("utf-8")
+
+
+def _snapshot_data_url(content: object) -> str | None:
+    """The image data URL of a `snapshot` message, or `None` for anything else."""
+    if not isinstance(content, dict) or content.get("kind") != "snapshot":
+        return None
+    data_url = content.get("dataUrl")
+    return data_url if isinstance(data_url, str) else None
 
 
 _ModelT = TypeVar("_ModelT", bound=pydantic.BaseModel)
@@ -197,6 +209,13 @@ class GraphWidget(anywidget.AnyWidget):
         to_json=lambda value, widget: value.to_json(),
         from_json=lambda value, widget: Legend.model_validate(value),
     )
+    fallback: traitlets.Bool[bool, bool | int] = traitlets.Bool(
+        default_value=True,
+        help="Whether to store a static PNG snapshot of the rendered graph next to the widget "
+        "output, so committed notebooks still show the graph on frontends that cannot render "
+        "widgets (GitHub, nbviewer). The snapshot is refreshed after the initial layout and "
+        "after changes. Set to False to skip it.",
+    ).tag(sync=True)
     last_event: PydanticTrait[InteractionEvent] = PydanticTrait(
         InteractionEvent,
         allow_none=True,
@@ -223,6 +242,13 @@ class GraphWidget(anywidget.AnyWidget):
     ).tag(sync=True)
 
     _max_allowed_nodes: int = 10_000
+
+    # Save/fit requests awaiting their response, and whether the message dispatcher
+    # that routes them (and the fallback snapshots) is registered. Per-instance state,
+    # hence traits rather than plain class attributes.
+    _pending_save_requests: traitlets.Dict[str, asyncio.Future[dict[str, Any]]] = traitlets.Dict()
+    _pending_fit_requests: traitlets.Dict[str, asyncio.Future[dict[str, Any]]] = traitlets.Dict()
+    _frontend_dispatcher_registered: traitlets.Bool[bool, bool | int] = traitlets.Bool(default_value=False)
 
     # Maps a data URI icon back to its short reference; kept in sync with `_icon_refs`.
     _icon_uri_to_ref: dict[str, str] = {}
@@ -395,8 +421,6 @@ class GraphWidget(anywidget.AnyWidget):
         self.observe(handler, names=["last_event"])
         return handler
 
-    _pending_save_requests: dict[str, asyncio.Future[dict[str, Any]]]
-
     async def save(
         self,
         file: str | pathlib.Path,
@@ -464,7 +488,7 @@ class GraphWidget(anywidget.AnyWidget):
             except ValueError as exc:
                 raise ValueError(f"Invalid background_color {background_color!r}: {exc}") from exc
 
-        self._check_save_frontend()
+        self._check_live_frontend("save")
 
         loop = asyncio.get_running_loop()
         # one deadline for load + render, not one per phase
@@ -473,7 +497,7 @@ class GraphWidget(anywidget.AnyWidget):
 
         request_id = uuid.uuid4().hex
         future: asyncio.Future[dict[str, Any]] = loop.create_future()
-        self._ensure_save_dispatcher()
+        self._ensure_frontend_dispatcher()
         self._pending_save_requests[request_id] = future
 
         try:
@@ -506,6 +530,73 @@ class GraphWidget(anywidget.AnyWidget):
         path.write_bytes(_decode_data_url(data_url))
         return path
 
+    async def fit(
+        self,
+        node_ids: Sequence[NodeIdType] | None = None,
+        *,
+        timeout: float = 30.0,
+    ) -> None:
+        """Frame the whole graph, or the given nodes, in the viewport.
+
+        The view is controlled by the widget frontend (in the browser), so this sends a request
+        over the widget channel and waits for it to be applied. It must be awaited from a notebook
+        cell while the widget is displayed in a live frontend (JupyterLab, Notebook, VS Code,
+        Colab, or marimo). Outside a running kernel, e.g. in a plain Python script, there is no
+        renderer to update.
+
+        The graph is already framed once when it first renders (see the `fit` parameter of
+        `render_widget`), so use this to frame it again after changing it, or to zoom in on part
+        of it, such as the current selection:
+
+        >>> await widget.fit()
+        >>> await widget.fit(widget.selected.nodeIds)
+
+        Parameters
+        ----------
+        node_ids:
+            The ids of the nodes to frame. Defaults to every node in the graph.
+        timeout:
+            Total time to wait for the frontend to apply the fit, in seconds. This includes
+            waiting for the widget to finish its initial render, which matters when `fit` is
+            called right after the widget is displayed.
+
+        Raises
+        ------
+        ValueError
+            If `node_ids` is empty, or contains an id that is not in the graph.
+        """
+        self._check_live_frontend("fit")
+
+        request: dict[str, Any] = {"kind": "fit"}
+        requested = resolve_fit_node_ids(node_ids, self.nodes)
+        if requested is not None:
+            request["nodeIds"] = requested
+
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+        await self._wait_for_frontend_ready(loop, deadline)
+
+        request_id = uuid.uuid4().hex
+        future: asyncio.Future[dict[str, Any]] = loop.create_future()
+        self._ensure_frontend_dispatcher()
+        self._pending_fit_requests[request_id] = future
+
+        try:
+            self.send({**request, "id": request_id})
+            response = await asyncio.wait_for(future, timeout=max(0.0, deadline - loop.time()))
+        except asyncio.TimeoutError as exc:
+            raise TimeoutError(
+                f"Fitting the graph timed out after {timeout} seconds. The widget must be displayed "
+                "in a live notebook frontend (JupyterLab, Notebook, VS Code, Colab, or marimo) for "
+                "fit() to work. If the widget was only just displayed, the frontend may still be "
+                "loading — retry the call."
+            ) from exc
+        finally:
+            self._pending_fit_requests.pop(request_id, None)
+
+        if response.get("error"):
+            raise RuntimeError(f"Could not fit the graph: {response['error']}")
+
     async def _wait_for_frontend_ready(self, loop: asyncio.AbstractEventLoop, deadline: float) -> None:
         """Wait until the frontend signals that the renderer is mounted.
 
@@ -536,8 +627,8 @@ class GraphWidget(anywidget.AnyWidget):
         finally:
             self.unobserve(handler, names=["_nvl_ready"])
 
-    def _check_save_frontend(self) -> None:
-        """Fail fast when no live kernel comm can carry a save request to the frontend.
+    def _check_live_frontend(self, method: str) -> None:
+        """Fail fast when no live kernel comm can carry a request to the frontend.
 
         Mirrors the check `Widget.send` performs before delivering a message: a missing,
         dummy (kernel-less), or dead-kernel comm means the request would silently go
@@ -546,26 +637,63 @@ class GraphWidget(anywidget.AnyWidget):
         comm = self.comm
         if comm is None or isinstance(comm, DummyComm) or (hasattr(comm, "kernel") and comm.kernel is None):
             raise RuntimeError(
-                "GraphWidget.save() requires a live notebook frontend: outside a running kernel "
+                f"GraphWidget.{method}() requires a live notebook frontend: outside a running kernel "
                 "(e.g. in a plain Python script) there is no browser to render the graph. Display "
                 "the widget in a notebook (JupyterLab, Notebook, VS Code, Colab, or marimo) and "
-                "call save() from a cell."
+                f"call {method}() from a cell."
             )
 
-    def _ensure_save_dispatcher(self) -> None:
-        """Register the frontend-message dispatcher backing :meth:`save` (once per widget)."""
-        if not hasattr(self, "_pending_save_requests"):
-            self._pending_save_requests = {}
-            self.on_msg(self._on_frontend_msg)
+    def _ipython_display_(self, **kwargs: Any) -> None:
+        """Display the widget, preceded by an output slot for the static PNG fallback.
+
+        The slot is created here, while the cell is executing: a display message emitted
+        later from a comm callback belongs to no cell, so a slot created when the first
+        snapshot arrives would not be recorded. The widget's own bundle is displayed
+        unchanged; the fallback fills the slot once the frontend reports an image.
+        """
+        bundle = self._repr_mimebundle_(**kwargs)
+        data, metadata = bundle if isinstance(bundle, tuple) else (bundle, None)
+        if not data:
+            return
+
+        self._ensure_frontend_dispatcher()
+
+        if self.fallback:
+            self._fallback_outputs.add_slot()
+
+        # IPython's display helpers are untyped, and mypy runs `no-untyped-call`.
+        display(data, raw=True, metadata=metadata)  # type: ignore[no-untyped-call]
+
+    def _ensure_frontend_dispatcher(self) -> None:
+        """Register the dispatcher backing the frontend messages this widget consumes.
+
+        It routes `save_response` to the awaiting :meth:`save` call, `fit_response` to the
+        awaiting :meth:`fit` call, and `snapshot` to the PNG fallback output. Registered once
+        per widget, on first display or request.
+        """
+        if self._frontend_dispatcher_registered:
+            return
+        self._frontend_dispatcher_registered = True
+        self.on_msg(self._on_frontend_msg)
 
     def _on_frontend_msg(self, widget: object, content: object, buffers: object) -> None:
-        """Route `save_response` messages from the frontend to their awaiting :meth:`save` call."""
-        if not isinstance(content, dict) or content.get("kind") != "save_response":
+        """Route messages from the frontend to their handler."""
+        if (data_url := _snapshot_data_url(content)) is not None:
+            self._fallback_outputs.store(data_url)
+            return
+        if not isinstance(content, dict):
+            return
+        kind = content.get("kind")
+        if kind == "save_response":
+            pending = self._pending_save_requests
+        elif kind == "fit_response":
+            pending = self._pending_fit_requests
+        else:
             return
         request_id = content.get("id")
         if not isinstance(request_id, str):
             return
-        future = self._pending_save_requests.get(request_id)
+        future = pending.get(request_id)
         if future is not None and not future.done():
             future.set_result(content)
 
@@ -580,6 +708,7 @@ class GraphWidget(anywidget.AnyWidget):
         theme: str = "auto",
         legend: Legend | None = None,
         max_allowed_nodes: int = 10_000,
+        fallback: bool = True,
     ) -> GraphWidget:
         """Create a GraphWidget from Node and Relationship lists."""
         widget = cls(
@@ -590,6 +719,7 @@ class GraphWidget(anywidget.AnyWidget):
             options=options.to_widget_options() if options else WidgetOptions(),
             theme=theme,
             legend=legend if legend is not None else Legend(),
+            fallback=fallback,
         )
         widget._max_allowed_nodes = max_allowed_nodes
         return widget
@@ -600,6 +730,11 @@ class GraphWidget(anywidget.AnyWidget):
     @cached_property
     def _entity_ops(self) -> GraphEntityOperations:
         return GraphEntityOperations(self)
+
+    @cached_property
+    def _fallback_outputs(self) -> FallbackOutputs:
+        """Bookkeeping for the static PNG snapshots stored beside this widget's outputs."""
+        return FallbackOutputs()
 
     def sync_nodes(self) -> None:
         """Manually trigger a sync of the `nodes` list to the frontend."""
@@ -754,6 +889,7 @@ class GraphWidget(anywidget.AnyWidget):
         sizes: dict[NodeIdType, RealNumber] | None = None,
         node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
         property: str | None = None,
+        sizing: NodeSizing | str = NodeSizing.AREA,
     ) -> None:
         """
         Resize the nodes in the graph.
@@ -769,8 +905,12 @@ class GraphWidget(anywidget.AnyWidget):
             node sizes are scaled to fit in the given range. If None, the sizes are used as is.
         property:
             The property of the nodes to use for sizing. Must be None if `sizes` is provided.
+        sizing:
+            The `NodeSizing` to use. Ignored if `node_radius_min_max` is None.
         """
-        self._entity_ops.resize_nodes(sizes=sizes, node_radius_min_max=node_radius_min_max, property=property)
+        self._entity_ops.resize_nodes(
+            sizes=sizes, node_radius_min_max=node_radius_min_max, property=property, sizing=sizing
+        )
 
     def resize_relationships(
         self,

@@ -12,6 +12,7 @@ on:
       - "js-applet/**" # built assets are needed to import the widget
       - "scripts/build_js_applet.sh"
       - ".github/actions/build-js/**"
+      - "examples/**" # the notebook tests run the example notebooks
     branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab

@@ -7,11 +7,15 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 import pathlib
+from importlib.metadata import version as distribution_version
 
 project = "Graph Visualization for Python"
 copyright = "2025, Neo4j, Inc."
 author = "Neo4j, Inc."
-release = "0.1.6"
+
+# Read the installed distribution so the docs version tracks the package release
+# instead of a hand-maintained literal.
+release = distribution_version("neo4j-viz")
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

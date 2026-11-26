@@ -7,18 +7,15 @@ headless Chrome, and the whole widget element (graph canvas plus its UI chrome:
 toolbar, search, legend) is screenshotted. The images are copied back to their
 repository locations.
 
-Most graphs are built locally without a database, via the toy graph from the
+The graphs are built without a database, via the toy graph from the
 getting-started guide and the examples' CREATE queries through the
-``from_gql_create`` GQL integration. The GDS image needs a running Graph Data
-Science instance: set ``NEO4J_URI`` (see ``just local-neo4j-setup``) to include
-it, otherwise that spec is skipped. Run from anywhere inside the repo.
+``from_gql_create`` GQL integration. Run from anywhere inside the repo.
 """
 
 from __future__ import annotations
 
 import argparse
 import functools
-import os
 import shutil
 import struct
 import sys
@@ -156,40 +153,6 @@ VG = from_gql_create(
 )
 """
 
-# The Cora graph from examples/gds-example.ipynb. Unlike the other specs this
-# needs a running GDS instance (see the module docstring).
-_GDS_CELLS = (
-    """\
-import os
-
-from graphdatascience import GraphDataScience
-
-gds = GraphDataScience(
-    os.environ["NEO4J_URI"],
-    auth=(os.environ.get("NEO4J_USERNAME", "neo4j"), os.environ.get("NEO4J_PASSWORD", "password")),
-)
-
-G = gds.graph.datasets.load_cora(graph_name="cora")
-gds.node_similarity.mutate(G, mutate_relationship_type="SIMILAR", mutate_property="similarity")
-gds.page_rank.mutate(G, mutate_property="pagerank")
-gds.louvain.mutate(G, mutate_property="componentId")
-""",
-    """\
-import matplotlib.colors as mcolors
-from palettable.colorbrewer.qualitative import Dark2_7
-
-from neo4j_viz.gds import from_gds
-
-VG = from_gds(gds, G, max_node_count=100)
-VG.resize_nodes(property="pagerank")
-
-number_of_components = len({n.properties["componentId"] for n in VG.nodes})
-color_map = Dark2_7.mpl_colormap.resampled(number_of_components)
-colors = [mcolors.rgb2hex(color_map(i)) for i in range(number_of_components)]
-VG.color_nodes(property="componentId", colors=colors, override=True)
-""",
-)
-
 
 @dataclass(frozen=True)
 class ImageSpec:
@@ -206,9 +169,6 @@ class ImageSpec:
     # Extra locations to copy the produced image to (e.g. the examples/ copy
     # that a notebook references alongside the Antora page copy).
     also_copy: tuple[Path, ...] = ()
-    # When set, the spec only runs if this environment variable is present. Used
-    # for images that need an external service (e.g. GDS via NEO4J_URI).
-    requires_env: str | None = None
 
     @property
     def filename(self) -> str:
@@ -287,13 +247,6 @@ def _specs() -> list[ImageSpec]:
             also_copy=(_EXAMPLE_IMAGES / "getting-started-widget-colored.png",),
         ),
         ImageSpec(
-            name="gds-example-graph",
-            target=_EXAMPLE_IMAGES / "gds-example-graph.png",
-            size=widget_size,
-            cells=(*_GDS_CELLS, _render_cell(widget_size)),
-            requires_env="NEO4J_URI",
-        ),
-        ImageSpec(
             name="snowflake-example-graph",
             target=_EXAMPLE_IMAGES / "example_instruments_1.png",
             size=widget_size,
@@ -339,13 +292,6 @@ def main() -> int:
         jupyter_server(Path(tmp)) as server,
     ):
         for spec in specs:
-            if spec.requires_env and not os.environ.get(spec.requires_env):
-                print(
-                    f"Skipping {spec.name} (set {spec.requires_env} to regenerate)",
-                    flush=True,
-                )
-                continue
-
             print(f"Regenerating {spec.target.relative_to(GIT_ROOT)} ...", flush=True)
             try:
                 produced = server.root / spec.filename

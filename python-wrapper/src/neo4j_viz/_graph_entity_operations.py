@@ -17,7 +17,7 @@ from .colors import (
     to_hex,
 )
 from .node import Node, NodeIdType
-from .node_size import RealNumber, verify_radii
+from .node_size import NodeSizing, RealNumber, scale_sizes, verify_radii
 from .options import ContinuousLegendSection, DiscreteLegendSection, Legend, LegendEntry
 from .relationship import Relationship
 
@@ -174,6 +174,7 @@ class GraphEntityOperations:
         sizes: dict[NodeIdType, RealNumber] | None = None,
         node_radius_min_max: tuple[RealNumber, RealNumber] | None = (3, 60),
         property: str | None = None,
+        sizing: NodeSizing | str = NodeSizing.AREA,
     ) -> None:
         """Resize nodes from explicit sizes or a property. See `VisualizationGraph.resize_nodes` for details."""
         if sizes is not None and property is not None:
@@ -181,6 +182,9 @@ class GraphEntityOperations:
 
         if sizes is None and property is None and node_radius_min_max is None:
             raise ValueError("At least one of `sizes`, `property` or `node_radius_min_max` must be given")
+
+        # Fail on an unknown sizing mode even when the sizes are not scaled
+        sizing = NodeSizing(sizing)
 
         # Gather node sizes
         all_sizes = {}
@@ -219,7 +223,7 @@ class GraphEntityOperations:
         if node_radius_min_max is not None:
             verify_radii(node_radius_min_max)
 
-            final_sizes = self._normalize_values(all_sizes, node_radius_min_max)
+            final_sizes = scale_sizes(all_sizes, node_radius_min_max, sizing)
         else:
             final_sizes = all_sizes
 

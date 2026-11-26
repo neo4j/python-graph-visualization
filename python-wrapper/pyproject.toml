@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neo4j-viz"
-version = "1.13.0"
+version = "1.14.0"
 description = "A simple graph visualization tool"
 readme = "README.md"
 authors = [{ name = "Neo4j", email = "team-gds@neo4j.org" }]
@@ -59,16 +59,16 @@ streamlit = ["streamlit<2,>=1.58"]
 
 [dependency-groups]
 dev = [
-    "ruff==0.17.3",
+    "ruff==0.17.5",
     "mypy==2.4.1",
     "pytest==9.2.0",
     "selenium==4.52.0",
     "ipykernel==7.4.0",
     "palettable==3.3.3",
     "pytest-mock==3.17.0",
-    "playwright==1.64.1",
+    "playwright==1.65.2",
     "nbconvert==7.17.2",
-    "streamlit==1.66.1",
+    "streamlit==1.67.0",
     "matplotlib>=3.9.4",
     "jupyterlab>=4.5.7",
     "marimo",
@@ -191,6 +191,11 @@ strict = true
 exclude = [
     '(^build|^\.?venv)',
     'build',
+    # The scripts are dev tooling rather than library code: they import the `docs` dependency
+    # group (Sphinx and nbsphinx install only on Python 3.13+), which `code-style` cannot
+    # install on the oldest supported Python it lints with. The `code-style-scripts` job checks
+    # them on the newest supported Python instead.
+    '^scripts/',
     ]
 plugins = ['pydantic.mypy']
 untyped_calls_exclude=["nbconvert"]
