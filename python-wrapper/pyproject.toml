@@ -59,10 +59,10 @@ streamlit = ["streamlit<2,>=1.58"]
 
 [dependency-groups]
 dev = [
-    "ruff==0.17.5",
+    "ruff==0.17.6",
     "mypy==2.4.1",
     "pytest==9.2.0",
-    "selenium==4.52.0",
+    "selenium==4.54.0",
     "ipykernel==7.4.0",
     "palettable==3.3.3",
     "pytest-mock==3.17.0",
